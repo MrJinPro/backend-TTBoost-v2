@@ -1,0 +1,159 @@
+from fastapi import APIRouter, Depends, HTTPException, status, Header, Request
+from pydantic import BaseModel
+from sqlalchemy.orm import Session
+
+from app.db.database import SessionLocal, init_db
+from app.db import models
+from app.services.security import hash_password, verify_password, create_access_token, decode_token
+from datetime import datetime
+
+
+router = APIRouter()
+
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+class RegisterRequest(BaseModel):
+    username: str
+    password: str
+
+
+class AuthResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+
+
+class RedeemLicenseRequest(BaseModel):
+    username: str
+    password: str
+    license_key: str
+
+
+class RedeemLicenseResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    license_expires_at: str | None = None
+    plan: str | None = None
+
+
+@router.post("/register", response_model=AuthResponse)
+def register(req: RegisterRequest, db: Session = Depends(get_db)):
+    init_db()
+    username = req.username.strip().lower().replace("@", "")
+    if len(username) < 2:
+        raise HTTPException(400, detail="invalid username")
+    exists = db.query(models.User).filter(models.User.username == username).first()
+    if exists:
+        raise HTTPException(409, detail="user exists")
+    user = models.User(username=username, password_hash=hash_password(req.password))
+    db.add(user)
+    db.flush()
+    # default settings
+    settings = models.UserSettings(user_id=user.id)
+    db.add(settings)
+    db.commit()
+    token = create_access_token(user.id)
+    return AuthResponse(access_token=token)
+
+
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+
+@router.post("/login", response_model=AuthResponse)
+def login(req: LoginRequest, db: Session = Depends(get_db)):
+    username = req.username.strip().lower().replace("@", "")
+    user = db.query(models.User).filter(models.User.username == username).first()
+    if not user or not verify_password(req.password, user.password_hash):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid credentials")
+    token = create_access_token(user.id)
+    return AuthResponse(access_token=token)
+
+
+@router.post("/redeem-license", response_model=RedeemLicenseResponse)
+def redeem_license(req: RedeemLicenseRequest, db: Session = Depends(get_db)):
+    """Обмен лицензионного ключа на JWT и (при необходимости) создание пользователя.
+    Логика:
+    1. Проверяем существование активной лицензии и срок.
+    2. Создаём пользователя, если его нет.
+    3. Привязываем лицензию к пользователю (user_id), если не привязана.
+    4. Возвращаем JWT и данные по сроку лицензии.
+    """
+    username = req.username.strip().lower().replace("@", "")
+    if len(username) < 2:
+        raise HTTPException(400, detail="invalid username")
+
+    lic = db.query(models.LicenseKey).filter(models.LicenseKey.key == req.license_key.strip()).first()
+    if not lic:
+        raise HTTPException(404, detail="license not found")
+    if lic.status != models.LicenseStatus.active:
+        raise HTTPException(403, detail="license not active")
+    if lic.expires_at and lic.expires_at < datetime.utcnow():
+        raise HTTPException(403, detail="license expired")
+
+    user = db.query(models.User).filter(models.User.username == username).first()
+    if not user:
+        # создать пользователя
+        user = models.User(username=username, password_hash=hash_password(req.password))
+        db.add(user)
+        db.flush()
+        settings = models.UserSettings(user_id=user.id)
+        db.add(settings)
+    else:
+        # проверяем пароль
+        if not verify_password(req.password, user.password_hash):
+            raise HTTPException(401, detail="invalid credentials")
+
+    # привязать лицензию, если еще не привязана или уже привязана к этому user
+    if lic.user_id and lic.user_id != user.id:
+        raise HTTPException(409, detail="license already bound to another user")
+    if not lic.user_id:
+        lic.user_id = user.id
+    db.commit()
+
+    token = create_access_token(user.id)
+    return RedeemLicenseResponse(access_token=token, license_expires_at=lic.expires_at.isoformat() if lic.expires_at else None, plan=lic.plan)
+
+
+def get_current_user(authorization: str | None = Header(default=None), db: Session = Depends(get_db)) -> models.User:
+    if not authorization or not authorization.lower().startswith("bearer "):
+        raise HTTPException(status_code=401, detail="missing bearer token")
+    token = authorization.split(" ", 1)[1]
+    sub = decode_token(token)
+    if not sub:
+        raise HTTPException(status_code=401, detail="invalid token")
+    user = db.get(models.User, sub)
+    if not user:
+        raise HTTPException(status_code=401, detail="user not found")
+    return user
+
+
+class MeResponse(BaseModel):
+    id: str
+    username: str
+    voice_id: str
+    tts_enabled: bool
+    gift_sounds_enabled: bool
+    tts_volume: int
+    gifts_volume: int
+
+
+@router.get("/me", response_model=MeResponse)
+def me(user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    settings = user.settings
+    return MeResponse(
+        id=user.id,
+        username=user.username,
+        voice_id=settings.voice_id if settings else "ru-RU-SvetlanaNeural",
+        tts_enabled=settings.tts_enabled if settings else True,
+        gift_sounds_enabled=settings.gift_sounds_enabled if settings else True,
+        tts_volume=settings.tts_volume if settings else 100,
+        gifts_volume=settings.gifts_volume if settings else 100,
+    )
