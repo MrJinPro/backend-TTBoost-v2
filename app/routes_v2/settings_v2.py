@@ -19,6 +19,7 @@ def get_db():
 
 
 class UpdateSettingsRequest(BaseModel):
+    tiktok_username: str | None = None
     voice_id: str | None = None
     tts_enabled: bool | None = None
     gift_sounds_enabled: bool | None = None
@@ -28,6 +29,11 @@ class UpdateSettingsRequest(BaseModel):
 
 @router.post("/update")
 def update_settings(req: UpdateSettingsRequest, user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    # Update user tiktok_username if provided
+    if req.tiktok_username is not None:
+        user.tiktok_username = req.tiktok_username
+    
+    # Update settings
     s = user.settings
     if not s:
         s = models.UserSettings(user_id=user.id)
