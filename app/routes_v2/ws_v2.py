@@ -160,9 +160,19 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
 
     # run tiktok client
     try:
+        # Используем tiktok_username если задан, иначе username
+        target_username = user.tiktok_username if user.tiktok_username else user.username
+        if not target_username:
+            await websocket.send_text(json.dumps({
+                "type": "error",
+                "message": "TikTok username не указан. Укажите его в настройках."
+            }, ensure_ascii=False))
+            await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+            return
+        
         await tiktok_service.start_client(
             user_id=user.id,
-            tiktok_username=user.username,
+            tiktok_username=target_username,
             on_comment_callback=on_comment,
             on_gift_callback=on_gift,
             on_like_callback=on_like,
@@ -170,10 +180,27 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
             on_follow_callback=on_follow,
             on_subscribe_callback=on_subscribe,
         )
+        # Отправляем подтверждение успешного подключения
+        await websocket.send_text(json.dumps({
+            "type": "status",
+            "message": f"Подключено к TikTok Live @{target_username}",
+            "connected": True
+        }, ensure_ascii=False))
+        
         while True:
             await websocket.receive_text()
     except WebSocketDisconnect:
         pass
+    except Exception as e:
+        # Отправляем ошибку перед закрытием
+        error_msg = str(e)
+        try:
+            await websocket.send_text(json.dumps({
+                "type": "error",
+                "message": f"Ошибка подключения к TikTok Live: {error_msg}"
+            }, ensure_ascii=False))
+        except:
+            pass
     finally:
         if tiktok_service.is_running(user.id):
             await tiktok_service.stop_client(user.id)
