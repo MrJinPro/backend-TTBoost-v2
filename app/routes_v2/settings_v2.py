@@ -32,7 +32,7 @@ def update_settings(req: UpdateSettingsRequest, user: models.User = Depends(get_
     # Update user tiktok_username if provided
     if req.tiktok_username is not None:
         user.tiktok_username = req.tiktok_username
-        db.add(user)  # Добавляем user в сессию для сохранения изменений
+        user = db.merge(user)  # Используем merge вместо add для избежания конфликта сессий
     
     # Update settings
     s = user.settings
