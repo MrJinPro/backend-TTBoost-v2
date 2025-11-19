@@ -96,10 +96,10 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
                 if t.action == models.TriggerAction.tts and t.action_params:
                     template = t.action_params.get("text_template") or "{message}"
                     phrase = template.replace("{user}", _remove_emojis(u)).replace("{message}", sanitized_text)
-                    tts_url = await generate_tts(phrase, voice_id)
+                    tts_url = await generate_tts(phrase, voice_id, user_id=str(user.id))
                     break
         if not tts_url:
-            tts_url = await generate_tts(sanitized_text, voice_id)
+            tts_url = await generate_tts(sanitized_text, voice_id, user_id=str(user.id))
         await websocket.send_text(json.dumps({"type": "chat", "user": u, "message": text, "tts_url": tts_url}, ensure_ascii=False))
 
         if u not in first_message_seen:
@@ -133,7 +133,7 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
                     break
         if not sound_url:
             phrase = f"{_remove_emojis(u)} отправил подарок {_remove_emojis(gift_name)}, количество {count}"
-            sound_url = await generate_tts(phrase, voice_id)
+            sound_url = await generate_tts(phrase, voice_id, user_id=str(user.id))
         await websocket.send_text(json.dumps({"type": "gift", "user": u, "gift_name": gift_name, "count": count, "diamonds": diamonds, "sound_url": sound_url}, ensure_ascii=False))
 
     async def on_like(u: str, count: int):
