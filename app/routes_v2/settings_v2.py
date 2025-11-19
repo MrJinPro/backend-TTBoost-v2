@@ -37,8 +37,9 @@ def update_settings(req: UpdateSettingsRequest, user: models.User = Depends(get_
         user.tiktok_username = req.tiktok_username
         user = db.merge(user)  # Используем merge вместо add для избежания конфликта сессий
     
-    # Update settings
-    s = user.settings
+    # Query settings directly from current DB session
+    s = db.query(models.UserSettings).filter(models.UserSettings.user_id == user.id).first()
+    
     print(f"Current settings object: {s}")
     if s:
         print(f"Current voice_id in DB: {s.voice_id}")
@@ -46,8 +47,9 @@ def update_settings(req: UpdateSettingsRequest, user: models.User = Depends(get_
         print("Creating new settings")
         s = models.UserSettings(user_id=user.id)
         db.add(s)
+    
     if req.voice_id is not None:
-        print(f"Setting voice_id from {s.voice_id} to {req.voice_id}")
+        print(f"Setting voice_id from {s.voice_id if s.voice_id else 'None'} to {req.voice_id}")
         s.voice_id = req.voice_id
     if req.tts_enabled is not None:
         s.tts_enabled = req.tts_enabled
