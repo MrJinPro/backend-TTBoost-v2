@@ -29,6 +29,10 @@ class UpdateSettingsRequest(BaseModel):
 
 @router.post("/update")
 def update_settings(req: UpdateSettingsRequest, user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.info(f"📥 Update settings request: {req.model_dump()}")
+    
     # Update user tiktok_username if provided
     if req.tiktok_username is not None:
         user.tiktok_username = req.tiktok_username
@@ -36,10 +40,13 @@ def update_settings(req: UpdateSettingsRequest, user: models.User = Depends(get_
     
     # Update settings
     s = user.settings
+    logger.info(f"Current settings: {s}")
     if not s:
+        logger.info("Creating new settings")
         s = models.UserSettings(user_id=user.id)
         db.add(s)
     if req.voice_id is not None:
+        logger.info(f"Setting voice_id: {req.voice_id}")
         s.voice_id = req.voice_id
     if req.tts_enabled is not None:
         s.tts_enabled = req.tts_enabled
@@ -50,4 +57,5 @@ def update_settings(req: UpdateSettingsRequest, user: models.User = Depends(get_
     if req.gifts_volume is not None:
         s.gifts_volume = int(req.gifts_volume)
     db.commit()
+    logger.info(f"✅ Settings saved. voice_id={s.voice_id}")
     return {"status": "ok"}
