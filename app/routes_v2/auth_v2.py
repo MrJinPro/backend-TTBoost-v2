@@ -138,6 +138,7 @@ def get_current_user(authorization: str | None = Header(default=None), db: Sessi
 class MeResponse(BaseModel):
     id: str
     username: str
+    tiktok_username: str | None = None
     voice_id: str
     tts_enabled: bool
     gift_sounds_enabled: bool
@@ -151,6 +152,7 @@ def me(user: models.User = Depends(get_current_user), db: Session = Depends(get_
     return MeResponse(
         id=user.id,
         username=user.username,
+        tiktok_username=user.tiktok_username,
         voice_id=settings.voice_id if settings else "ru-RU-SvetlanaNeural",
         tts_enabled=settings.tts_enabled if settings else True,
         gift_sounds_enabled=settings.gift_sounds_enabled if settings else True,
