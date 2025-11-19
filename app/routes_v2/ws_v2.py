@@ -80,8 +80,8 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
 
     def get_current_voice_id():
         """Получить актуальный voice_id из базы"""
-        db.refresh(user)
-        return user.settings.voice_id if user.settings else "gtts-ru"
+        settings = db.query(models.UserSettings).filter(models.UserSettings.user_id == user.id).first()
+        return settings.voice_id if settings and settings.voice_id else "gtts-ru"
 
     async def on_comment(u: str, text: str):
         voice_id = get_current_voice_id()
