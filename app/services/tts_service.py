@@ -132,6 +132,8 @@ async def _generate_gtts(text: str, voice_info: dict, user_id: str = None) -> st
 
 async def _generate_edge(text: str, voice_info: dict, user_id: str = None) -> str:
     """Генерация через Microsoft Edge TTS"""
+    print(f"🎙️ Attempting Edge TTS with voice: {voice_info['id']}")
+    
     # Используем MEDIA_ROOT из .env
     media_root = os.getenv("MEDIA_ROOT", "/opt/ttboost/static")
     
@@ -157,10 +159,12 @@ async def _generate_edge(text: str, voice_info: dict, user_id: str = None) -> st
         base_url = os.getenv("TTS_BASE_URL", "https://media.ttboost.pro")
         url = f"{base_url.rstrip('/')}/{url_path}/{filename}"
         
+        print(f"✅ Edge TTS успешно создан: {file_path}")
         logger.info(f"Edge TTS создан: {file_path}")
         return url
         
     except Exception as e:
+        print(f"❌ Edge TTS ошибка: {e}")
         logger.error(f"Ошибка Edge TTS: {e}")
         return ""
 
