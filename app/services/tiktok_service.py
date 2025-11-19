@@ -130,7 +130,9 @@ class TikTokService:
                     return
                 # Логика: если подарок стриковый — шлём событие только по завершению стрика,
                 # если не стриковый — шлём сразу.
-                if event.gift.streakable and event.gift.streaking:
+                streakable = getattr(event.gift, 'streakable', False)
+                streaking = getattr(event.gift, 'streaking', False)
+                if streakable and streaking:
                     return  # ждём окончания стрика
                 username = event.user.nickname or event.user.unique_id
                 gift_id = getattr(event.gift, 'id', None) or event.gift.name  # Пытаемся получить ID, fallback на name
