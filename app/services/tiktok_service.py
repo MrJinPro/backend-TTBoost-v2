@@ -133,12 +133,13 @@ class TikTokService:
                 if event.gift.streakable and event.gift.streaking:
                     return  # ждём окончания стрика
                 username = event.user.nickname or event.user.unique_id
+                gift_id = getattr(event.gift, 'id', None) or event.gift.name  # Пытаемся получить ID, fallback на name
                 gift_name = event.gift.name
                 count = event.gift.count
                 diamonds = event.gift.diamond_count * count
-                logger.info(f"TikTok подарок от {username}: {gift_name} x{count} ({diamonds} алмазов)")
+                logger.info(f"TikTok подарок от {username}: {gift_name} (ID: {gift_id}) x{count} ({diamonds} алмазов)")
                 try:
-                    await on_gift_callback(username, gift_name, count, diamonds)
+                    await on_gift_callback(username, gift_id, gift_name, count, diamonds)
                 except Exception as e:
                     logger.error(f"Ошибка в gift callback: {e}")
             

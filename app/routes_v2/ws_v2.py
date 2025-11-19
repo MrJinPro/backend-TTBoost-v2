@@ -121,9 +121,9 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
                         await websocket.send_text(json.dumps({"type": "viewer_first_message", "user": u, "sound_url": _abs_url(f"/static/sounds/{user.id}/{fn}")}, ensure_ascii=False))
                     break
 
-    async def on_gift(u: str, gift_name: str, count: int, diamonds: int = 0):
+    async def on_gift(u: str, gift_id: str, gift_name: str, count: int, diamonds: int = 0):
         voice_id = get_current_voice_id()
-        # trigger by gift name
+        # trigger by gift_id
         trig = (
             db.query(models.Trigger)
             .filter(models.Trigger.user_id == user.id, models.Trigger.event_type == "gift", models.Trigger.enabled == True)
@@ -132,7 +132,8 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
         )
         sound_url = None
         for t in trig:
-            if t.condition_key == "gift_name" and t.condition_value and t.condition_value.lower() == gift_name.lower():
+            # Проверяем по gift_id
+            if t.condition_key == "gift_id" and t.condition_value and t.condition_value == gift_id:
                 fn = t.action_params.get("sound_filename") if t.action_params else None
                 if fn:
                     sound_url = _abs_url(f"/static/sounds/{user.id}/{fn}")
@@ -140,7 +141,7 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
         if not sound_url:
             phrase = f"{_remove_emojis(u)} отправил подарок {_remove_emojis(gift_name)}, количество {count}"
             sound_url = await generate_tts(phrase, voice_id, user_id=str(user.id))
-        await websocket.send_text(json.dumps({"type": "gift", "user": u, "gift_name": gift_name, "count": count, "diamonds": diamonds, "sound_url": sound_url}, ensure_ascii=False))
+        await websocket.send_text(json.dumps({"type": "gift", "user": u, "gift_id": gift_id, "gift_name": gift_name, "count": count, "diamonds": diamonds, "sound_url": sound_url}, ensure_ascii=False))
 
     async def on_like(u: str, count: int):
         await websocket.send_text(json.dumps({"type": "like", "user": u, "count": count}, ensure_ascii=False))
