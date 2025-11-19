@@ -10,7 +10,7 @@ load_dotenv()  # Load ENV, SERVER_HOST, TTS_BASE_URL, SIGN_SERVER_URL
 
 from app.routes import auth, tts, ws, voices, sounds, profile, catalog, triggers
 from app.db.database import init_db
-from app.routes_v2 import auth_v2, settings_v2, sounds_v2, triggers_v2, ws_v2, license_v2
+from app.routes_v2 import auth_v2, settings_v2, sounds_v2, triggers_v2, ws_v2, license_v2, voices_v2
 
 app = FastAPI(title="TTBoost Backend", version="0.1.0")
 
@@ -57,6 +57,7 @@ app.include_router(sounds_v2.router, prefix="/v2/sounds", tags=["v2-sounds"])
 app.include_router(triggers_v2.router, prefix="/v2/triggers", tags=["v2-triggers"])
 app.include_router(ws_v2.router, prefix="/v2", tags=["v2-ws"])
 app.include_router(license_v2.router, prefix="/v2/license", tags=["v2-license"])
+app.include_router(voices_v2.router, prefix="/v2", tags=["v2-voices"])
 
 
 @app.get("/")
