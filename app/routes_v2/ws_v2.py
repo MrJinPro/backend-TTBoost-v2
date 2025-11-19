@@ -76,10 +76,15 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
         return
     await websocket.accept()
-    voice_id = (user.settings.voice_id if user.settings else "ru-RU-SvetlanaNeural")
     first_message_seen = set()
 
+    def get_current_voice_id():
+        """Получить актуальный voice_id из базы"""
+        db.refresh(user)
+        return user.settings.voice_id if user.settings else "gtts-ru"
+
     async def on_comment(u: str, text: str):
+        voice_id = get_current_voice_id()
         sanitized_text = _remove_emojis(text)
         # find trigger
         trig = (
@@ -116,7 +121,8 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
                         await websocket.send_text(json.dumps({"type": "viewer_first_message", "user": u, "sound_url": _abs_url(f"/static/sounds/{user.id}/{fn}")}, ensure_ascii=False))
                     break
 
-    async def on_gift(u: str, gift_name: str, count: int, diamonds: int):
+    async def on_gift(u: str, gift_name: str, count: int, diamonds: int = 0):
+        voice_id = get_current_voice_id()
         # trigger by gift name
         trig = (
             db.query(models.Trigger)
