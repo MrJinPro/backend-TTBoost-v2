@@ -126,12 +126,15 @@ class TikTokService:
             @client.on(GiftEvent)
             async def on_gift(event: GiftEvent):
                 """Обработка подарков"""
+                logger.info(f"🎁 GiftEvent получен! event.gift={event.gift}")
                 if not on_gift_callback:
+                    logger.warning("on_gift_callback не установлен")
                     return
                 # Логика: если подарок стриковый — шлём событие только по завершению стрика,
                 # если не стриковый — шлём сразу.
                 streakable = getattr(event.gift, 'streakable', False)
                 streaking = getattr(event.gift, 'streaking', False)
+                logger.info(f"🎁 Gift check: streakable={streakable}, streaking={streaking}")
                 if streakable and streaking:
                     return  # ждём окончания стрика
                 username = event.user.nickname or event.user.unique_id
