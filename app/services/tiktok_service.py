@@ -107,17 +107,6 @@ class TikTokService:
             }
             
             # Регистрируем обработчики событий
-            
-            # УНИВЕРСАЛЬНЫЙ обработчик для отладки - ловит ВСЕ события
-            @client.on("*")
-            async def on_any_event(event):
-                """Ловим ВСЕ события для отладки"""
-                event_type = type(event).__name__
-                # Пропускаем уже обработанные события чтобы не было дублирования в логах
-                known_events = ['CommentEvent', 'LikeEvent', 'ConnectEvent', 'DisconnectEvent']
-                if event_type not in known_events:
-                    logger.info(f"📡 Получено событие: {event_type} | Данные: {event}")
-            
             @client.on(ConnectEvent)
             async def on_connect(event: ConnectEvent):
                 logger.info(f"TikTok Live подключен: {tiktok_username}")
