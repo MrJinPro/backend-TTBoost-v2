@@ -84,14 +84,21 @@ class TikTokService:
                 WebDefaults.tiktok_sign_api_key = self._sign_api_key
                 os.environ.setdefault("SIGN_API_KEY", self._sign_api_key)
                 logger.info(
-                    f"EulerStream SIGN_API_KEY установлен (***{self._sign_api_key[-6:]}), будет использоваться для подписи"
+                    f"🔑 EulerStream SIGN_API_KEY установлен: {self._sign_api_key[:15]}...{self._sign_api_key[-10:]}"
                 )
+                logger.info(f"🔑 Free tier ключ - подарки могут быть недоступны без Premium подписки")
+            else:
+                logger.warning("⚠️ SIGN_API_KEY НЕ УСТАНОВЛЕН! Будет анонимное подключение (только комментарии/лайки)")
+                
             if self._sign_api_url:
                 WebDefaults.tiktok_sign_url = self._sign_api_url
                 os.environ.setdefault("SIGN_API_URL", self._sign_api_url)
-                logger.info(f"Sign server base URL: {self._sign_api_url}")
+                logger.info(f"🌐 Sign server URL: {self._sign_api_url}")
+            else:
+                logger.info(f"🌐 Sign server URL (по умолчанию): {WebDefaults.tiktok_sign_url}")
 
             # Создаем клиент для конкретного стримера (без несуществующих kwargs)
+            logger.info(f"🔧 Создаём TikTok клиент для @{tiktok_username}")
             client: TikTokLiveClient = TikTokLiveClient(unique_id=f"@{tiktok_username}")
             
             # Сохраняем время подключения для фильтрации старых событий
