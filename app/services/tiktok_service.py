@@ -9,7 +9,9 @@ from TikTokLive.events import (
     LikeEvent, 
     ConnectEvent, 
     DisconnectEvent,
-    JoinEvent  # Событие когда зритель заходит в стрим
+    JoinEvent,  # Событие когда зритель заходит в стрим
+    ShareEvent,  # Событие когда кто-то делится стримом
+    RoomUserSeqEvent,  # Счётчик зрителей в реальном времени
 )
 try:
     from TikTokLive.events import FollowEvent  # type: ignore
@@ -105,6 +107,17 @@ class TikTokService:
             }
             
             # Регистрируем обработчики событий
+            
+            # УНИВЕРСАЛЬНЫЙ обработчик для отладки - ловит ВСЕ события
+            @client.on("*")
+            async def on_any_event(event):
+                """Ловим ВСЕ события для отладки"""
+                event_type = type(event).__name__
+                # Пропускаем уже обработанные события чтобы не было дублирования в логах
+                known_events = ['CommentEvent', 'LikeEvent', 'ConnectEvent', 'DisconnectEvent']
+                if event_type not in known_events:
+                    logger.info(f"📡 Получено событие: {event_type} | Данные: {event}")
+            
             @client.on(ConnectEvent)
             async def on_connect(event: ConnectEvent):
                 logger.info(f"TikTok Live подключен: {tiktok_username}")
@@ -190,6 +203,20 @@ class TikTokService:
                         await on_subscribe_callback(username)
                     except Exception as e:
                         logger.error(f"Ошибка в subscribe callback: {e}")
+            
+            # Share Event
+            @client.on(ShareEvent)
+            async def on_share(event: ShareEvent):
+                """Обработка события когда кто-то делится стримом"""
+                username = getattr(event.user, 'nickname', None) or getattr(event.user, 'unique_id', 'Unknown')
+                logger.info(f"📤 TikTok Share: {username} поделился стримом")
+            
+            # RoomUserSeqEvent - Счётчик зрителей
+            @client.on(RoomUserSeqEvent)
+            async def on_room_user_seq(event: RoomUserSeqEvent):
+                """Обработка счётчика зрителей"""
+                viewer_count = getattr(event, 'viewer_count', 0) or getattr(event, 'total', 0)
+                logger.info(f"👥 Зрителей в стриме: {viewer_count}")
             
             @client.on(DisconnectEvent)
             async def on_disconnect(event: DisconnectEvent):
