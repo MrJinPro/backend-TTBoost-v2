@@ -13,6 +13,12 @@ from TikTokLive.events import (
     ShareEvent,  # Событие когда кто-то делится стримом
     RoomUserSeqEvent,  # Счётчик зрителей в реальном времени
 )
+# Импорт для работы с RAW protobuf событиями
+try:
+    from TikTokLive.proto import WebcastResponse, WebcastPushFrame
+except ImportError:
+    WebcastResponse = None
+    WebcastPushFrame = None
 try:
     from TikTokLive.events import FollowEvent  # type: ignore
 except Exception:  # pragma: no cover
@@ -101,6 +107,12 @@ class TikTokService:
             logger.info(f"🔧 Создаём TikTok клиент для @{tiktok_username}")
             client: TikTokLiveClient = TikTokLiveClient(unique_id=f"@{tiktok_username}")
             
+            # ВКЛЮЧАЕМ DEBUG РЕЖИМ БИБЛИОТЕКИ чтобы видеть ВСЕ raw события
+            import logging as stdlib_logging
+            stdlib_logging.basicConfig(level=stdlib_logging.DEBUG)
+            client.logger.setLevel(stdlib_logging.DEBUG)
+            logger.info("🐛 DEBUG режим TikTokLive включён - будут видны все raw события")
+            
             # Сохраняем время подключения для фильтрации старых событий
             connection_time = datetime.now()
             self._connection_times[user_id] = connection_time
@@ -114,6 +126,18 @@ class TikTokService:
             }
             
             # Регистрируем обработчики событий
+            
+            # RAW WebSocket handler - ловим ВСЕ сообщения на низком уровне
+            if WebcastPushFrame is not None:
+                @client.on("raw")
+                async def on_raw_message(frame):
+                    """Обработка RAW WebSocket фреймов"""
+                    try:
+                        if hasattr(frame, 'payload_type'):
+                            logger.debug(f"🔍 RAW Frame: type={frame.payload_type}, size={len(frame.payload) if hasattr(frame, 'payload') else 0} bytes")
+                    except Exception as e:
+                        logger.debug(f"🔍 RAW Frame error: {e}")
+            
             @client.on(ConnectEvent)
             async def on_connect(event: ConnectEvent):
                 logger.info(f"TikTok Live подключен: {tiktok_username}")
