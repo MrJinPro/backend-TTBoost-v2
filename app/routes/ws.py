@@ -5,6 +5,7 @@ from app.services.tts_service import generate_tts
 from app.services.tiktok_service import tiktok_service
 from app.services.profile_service import get_or_create_profile, get_gift_sound, get_viewer_sound
 from app.services.triggers_service import find_applicable_trigger
+from app.services.profile_service import get_or_create_profile
 from TikTokLive.client.errors import SignatureRateLimitError, SignAPIError, PremiumEndpointError
 import asyncio
 import json
@@ -143,10 +144,21 @@ async def ws_endpoint(websocket: WebSocket, ws_token: str):
     async def on_gift(user: str, gift_id: str, gift_name: str, count: int, diamonds: int):
         """Обработка подарка - использует кастомный звук если настроен"""
         try:
-            sound_url: str
+            sound_url: str | None = None
+            tts_url: str | None = None
 
-            # 1) Сначала проверяем триггеры
-            trig = await find_applicable_trigger(user_id, event_type="gift", condition_key="gift_name", condition_value=gift_name)
+            # Загружаем профиль для настроек (в частности gift_tts_alongside)
+            profile = await get_or_create_profile(user_id)
+            gift_tts_alongside = getattr(profile, 'gift_tts_alongside', False)
+
+            # 1) Сначала проверяем триггеры (расширенный поиск с gift_id)
+            # Передаем gift_id (int) если возможно
+            try_gift_id = None
+            try:
+                try_gift_id = int(gift_id)
+            except Exception:
+                try_gift_id = None
+            trig = await find_applicable_trigger(user_id, event_type="gift", condition_key="gift_name", condition_value=gift_name, gift_id=try_gift_id)
             if trig and trig.enabled and trig.action and trig.action.type == "play_sound" and trig.action.sound_file:
                 sound_url = f"/static/sounds/{user_id}/{trig.action.sound_file}"
                 logger.info(f"Триггер сработал для подарка {gift_name}: {sound_url}")
@@ -159,17 +171,26 @@ async def ws_endpoint(websocket: WebSocket, ws_token: str):
                 else:
                     # 3) Fallback: TTS
                     sound_text = f"{_remove_emojis(user)} отправил подарок {_remove_emojis(gift_name)}, количество {count}"
-                    sound_url = await generate_tts(sound_text, voice_id)
+                    tts_url = await generate_tts(sound_text, voice_id)
+                    sound_url = tts_url  # если нет кастомного звука, TTS используется как основной
+
+            # Если включена опция одновременного озвучивания и у нас есть отдельный звук триггера/кастомный
+            if gift_tts_alongside and sound_url and (tts_url is None):
+                # Генерируем параллельно голосовое описание, даже если триггер уже дал звук
+                tts_text = f"{_remove_emojis(user)} отправил {_remove_emojis(gift_name)} x{count}"
+                tts_url = await generate_tts(tts_text, voice_id)
             
             payload = {
                 "type": "gift",
                 "gift_name": gift_name,
                 "count": count,
-                "sound_url": _abs_url(sound_url),
+                "sound_url": _abs_url(sound_url) if sound_url else None,
                 "user": user,
                 "diamonds": diamonds,
                 "gift_id": gift_id,
             }
+            if tts_url:
+                payload["tts_url"] = _abs_url(tts_url)
             await websocket.send_text(json.dumps(payload, ensure_ascii=False))
             logger.info(f"TikTok подарок: {user} {gift_name} x{count}")
         except Exception as e:

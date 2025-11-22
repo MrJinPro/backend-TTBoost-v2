@@ -11,6 +11,7 @@ from app.services.profile_service import (
     set_viewer_sound,
     remove_viewer_sound,
     list_user_sounds,
+    update_profile,
 )
 from app.models.profile import (
     SetGiftSoundRequest,
@@ -35,6 +36,10 @@ class DeleteGiftSoundRequest(BaseModel):
 class DeleteViewerSoundRequest(BaseModel):
     ws_token: str
     viewer_username: str
+
+class SetGiftTTSAlongsideRequest(BaseModel):
+    ws_token: str
+    enabled: bool
 
 
 @router.post("/get", response_model=ProfileResponse)
@@ -135,3 +140,13 @@ async def list_profile_sounds(ws_token: str):
     sounds = await list_user_sounds(user_id)
     
     return sounds
+
+@router.post("/gift-tts-alongside/set")
+async def set_gift_tts_alongside(req: SetGiftTTSAlongsideRequest):
+    """Включить/выключить озвучку подарков (TTS) вместе с кастомным звуком/триггером."""
+    user_data = await verify_ws_token(req.ws_token)
+    if not user_data:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    user_id = user_data.get("user_id")
+    profile = await update_profile(user_id, gift_tts_alongside=req.enabled)
+    return {"status": "ok", "gift_tts_alongside": profile.gift_tts_alongside}

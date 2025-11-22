@@ -36,6 +36,8 @@ class UserProfile(BaseModel):
     gifts_enabled: bool = True
     gifts_volume: float = 1.0
     gift_sounds: Dict[str, GiftSound] = {}  # gift_name -> GiftSound
+    # Воспроизводить ли озвучку (TTS) вместе с триггер/кастомным звуком подарка
+    gift_tts_alongside: bool = False  # если True: и звук триггера, и голосовое описание; если False: только звук/фолбэк
     
     # Зрители
     viewer_sounds: Dict[str, ViewerSound] = {}  # viewer_username -> ViewerSound

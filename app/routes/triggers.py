@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from app.services.license_service import verify_ws_token
 from app.models.triggers import SetTriggerRequest, DeleteTriggerRequest, TriggersResponse, Trigger, TriggersMetaResponse
+from app.services.gift_catalog import get_gift_id_by_name
 from app.services.triggers_service import add_or_update_trigger, delete_trigger, list_triggers
 
 router = APIRouter()
@@ -15,10 +16,16 @@ async def set_trigger(req: SetTriggerRequest):
     # Политика: для чата (event_type='chat') разрешён только action.type='tts'
     if req.event_type == 'chat' and req.action.type == 'play_sound':
         raise HTTPException(status_code=400, detail='Chat supports only TTS action')
+    gift_id = None
+    if req.event_type == 'gift':
+        # Автоподтягивание gift_id если задано по имени
+        if req.condition_key == 'gift_name' and req.condition_value:
+            gift_id = get_gift_id_by_name(req.condition_value)
     trigger = Trigger(
         event_type=req.event_type,
         condition_key=req.condition_key,
         condition_value=req.condition_value,
+        gift_id=gift_id,
         action=req.action,
         enabled=req.enabled,
         priority=req.priority,

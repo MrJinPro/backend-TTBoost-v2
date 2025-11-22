@@ -30,6 +30,9 @@ def _load_user_triggers(user_id: str) -> List[Trigger]:
             if isinstance(raw, list):
                 for obj in raw:
                     try:
+                        # Совместимость: старые записи без gift_id
+                        if 'gift_id' not in obj:
+                            obj['gift_id'] = None
                         items.append(Trigger(**obj))
                     except Exception:
                         continue
@@ -80,7 +83,7 @@ async def delete_trigger(user_id: str, event_type: str, condition_key: Optional[
     return False
 
 
-async def find_applicable_trigger(user_id: str, event_type: str, condition_key: Optional[str], condition_value: Optional[str]) -> Optional[Trigger]:
+async def find_applicable_trigger(user_id: str, event_type: str, condition_key: Optional[str], condition_value: Optional[str], gift_id: Optional[int] = None) -> Optional[Trigger]:
     items = [t for t in TRIGGERS.get(user_id, []) if t.enabled and t.event_type == event_type]
     if not items:
         return None
@@ -91,7 +94,17 @@ async def find_applicable_trigger(user_id: str, event_type: str, condition_key: 
         if not t.condition_key:
             matched.append(t)
             continue
-        # Стандартное точное совпадение
+        # Gift расширения: поддержка gift_name case-insensitive и gift_id
+        if event_type == 'gift':
+            # gift_id приоритетнее если у триггера он есть
+            if t.gift_id is not None and gift_id is not None and t.gift_id == gift_id:
+                matched.append(t)
+                continue
+            if t.condition_key == 'gift_name' and condition_key == 'gift_name':
+                if (t.condition_value or '').lower() == (condition_value or '').lower():
+                    matched.append(t)
+                    continue
+        # Стандартное точное совпадение (для остальных типов)
         if t.condition_key == condition_key and t.condition_value == condition_value:
             matched.append(t)
             continue

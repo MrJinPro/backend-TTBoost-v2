@@ -12,6 +12,7 @@ class Trigger(BaseModel):
     event_type: str  # 'gift' | 'viewer_join' | 'follow' | 'subscribe' | 'chat'
     condition_key: Optional[str] = None  # e.g. 'gift_name' | 'username' | 'message_contains'
     condition_value: Optional[str] = None
+    gift_id: Optional[int] = None  # Для event_type='gift' автоматическое сопоставление ID из каталога
     action: TriggerAction
     enabled: bool = True
     priority: int = 0  # больший priority выигрывает при множестве совпадений
@@ -22,6 +23,7 @@ class SetTriggerRequest(BaseModel):
     event_type: str
     condition_key: Optional[str] = None
     condition_value: Optional[str] = None
+    gift_id: Optional[int] = None
     action: TriggerAction
     enabled: bool = True
     priority: int = 0
