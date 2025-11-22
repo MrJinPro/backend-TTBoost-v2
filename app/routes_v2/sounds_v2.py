@@ -1,6 +1,7 @@
 import os
 from fastapi import APIRouter, Depends, UploadFile, File, HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 from pydantic import BaseModel
 from mutagen import File as MutagenFile
 
@@ -67,7 +68,15 @@ async def upload_sound(user: models.User = Depends(get_current_user), db: Sessio
     url = f"{_media_base_url()}/static/sounds/{user.id}/{safe_name}"
     rec = models.SoundFile(user_id=user.id, filename=safe_name, url=url, bytes=len(content), duration_ms=int(duration_sec*1000) if duration_sec else None, kind=models.SoundType.uploaded)
     db.add(rec)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        # Откатим транзакцию и вернём 409 с данными существующей записи
+        db.rollback()
+        existing = db.query(models.SoundFile).filter(models.SoundFile.user_id == user.id, models.SoundFile.filename == safe_name).first()
+        if existing:
+            return {"status": "exists", "filename": existing.filename, "url": existing.url}
+        raise HTTPException(409, detail="duplicate sound filename")
     return {"status": "ok", "filename": safe_name, "url": url}
 
 

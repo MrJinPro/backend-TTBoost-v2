@@ -163,8 +163,15 @@ async def status():
     # TikTok clients info
     try:
         clients_cnt = len(getattr(tiktok_service, '_clients', {}))
+        # Добавим максимальный лаг по подаркам для диагностики (в секундах)
+        gift_lags = []
+        from datetime import datetime as _dt
+        for uid, last_evt in getattr(tiktok_service, '_last_gift_event', {}).items():
+            gift_lags.append((_dt.utcnow() - last_evt).total_seconds())
+        max_gift_lag_sec = max(gift_lags) if gift_lags else None
     except Exception:
         clients_cnt = 0
+        max_gift_lag_sec = None
     uptime_sec = (datetime.utcnow() - START_TIME).total_seconds()
     return {
         "status": "ok" if db_ok else "degraded",
@@ -177,7 +184,13 @@ async def status():
         "tiktok_clients": clients_cnt,
         "allowed_origins": allowed_origins,
         "allow_localhost_dev": os.getenv("ALLOW_LOCALHOST_DEV", "1"),
+        "max_gift_event_lag_sec": int(max_gift_lag_sec) if max_gift_lag_sec is not None else None,
     }
+
+@app.get("/health")
+async def health():
+    """Алиас /health для внешних мониторингов (HEAD/GET). Возвращает тот же JSON что /status."""
+    return await status()
 
 def _tail_log(path: str, lines: int) -> list[str]:
     try:

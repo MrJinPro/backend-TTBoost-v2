@@ -42,20 +42,23 @@ class TikTokService:
     """Сервис для управления подключениями к TikTok Live"""
     
     def __init__(self):
-        self._clients: Dict[str, TikTokLiveClient] = {}
-        self._callbacks: Dict[str, dict] = {}
-        self._connection_times: Dict[str, datetime] = {}  # Время подключения для фильтрации старых событий
-        self._last_activity: Dict[str, datetime] = {}
-        self._watchdogs: Dict[str, asyncio.Task] = {}
-        self._usernames: Dict[str, str] = {}
-        # Хранение метрик зрителей (текущие онлайн и накопительные всего посетившие)
-        self._viewer_current: Dict[str, int] = {}
-        self._viewer_total: Dict[str, int] = {}
-    # Анти-дублирование подарков: для каждого пользователя хранится (username+gift_id) -> (last_count, last_timestamp)
-    self._recent_gifts: Dict[str, Dict[str, tuple[int, datetime]]] = {}
+        # Словари состояния клиентов и колбэков
+        self._clients = {}            # type: Dict[str, TikTokLiveClient]
+        self._callbacks = {}          # type: Dict[str, dict]
+        self._connection_times = {}   # type: Dict[str, datetime]
+        self._last_activity = {}      # type: Dict[str, datetime]
+        self._watchdogs = {}          # type: Dict[str, asyncio.Task]
+        self._usernames = {}          # type: Dict[str, str]
+        # Метрики зрителей
+        self._viewer_current = {}     # type: Dict[str, int]
+        self._viewer_total = {}       # type: Dict[str, int]
+        # Анти-дублирование подарков: (username+gift_id) -> (last_count, last_timestamp)
+        self._recent_gifts = {}       # type: Dict[str, Dict[str, tuple[int, datetime]]]
+    # Время последнего успешно полученного GiftEvent на клиента
+    self._last_gift_event = {}     # type: Dict[str, datetime]
 
-        self._sign_api_key: Optional[str] = os.getenv("SIGN_API_KEY")
-        self._sign_api_url: Optional[str] = os.getenv("SIGN_API_URL")
+        self._sign_api_key = os.getenv("SIGN_API_KEY")   # type: Optional[str]
+        self._sign_api_url = os.getenv("SIGN_API_URL")   # type: Optional[str]
 
         if not self._sign_api_url:
             legacy = os.getenv("SIGN_SERVER_URL")
@@ -110,6 +113,23 @@ class TikTokService:
                 logger.info(f"🌐 Sign server URL: {self._sign_api_url}")
             else:
                 logger.info(f"🌐 Sign server URL (по умолчанию): {WebDefaults.tiktok_sign_url}")
+
+            # ===== Дополнительная авторизация через куки (для получения Gift / расширенного потока) =====
+            # Ожидаемый формат: TIKTOK_COOKIES="sessionid=xxxx; ttwid=yyyy; passport_csrf_token=zzz"
+            cookies_env = os.getenv("TIKTOK_COOKIES")
+            if cookies_env:
+                try:
+                    # В библиотеке нет публичного API для куки, но многие версии читают request_headers
+                    # Добавляем/обновляем заголовок Cookie на уровне WebDefaults.
+                    base_headers = getattr(WebDefaults, "request_headers", {}) or {}
+                    # Не перетираем другие заголовки (например User-Agent)
+                    base_headers["Cookie"] = cookies_env.strip()
+                    WebDefaults.request_headers = base_headers
+                    logger.info("🍪 TikTok cookies добавлены в WebDefaults (Cookie заголовок установлен)")
+                except Exception as e:
+                    logger.warning(f"Не удалось применить куки из TIKTOK_COOKIES: {e}")
+            else:
+                logger.info("🍪 TIKTOK_COOKIES не заданы (анонимное подключение может не получать подарки)")
 
             # Создаем клиент для конкретного стримера (без несуществующих kwargs)
             logger.info(f"🔧 Создаём TikTok клиент для @{tiktok_username}")
@@ -197,6 +217,9 @@ class TikTokService:
                             logger.debug(f"📦 RAW Frame decoded: types={type_counts}")
                         if gift_messages:
                             logger.info(f"🎁 Обнаружены Gift-сообщения в RAW кадре: count={gift_messages}")
+                            last_evt = self._last_gift_event.get(user_id)
+                            if not last_evt or (datetime.now() - last_evt).total_seconds() > 10:
+                                logger.warning("🎁 RAW содержит подарки, но GiftEvent не поступал >10s — возможно ограничение бесплатного ключа/отсутствие нужных cookies")
                     except Exception as e:
                         logger.debug(f"🔍 RAW Frame decode error: {e}")
             
@@ -238,26 +261,31 @@ class TikTokService:
                 count = getattr(gift_obj, 'count', None) or getattr(event, 'repeat_count', None) or 1
                 diamond_unit = getattr(gift_obj, 'diamond_count', 0) or getattr(gift_obj, 'diamond', 0)
                 diamonds = diamond_unit * count
-                # Анти-дубль логика
+                # Анти-дубль логика (можно отключить для диагностики через ENV DISABLE_GIFT_DEDUP=1)
+                disable_dedup = os.getenv("DISABLE_GIFT_DEDUP") == "1"
                 now = datetime.now()
                 gift_map = self._recent_gifts.setdefault(user_id, {})
                 signature = f"{username}:{gift_id}"
                 prev = gift_map.get(signature)
                 streakable = getattr(gift_obj, 'streakable', False)
                 streaking = getattr(gift_obj, 'streaking', False)
-                # Если стриковый подарок в процессе streaking и число не изменилось — пропускаем
-                if streakable and streaking and prev and prev[0] == count:
-                    logger.debug(f"↺ Пропуск стрикового повторяющегося кадра подарка {signature} count={count}")
-                    return
-                # Если точный дубль (тот же count) приходит слишком быстро (<3s) — пропускаем
-                if prev and prev[0] == count and (now - prev[1]).total_seconds() < 3:
-                    logger.debug(f"⏱️ Пропуск дубликата подарка {signature} count={count} delta={(now - prev[1]).total_seconds():.2f}s")
-                    return
+                if disable_dedup:
+                    logger.debug("🚫 Gift dedup отключён (DISABLE_GIFT_DEDUP=1) – отправляем каждое событие")
+                else:
+                    # Если стриковый подарок в процессе streaking и число не изменилось — пропускаем
+                    if streakable and streaking and prev and prev[0] == count:
+                        logger.debug(f"↺ Пропуск стрикового повторяющегося кадра подарка {signature} count={count}")
+                        return
+                    # Если точный дубль (тот же count) приходит слишком быстро (<3s) — пропускаем
+                    if prev and prev[0] == count and (now - prev[1]).total_seconds() < 3:
+                        logger.debug(f"⏱️ Пропуск дубликата подарка {signature} count={count} delta={(now - prev[1]).total_seconds():.2f}s")
+                        return
                 # Обновляем запись
                 gift_map[signature] = (count, now)
                 logger.info(
                     f"TikTok подарок от {username}: {gift_name} (ID: {gift_id}) x{count} (единица {diamond_unit}, всего {diamonds} алмазов)"
                 )
+                self._last_gift_event[user_id] = now
                 self._last_activity[user_id] = datetime.now()
                 try:
                     await on_gift_callback(username, gift_id, gift_name, count, diamonds)
