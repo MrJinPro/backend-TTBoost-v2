@@ -40,38 +40,24 @@ logger = logging.getLogger(__name__)
 
 class TikTokService:
     """Сервис для управления подключениями к TikTok Live"""
-    # Объявляем типы атрибутов на уровне класса для статического анализа
-    _clients: Dict[str, TikTokLiveClient]
-    _callbacks: Dict[str, dict]
-    _connection_times: Dict[str, datetime]
-    _last_activity: Dict[str, datetime]
-    _watchdogs: Dict[str, asyncio.Task]
-    _usernames: Dict[str, str]
-    _viewer_current: Dict[str, int]
-    _viewer_total: Dict[str, int]
-    _recent_gifts: Dict[str, Dict[str, tuple[int, datetime]]]
-    _last_gift_event: Dict[str, datetime]
-    _sign_api_key: Optional[str]
-    _sign_api_url: Optional[str]
-    
     def __init__(self):
         # Словари состояния клиентов и колбэков
-    self._clients = {}
-    self._callbacks = {}
-    self._connection_times = {}
-    self._last_activity = {}
-    self._watchdogs = {}
-    self._usernames = {}
+        self._clients = {}
+        self._callbacks = {}
+        self._connection_times = {}
+        self._last_activity = {}
+        self._watchdogs = {}
+        self._usernames = {}
         # Метрики зрителей
-    self._viewer_current = {}
-    self._viewer_total = {}
+        self._viewer_current = {}
+        self._viewer_total = {}
         # Анти-дублирование подарков: (username+gift_id) -> (last_count, last_timestamp)
-    self._recent_gifts = {}
+        self._recent_gifts = {}
         # Время последнего успешно полученного GiftEvent на клиента
-    self._last_gift_event = {}
+        self._last_gift_event = {}
 
-    self._sign_api_key = os.getenv("SIGN_API_KEY")
-    self._sign_api_url = os.getenv("SIGN_API_URL")
+        self._sign_api_key = os.getenv("SIGN_API_KEY")
+        self._sign_api_url = os.getenv("SIGN_API_URL")
 
         if not self._sign_api_url:
             legacy = os.getenv("SIGN_SERVER_URL")
