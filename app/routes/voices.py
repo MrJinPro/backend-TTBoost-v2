@@ -9,8 +9,11 @@ router = APIRouter()
 class Voice(BaseModel):
     id: str
     name: str
-    lang: str
+    lang: str | None = None
     engine: str
+    voice: str | None = None  # внутреннее имя для openai
+    unavailable: bool | None = None  # если движок недоступен (нет ключа)
+    slow: bool | None = None  # флаг для медленных вариантов gTTS
 
 
 class VoicesResponse(BaseModel):
@@ -27,9 +30,11 @@ class GenerateSampleResponse(BaseModel):
 
 
 @router.get("/voices", response_model=VoicesResponse)
+@router.get("/", response_model=VoicesResponse)
 async def get_voices():
-    """Получить список всех доступных голосов"""
+    """Получить список всех доступных голосов (дублируем /voices и / для совместимости с фронтом)."""
     voices = get_all_voices()
+    # Приводим к расширенной модели, сохраняя дополнительные поля если есть
     return VoicesResponse(voices=[Voice(**v) for v in voices])
 
 
