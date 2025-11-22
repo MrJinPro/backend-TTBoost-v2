@@ -12,7 +12,12 @@ from app.routes import auth, tts, ws, voices, sounds, profile, catalog, triggers
 from app.db.database import init_db
 from app.routes_v2 import auth_v2, settings_v2, sounds_v2, triggers_v2, ws_v2, license_v2, voices_v2, gifts_v2
 
+from datetime import datetime
+from sqlalchemy import text
+from app.services.tiktok_service import tiktok_service
+
 app = FastAPI(title="TTBoost Backend", version="0.1.0")
+START_TIME = datetime.utcnow()
 
 ALLOWED_ORIGINS_ENV = os.getenv("ALLOWED_ORIGINS")
 ALLOW_LOCALHOST_DEV = os.getenv("ALLOW_LOCALHOST_DEV", "1")  # если 1, то любые http://localhost:<port> и http://127.0.0.1:<port>
@@ -123,4 +128,36 @@ async def root():
         "env": os.getenv("ENV", "dev"),
         "server_host": os.getenv("SERVER_HOST"),
         "tts_base_url": os.getenv("TTS_BASE_URL"),
+    }
+
+@app.get("/status")
+async def status():
+    """Расширенный health-эндпойнт для фронта и мониторинга."""
+    # DB ping
+    db_ok = True
+    db_error = None
+    try:
+        from app.db.database import engine
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+    except Exception as e:  # pragma: no cover
+        db_ok = False
+        db_error = str(e)
+    # TikTok clients info
+    try:
+        clients_cnt = len(getattr(tiktok_service, '_clients', {}))
+    except Exception:
+        clients_cnt = 0
+    uptime_sec = (datetime.utcnow() - START_TIME).total_seconds()
+    return {
+        "status": "ok" if db_ok else "degraded",
+        "service": "ttboost-backend",
+        "version": app.version,
+        "env": os.getenv("ENV", "dev"),
+        "uptime_sec": int(uptime_sec),
+        "db_ok": db_ok,
+        "db_error": db_error,
+        "tiktok_clients": clients_cnt,
+        "allowed_origins": allowed_origins,
+        "allow_localhost_dev": os.getenv("ALLOW_LOCALHOST_DEV", "1"),
     }
