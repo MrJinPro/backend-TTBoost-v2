@@ -1,7 +1,9 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 import os
+import logging
+from logging.handlers import RotatingFileHandler
 from dotenv import load_dotenv
 
 # Важно: загружаем .env до импорта роутов, чтобы переменные окружения
@@ -43,6 +45,21 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"]
 )
+
+# ==== ЛОГИРОВАНИЕ С РОТАЦИЕЙ =====
+LOG_DIR = os.path.join(os.path.dirname(__file__), "logs")
+os.makedirs(LOG_DIR, exist_ok=True)
+LOG_FILE = os.getenv("BACKEND_LOG_FILE", os.path.join(LOG_DIR, "backend.log"))
+_log_handler_exists = any(isinstance(h, RotatingFileHandler) for h in logging.getLogger().handlers)
+if not _log_handler_exists:
+    file_handler = RotatingFileHandler(LOG_FILE, maxBytes=2_000_000, backupCount=3, encoding="utf-8")
+    formatter = logging.Formatter(fmt="%(asctime)s [%(levelname)s] %(name)s: %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
+    file_handler.setFormatter(formatter)
+    logging.getLogger().addHandler(file_handler)
+    logging.getLogger().setLevel(logging.INFO)
+    logging.getLogger(__name__).info(f"Файловый лог активирован: {LOG_FILE}")
+
+ALLOW_LOGS = os.getenv("ALLOW_LOGS", "0")  # Если 1, разрешаем /logs
 
 @app.middleware("http")
 async def dynamic_origin(request: Request, call_next):
@@ -160,4 +177,28 @@ async def status():
         "tiktok_clients": clients_cnt,
         "allowed_origins": allowed_origins,
         "allow_localhost_dev": os.getenv("ALLOW_LOCALHOST_DEV", "1"),
+    }
+
+def _tail_log(path: str, lines: int) -> list[str]:
+    try:
+        with open(path, "r", encoding="utf-8", errors="ignore") as f:
+            data = f.readlines()
+        return data[-lines:]
+    except FileNotFoundError:
+        return ["<log file not found>"]
+
+@app.get("/logs")
+async def logs(lines: int = 200):
+    """Возвращает последние N строк логов. Требует ALLOW_LOGS=1. Для прод осторожно."""
+    if ALLOW_LOGS != "1":
+        raise HTTPException(status_code=403, detail="/logs disabled")
+    if lines <= 0:
+        raise HTTPException(status_code=400, detail="lines must be > 0")
+    if lines > 2000:
+        lines = 2000  # ограничение во избежание больших ответов
+    content = _tail_log(LOG_FILE, lines)
+    return {
+        "file": LOG_FILE,
+        "lines": lines,
+        "content": content,
     }
