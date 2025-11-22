@@ -127,6 +127,19 @@ app.include_router(ws.router, tags=["ws"])
 
 # v2 API (логин/пароль, Bearer JWT, хранение в БД)
 init_db()
+# Простая попытка авто-ALTER для добавления gift_tts_alongside, если столбца нет
+try:
+    from sqlalchemy import inspect, text as sql_text
+    from app.db.database import engine
+    insp = inspect(engine)
+    cols = [c['name'] for c in insp.get_columns('user_settings')]
+    if 'gift_tts_alongside' not in cols:
+        with engine.connect() as conn:
+            conn.execute(sql_text('ALTER TABLE user_settings ADD COLUMN gift_tts_alongside BOOLEAN DEFAULT FALSE'))
+            conn.commit()
+        print('[DB] Added column user_settings.gift_tts_alongside')
+except Exception as e:  # pragma: no cover
+    print(f'[DB] Column check/add failed: {e}')
 app.include_router(auth_v2.router, prefix="/v2/auth", tags=["v2-auth"])
 app.include_router(settings_v2.router, prefix="/v2/settings", tags=["v2-settings"])
 app.include_router(sounds_v2.router, prefix="/v2/sounds", tags=["v2-sounds"])

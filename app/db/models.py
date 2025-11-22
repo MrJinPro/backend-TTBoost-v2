@@ -31,6 +31,7 @@ class UserSettings(Base):
     gift_sounds_enabled = Column(Boolean, default=True)
     tts_volume = Column(Integer, default=100)
     gifts_volume = Column(Integer, default=100)
+    gift_tts_alongside = Column(Boolean, default=False)  # озвучивать TTS вместе со звуком подарка
 
     user = relationship("User", back_populates="settings")
 
