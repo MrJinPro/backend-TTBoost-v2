@@ -1,26 +1,32 @@
 """
 Универсальный TTS сервис с поддержкой нескольких движков
-Поддерживает: gTTS (Google), Edge-TTS (Microsoft)
+Поддерживает: gTTS (Google), Edge-TTS (Microsoft), OpenAI TTS (модели *-tts)
 """
 import os
+import logging
+import asyncio
+from datetime import datetime
+from enum import Enum
+from typing import Optional, Dict
 from gtts import gTTS
 import edge_tts
-import logging
-from datetime import datetime
-import asyncio
-from enum import Enum
+try:  # pragma: no cover
+    from openai import OpenAI  # openai>=1.0.0
+except Exception:  # pragma: no cover
+    OpenAI = None  # type: ignore
 
 logger = logging.getLogger(__name__)
 
 
 class TTSEngine(str, Enum):
     """Доступные TTS движки"""
-    GTTS = "gtts"  # Google TTS
-    EDGE = "edge"  # Microsoft Edge TTS
+    GTTS = "gtts"      # Google TTS
+    EDGE = "edge"      # Microsoft Edge TTS
+    OPENAI = "openai"  # OpenAI TTS (gpt-4o-mini-tts и др.)
 
 
 # Список доступных голосов для каждого движка
-AVAILABLE_VOICES = {
+AVAILABLE_VOICES: Dict[str, list[dict]] = {
     "gtts": [
         {"id": "gtts-ru", "name": "Google Русский (женский)", "lang": "ru", "engine": "gtts"},
         {"id": "gtts-ru-slow", "name": "Google Русский медленный (женский)", "lang": "ru", "engine": "gtts", "slow": True},
@@ -31,7 +37,12 @@ AVAILABLE_VOICES = {
         {"id": "ru-RU-DariyaNeural", "name": "Microsoft Dariya (женский, нейронный)", "lang": "ru-RU", "engine": "edge"},
         {"id": "ru-RU-DmitryNeural", "name": "Microsoft Dmitry (мужской, нейронный)", "lang": "ru-RU", "engine": "edge"},
         {"id": "en-US-JennyNeural", "name": "Microsoft Jenny (female, neural)", "lang": "en-US", "engine": "edge"},
-    ]
+    ],
+    "openai": [
+        {"id": "openai-alloy", "name": "OpenAI Alloy", "voice": "alloy", "engine": "openai"},
+        {"id": "openai-coral", "name": "OpenAI Coral", "voice": "coral", "engine": "openai"},
+        {"id": "openai-verse", "name": "OpenAI Verse", "voice": "verse", "engine": "openai"},
+    ],
 }
 
 
@@ -76,6 +87,8 @@ async def generate_tts(text: str, voice_id: str = "gtts-ru", user_id: str = None
         result = await _generate_gtts(text, voice_info, user_id)
     elif engine == "edge":
         result = await _generate_edge(text, voice_info, user_id)
+    elif engine == "openai":
+        result = await _generate_openai(text, voice_info, user_id)
     else:
         logger.error(f"Неизвестный движок: {engine}")
         result = ""
@@ -166,5 +179,55 @@ async def _generate_edge(text: str, voice_info: dict, user_id: str = None) -> st
     except Exception as e:
         print(f"❌ Edge TTS ошибка: {e}")
         logger.error(f"Ошибка Edge TTS: {e}")
+        return ""
+
+
+async def _generate_openai(text: str, voice_info: dict, user_id: str = None) -> str:
+    """Генерация через OpenAI TTS (модель *_tts). Возвращает URL или пустую строку."""
+    if OpenAI is None:
+        logger.warning("OpenAI SDK не установлен - openai tts недоступен")
+        return ""
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        logger.warning("OPENAI_API_KEY не задан - openai tts пропущен")
+        return ""
+    model = os.getenv("OPENAI_TTS_MODEL", "gpt-4o-mini-tts")
+    voice = voice_info.get("voice", "alloy")
+
+    # Директория
+    media_root = os.getenv("MEDIA_ROOT", "/opt/ttboost/static")
+    if user_id:
+        tts_dir = os.path.join(media_root, "tts", user_id)
+        url_path = f"static/tts/{user_id}"
+    else:
+        tts_dir = os.path.join(media_root, "tts")
+        url_path = "static/tts"
+    os.makedirs(tts_dir, exist_ok=True)
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S_%f')
+    filename = f"tts_{timestamp}.mp3"
+    file_path = os.path.join(tts_dir, filename)
+
+    try:
+        client = OpenAI(api_key=api_key)
+        # Новый SDK метод audio.speech.create
+        resp = await asyncio.to_thread(
+            lambda: client.audio.speech.create(
+                model=model,
+                voice=voice,
+                input=text,
+            )
+        )
+        audio_bytes = resp.read() if hasattr(resp, 'read') else getattr(resp, 'audio', None)
+        if not audio_bytes:
+            logger.error("OpenAI TTS не вернул аудио")
+            return ""
+        with open(file_path, "wb") as f:
+            f.write(audio_bytes)
+        base_url = os.getenv("TTS_BASE_URL", "https://media.ttboost.pro")
+        url = f"{base_url.rstrip('/')}/{url_path}/{filename}"
+        logger.info(f"OpenAI TTS создан: {file_path} (voice={voice}, model={model})")
+        return url
+    except Exception as e:  # pragma: no cover
+        logger.error(f"Ошибка OpenAI TTS: {e}")
         return ""
 

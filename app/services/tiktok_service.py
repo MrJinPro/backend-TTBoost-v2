@@ -55,6 +55,8 @@ class TikTokService:
         self._recent_gifts = {}
         # Время последнего успешно полученного GiftEvent на клиента
         self._last_gift_event = {}
+        # Сигнатура последнего отправленного подарка (для дополнительного анти-дублирования)
+        self._last_gift_signature = {}  # type: Dict[str, tuple[str, datetime]]  # user_id -> (signature, ts)
 
         self._sign_api_key = os.getenv("SIGN_API_KEY")
         self._sign_api_url = os.getenv("SIGN_API_URL")
@@ -262,15 +264,24 @@ class TikTokService:
                 diamonds = diamond_unit * count
                 # Анти-дубль логика (можно отключить для диагностики через ENV DISABLE_GIFT_DEDUP=1)
                 disable_dedup = os.getenv("DISABLE_GIFT_DEDUP") == "1"
+                # Дополнительный тайм-аут по сигнатуре (ENV GIFT_DEDUP_DELTA_SEC, по умолчанию 5)
+                dedup_delta_sec = float(os.getenv("GIFT_DEDUP_DELTA_SEC", "5"))
                 now = datetime.now()
                 gift_map = self._recent_gifts.setdefault(user_id, {})
                 signature = f"{username}:{gift_id}"
                 prev = gift_map.get(signature)
                 streakable = getattr(gift_obj, 'streakable', False)
                 streaking = getattr(gift_obj, 'streaking', False)
+                # Сигнатура с деталями для более строгого дублирования
+                full_signature = f"{username}:{gift_id}:{count}:{diamond_unit}:{diamonds}"
+                last_sig = self._last_gift_signature.get(user_id)
                 if disable_dedup:
                     logger.debug("🚫 Gift dedup отключён (DISABLE_GIFT_DEDUP=1) – отправляем каждое событие")
                 else:
+                    # Если последний отправленный подарок идентичен и прошел недостаточный интервал — пропускаем
+                    if last_sig and last_sig[0] == full_signature and (now - last_sig[1]).total_seconds() < dedup_delta_sec:
+                        logger.debug(f"🔁 Пропуск полного дубликата подарка (full_signature) delta={(now - last_sig[1]).total_seconds():.2f}s < {dedup_delta_sec}s")
+                        return
                     # Если стриковый подарок в процессе streaking и число не изменилось — пропускаем
                     if streakable and streaking and prev and prev[0] == count:
                         logger.debug(f"↺ Пропуск стрикового повторяющегося кадра подарка {signature} count={count}")
@@ -281,6 +292,7 @@ class TikTokService:
                         return
                 # Обновляем запись
                 gift_map[signature] = (count, now)
+                self._last_gift_signature[user_id] = (full_signature, now)
                 logger.info(
                     f"TikTok подарок от {username}: {gift_name} (ID: {gift_id}) x{count} (единица {diamond_unit}, всего {diamonds} алмазов)"
                 )
