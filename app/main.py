@@ -15,6 +15,7 @@ from app.routes_v2 import auth_v2, settings_v2, sounds_v2, triggers_v2, ws_v2, l
 app = FastAPI(title="TTBoost Backend", version="0.1.0")
 
 ALLOWED_ORIGINS_ENV = os.getenv("ALLOWED_ORIGINS")
+ALLOW_LOCALHOST_DEV = os.getenv("ALLOW_LOCALHOST_DEV", "1")  # если 1, то любые http://localhost:<port> и http://127.0.0.1:<port>
 if ALLOWED_ORIGINS_ENV:
     allowed_origins = [o.strip() for o in ALLOWED_ORIGINS_ENV.split(",") if o.strip()]
 else:
@@ -40,28 +41,49 @@ app.add_middleware(
 
 @app.middleware("http")
 async def dynamic_origin(request: Request, call_next):
-    """Подстраховка: проставляем точный Access-Control-Allow-Origin если Origin входит в разрешённый список.
-    А также корректно отвечаем на preflight OPTIONS (даже если роут не найден)."""
+    """Динамическая установка CORS Origin + надёжный preflight.
+    Логика допуска origin:
+    1. Точное или prefix совпадение из allowed_origins.
+    2. Если ALLOW_LOCALHOST_DEV=1, то любой http://localhost:<port> или http://127.0.0.1:<port>.
+    """
     origin = request.headers.get("origin") or request.headers.get("Origin")
+
+    def is_allowed_origin(o: str) -> bool:
+        if not o:
+            return False
+        # Явное или prefix совпадение (оставляем возможность указать origin без порта)
+        if any(o.startswith(allowed.rstrip("/")) for allowed in allowed_origins):
+            return True
+        if ALLOW_LOCALHOST_DEV == "1":
+            if o.startswith("http://localhost:") or o.startswith("http://127.0.0.1:"):
+                return True
+        return False
+
     if request.method == "OPTIONS":
-        # Формируем быстрый preflight ответ (FastAPI сам тоже обработает, но мы гарантируем заголовки).
         from fastapi.responses import Response
         resp = Response(status_code=200)
-        if origin and any(origin.startswith(o.rstrip("/")) for o in allowed_origins):
+        if is_allowed_origin(origin):
             resp.headers["Access-Control-Allow-Origin"] = origin
         resp.headers["Access-Control-Allow-Credentials"] = "true"
         resp.headers["Access-Control-Allow-Methods"] = "GET,POST,PUT,PATCH,DELETE,OPTIONS"
-        req_headers = request.headers.get("Access-Control-Request-Headers", "*")
-        resp.headers["Access-Control-Allow-Headers"] = req_headers or "*"
+        # Если клиент запросил конкретные заголовки - возвращаем их, иначе базовый набор
+        req_headers = request.headers.get("Access-Control-Request-Headers")
+        allow_headers = req_headers or "Authorization, Content-Type, Accept, X-Requested-With"
+        resp.headers["Access-Control-Allow-Headers"] = allow_headers
+        resp.headers["Access-Control-Expose-Headers"] = "Content-Length, X-Request-Id"
         resp.headers["Vary"] = "Origin"
+        # Дополнительная отладка CORS при AUTH_DEBUG
+        if os.getenv("AUTH_DEBUG") == "1":
+            print(f"[CORS-DEBUG] Preflight origin={origin} allowed={is_allowed_origin(origin)} headers={allow_headers}")
         return resp
 
     response = await call_next(request)
-    if origin and any(origin.startswith(o.rstrip("/")) for o in allowed_origins):
-        # Ставим конкретный origin (не *) если он разрешён
+    if is_allowed_origin(origin):
         response.headers.setdefault("Access-Control-Allow-Origin", origin)
         response.headers.setdefault("Vary", "Origin")
         response.headers.setdefault("Access-Control-Allow-Credentials", "true")
+    elif os.getenv("AUTH_DEBUG") == "1":
+        print(f"[CORS-DEBUG] Origin '{origin}' отклонён. allowed_origins={allowed_origins} ALLOW_LOCALHOST_DEV={ALLOW_LOCALHOST_DEV}")
     return response
 
 # Static files
