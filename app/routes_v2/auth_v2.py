@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Header, Request
+import os
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -71,8 +72,21 @@ class LoginRequest(BaseModel):
 def login(req: LoginRequest, db: Session = Depends(get_db)):
     username = req.username.strip().lower().replace("@", "")
     user = db.query(models.User).filter(models.User.username == username).first()
-    if not user or not verify_password(req.password, user.password_hash):
+    auth_debug = os.getenv("AUTH_DEBUG") == "1"
+    if not user:
+        if auth_debug:
+            # Логируем причину конкретно
+            import logging
+            logging.getLogger(__name__).warning(f"AUTH_DEBUG login fail: user '{username}' not found")
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid credentials")
+    if not verify_password(req.password, user.password_hash):
+        if auth_debug:
+            import logging
+            logging.getLogger(__name__).warning(f"AUTH_DEBUG login fail: password mismatch for '{username}'")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid credentials")
+    if auth_debug:
+        import logging
+        logging.getLogger(__name__).info(f"AUTH_DEBUG login success for '{username}' user_id={user.id}")
     token = create_access_token(user.id)
     return AuthResponse(access_token=token)
 
