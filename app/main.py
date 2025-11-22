@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 import os
@@ -14,22 +14,54 @@ from app.routes_v2 import auth_v2, settings_v2, sounds_v2, triggers_v2, ws_v2, l
 
 app = FastAPI(title="TTBoost Backend", version="0.1.0")
 
+ALLOWED_ORIGINS_ENV = os.getenv("ALLOWED_ORIGINS")
+if ALLOWED_ORIGINS_ENV:
+    allowed_origins = [o.strip() for o in ALLOWED_ORIGINS_ENV.split(",") if o.strip()]
+else:
+    # По умолчанию разрешаем localhost и 127.* (Flutter web dev) + прод домен из SERVER_HOST
+    server_host = os.getenv("SERVER_HOST", "https://api.ttboost.pro").rstrip("/")
+    allowed_origins = [
+        "http://localhost",
+        "http://127.0.0.1",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        server_host.replace("https://", "http://"),
+        server_host,
+    ]
+
+# ВАЖНО: если allow_credentials=True, нельзя использовать "*" как origin, иначе браузер отбросит ответ.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
-    allow_headers=["*"],
+    allow_headers=["*"]
 )
 
-# На некоторых конфигурациях CORS-мидлварь может не проставлять заголовки на ответы StaticFiles.
-# Подстрахуемся глобальным middleware, добавляющим CORS-заголовки всегда (без перезаписи существующих).
 @app.middleware("http")
-async def ensure_cors_headers(request, call_next):
+async def dynamic_origin(request: Request, call_next):
+    """Подстраховка: проставляем точный Access-Control-Allow-Origin если Origin входит в разрешённый список.
+    А также корректно отвечаем на preflight OPTIONS (даже если роут не найден)."""
+    origin = request.headers.get("origin") or request.headers.get("Origin")
+    if request.method == "OPTIONS":
+        # Формируем быстрый preflight ответ (FastAPI сам тоже обработает, но мы гарантируем заголовки).
+        from fastapi.responses import Response
+        resp = Response(status_code=200)
+        if origin and any(origin.startswith(o.rstrip("/")) for o in allowed_origins):
+            resp.headers["Access-Control-Allow-Origin"] = origin
+        resp.headers["Access-Control-Allow-Credentials"] = "true"
+        resp.headers["Access-Control-Allow-Methods"] = "GET,POST,PUT,PATCH,DELETE,OPTIONS"
+        req_headers = request.headers.get("Access-Control-Request-Headers", "*")
+        resp.headers["Access-Control-Allow-Headers"] = req_headers or "*"
+        resp.headers["Vary"] = "Origin"
+        return resp
+
     response = await call_next(request)
-    response.headers.setdefault("Access-Control-Allow-Origin", "*")
-    response.headers.setdefault("Access-Control-Allow-Headers", "*")
-    response.headers.setdefault("Access-Control-Allow-Methods", "*")
+    if origin and any(origin.startswith(o.rstrip("/")) for o in allowed_origins):
+        # Ставим конкретный origin (не *) если он разрешён
+        response.headers.setdefault("Access-Control-Allow-Origin", origin)
+        response.headers.setdefault("Vary", "Origin")
+        response.headers.setdefault("Access-Control-Allow-Credentials", "true")
     return response
 
 # Static files
