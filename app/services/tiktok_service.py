@@ -45,14 +45,16 @@ class TikTokService:
         self._clients: Dict[str, TikTokLiveClient] = {}
         self._callbacks: Dict[str, dict] = {}
         self._connection_times: Dict[str, datetime] = {}  # Время подключения для фильтрации старых событий
-        # Настройки подписи (EulerStream / кастомный sign server)
-        # Поддерживаются переменные окружения:
-        #  - SIGN_API_KEY: API ключ EulerStream
-        #  - SIGN_API_URL: Базовый URL sign-сервера (по умолчанию https://tiktok.eulerstream.com)
-        #  - SIGN_SERVER_URL (устаревш.): URL самописного /sign — используйте SIGN_API_URL вместо
+        self._last_activity: Dict[str, datetime] = {}
+        self._watchdogs: Dict[str, asyncio.Task] = {}
+        self._usernames: Dict[str, str] = {}
+        # Хранение метрик зрителей (текущие онлайн и накопительные всего посетившие)
+        self._viewer_current: Dict[str, int] = {}
+        self._viewer_total: Dict[str, int] = {}
+
         self._sign_api_key: Optional[str] = os.getenv("SIGN_API_KEY")
         self._sign_api_url: Optional[str] = os.getenv("SIGN_API_URL")
-        # Для обратной совместимости: если задан SIGN_SERVER_URL, используем его как SIGN_API_URL
+
         if not self._sign_api_url:
             legacy = os.getenv("SIGN_SERVER_URL")
             if legacy:
@@ -68,6 +70,8 @@ class TikTokService:
         on_join_callback: Optional[Callable] = None,
         on_follow_callback: Optional[Callable] = None,
         on_subscribe_callback: Optional[Callable] = None,
+        on_share_callback: Optional[Callable] = None,
+        on_viewer_callback: Optional[Callable] = None,
     ):
         """
         Запускает клиент TikTok Live для указанного пользователя
@@ -79,6 +83,8 @@ class TikTokService:
             on_gift_callback: callback для подарков (user, gift_name, count, diamonds)
             on_like_callback: callback для лайков (user, count)
             on_join_callback: callback для входа зрителей (user)
+            on_share_callback: callback когда зритель делится стримом (user)
+            on_viewer_callback: callback обновления метрик зрителей (current, total)
         """
         if user_id in self._clients:
             logger.warning(f"TikTok клиент уже запущен для {user_id}")
@@ -116,6 +122,8 @@ class TikTokService:
             # Сохраняем время подключения для фильтрации старых событий
             connection_time = datetime.now()
             self._connection_times[user_id] = connection_time
+            self._last_activity[user_id] = connection_time
+            self._usernames[user_id] = tiktok_username
             
             # Сохраняем callbacks
             self._callbacks[user_id] = {
@@ -123,6 +131,8 @@ class TikTokService:
                 "gift": on_gift_callback,
                 "like": on_like_callback,
                 "join": on_join_callback,
+                "share": on_share_callback,
+                "viewer": on_viewer_callback,
             }
             
             # Регистрируем обработчики событий
@@ -131,16 +141,67 @@ class TikTokService:
             if WebcastPushFrame is not None:
                 @client.on("raw")
                 async def on_raw_message(frame):
-                    """Обработка RAW WebSocket фреймов"""
+                    """Обработка RAW WebSocket фреймов: декодируем protobuf и ищем Gift-сообщения"""
                     try:
-                        if hasattr(frame, 'payload_type'):
-                            logger.debug(f"🔍 RAW Frame: type={frame.payload_type}, size={len(frame.payload) if hasattr(frame, 'payload') else 0} bytes")
+                        # Базовый лог о типе и размере фрейма
+                        f_type = getattr(frame, 'payload_type', None)
+                        f_payload = getattr(frame, 'payload', None)
+                        if f_type is not None:
+                            logger.debug(f"🔍 RAW Frame: type={f_type}, size={len(f_payload) if f_payload else 0} bytes")
+                        # Отмечаем активность
+                        self._last_activity[user_id] = datetime.now()
+
+                        # Унифицированно получаем байты WebcastPushFrame
+                        push_bytes = None
+                        if hasattr(frame, 'SerializeToString'):
+                            # Это уже protobuf-объект
+                            push_bytes = frame.SerializeToString()
+                        elif isinstance(frame, (bytes, bytearray)):
+                            push_bytes = bytes(frame)
+
+                        if not push_bytes:
+                            return
+
+                        # Парсим WebcastPushFrame
+                        push = WebcastPushFrame()
+                        push.ParseFromString(push_bytes)
+
+                        # Получаем полезную нагрузку и пытаемся распаковать (некоторые кадры сжаты)
+                        payload = push.payload if hasattr(push, 'payload') else b""
+                        if not payload:
+                            return
+
+                        decompressed = payload
+                        try:
+                            import zlib
+                            decompressed = zlib.decompress(payload)
+                        except Exception:
+                            # Не сжатый payload — используем как есть
+                            decompressed = payload
+
+                        # Парсим WebcastResponse и считаем типы сообщений
+                        resp = WebcastResponse()
+                        resp.ParseFromString(decompressed)
+
+                        type_counts = {}
+                        gift_messages = 0
+                        for msg in getattr(resp, 'messages', []):
+                            mtype = getattr(msg, 'type', '')
+                            type_counts[mtype] = type_counts.get(mtype, 0) + 1
+                            if mtype.endswith('GiftMessage') or mtype == 'WebcastGiftMessage' or 'Gift' in mtype:
+                                gift_messages += 1
+
+                        if type_counts:
+                            logger.debug(f"📦 RAW Frame decoded: types={type_counts}")
+                        if gift_messages:
+                            logger.info(f"🎁 Обнаружены Gift-сообщения в RAW кадре: count={gift_messages}")
                     except Exception as e:
-                        logger.debug(f"🔍 RAW Frame error: {e}")
+                        logger.debug(f"🔍 RAW Frame decode error: {e}")
             
             @client.on(ConnectEvent)
             async def on_connect(event: ConnectEvent):
                 logger.info(f"TikTok Live подключен: {tiktok_username}")
+                self._last_activity[user_id] = datetime.now()
             
             @client.on(CommentEvent)
             async def on_comment(event: CommentEvent):
@@ -151,6 +212,7 @@ class TikTokService:
                     username = event.user.nickname or event.user.unique_id
                     text = event.comment
                     logger.info(f"TikTok комментарий от {username}: {text}")
+                    self._last_activity[user_id] = datetime.now()
                     try:
                         await on_comment_callback(username, text)
                     except Exception as e:
@@ -159,23 +221,25 @@ class TikTokService:
             @client.on(GiftEvent)
             async def on_gift(event: GiftEvent):
                 """Обработка подарков"""
-                logger.info(f"🎁 GiftEvent получен! event.gift={event.gift}")
+                logger.info(f"🎁 GiftEvent получен: raw={event.gift}")
                 if not on_gift_callback:
                     logger.warning("on_gift_callback не установлен")
                     return
-                # Логика: если подарок стриковый — шлём событие только по завершению стрика,
-                # если не стриковый — шлём сразу.
-                streakable = getattr(event.gift, 'streakable', False)
-                streaking = getattr(event.gift, 'streaking', False)
-                logger.info(f"🎁 Gift check: streakable={streakable}, streaking={streaking}")
-                if streakable and streaking:
-                    return  # ждём окончания стрика
+                # В live_tester мы НЕ задерживаем стриковые подарки, сразу отдаём каждое обновление.
+                # Повторяем ту же логику здесь: убираем фильтр streaking.
+                gift_obj = event.gift
                 username = event.user.nickname or event.user.unique_id
-                gift_id = getattr(event.gift, 'id', None) or event.gift.name  # Пытаемся получить ID, fallback на name
-                gift_name = event.gift.name
-                count = event.gift.count
-                diamonds = event.gift.diamond_count * count
-                logger.info(f"TikTok подарок от {username}: {gift_name} (ID: {gift_id}) x{count} ({diamonds} алмазов)")
+                # Надёжное извлечение ID и имени
+                gift_id = getattr(gift_obj, 'id', None) or getattr(gift_obj, 'name', 'unknown_gift')
+                gift_name = getattr(gift_obj, 'name', str(gift_id))
+                # Безопасное извлечение количества: сначала gift.count, затем repeat_count, затем 1
+                count = getattr(gift_obj, 'count', None) or getattr(event, 'repeat_count', None) or 1
+                diamond_unit = getattr(gift_obj, 'diamond_count', 0) or getattr(gift_obj, 'diamond', 0)
+                diamonds = diamond_unit * count
+                logger.info(
+                    f"TikTok подарок от {username}: {gift_name} (ID: {gift_id}) x{count} (единица {diamond_unit}, всего {diamonds} алмазов)"
+                )
+                self._last_activity[user_id] = datetime.now()
                 try:
                     await on_gift_callback(username, gift_id, gift_name, count, diamonds)
                 except Exception as e:
@@ -188,6 +252,7 @@ class TikTokService:
                     username = event.user.nickname or event.user.unique_id
                     count = event.count
                     logger.info(f"TikTok лайки от {username}: {count}")
+                    self._last_activity[user_id] = datetime.now()
                     try:
                         await on_like_callback(username, count)
                     except Exception as e:
@@ -199,6 +264,7 @@ class TikTokService:
                 if on_join_callback:
                     username = event.user.nickname or event.user.unique_id
                     logger.info(f"TikTok зритель присоединился: {username}")
+                    self._last_activity[user_id] = datetime.now()
                     try:
                         await on_join_callback(username)
                     except Exception as e:
@@ -230,17 +296,45 @@ class TikTokService:
                 """Обработка события когда кто-то делится стримом"""
                 username = getattr(event.user, 'nickname', None) or getattr(event.user, 'unique_id', 'Unknown')
                 logger.info(f"📤 TikTok Share: {username} поделился стримом")
+                self._last_activity[user_id] = datetime.now()
+                if on_share_callback:
+                    try:
+                        await on_share_callback(username)
+                    except Exception as e:
+                        logger.error(f"Ошибка в share callback: {e}")
             
             # RoomUserSeqEvent - Счётчик зрителей
             @client.on(RoomUserSeqEvent)
             async def on_room_user_seq(event: RoomUserSeqEvent):
                 """Обработка счётчика зрителей"""
-                viewer_count = getattr(event, 'viewer_count', 0) or getattr(event, 'total', 0)
-                logger.info(f"👥 Зрителей в стриме: {viewer_count}")
+                # В live_tester мы разделяем текущих онлайн и накопительный total.
+                current = getattr(event, 'viewer_count', None)
+                total = getattr(event, 'total', None)
+                # Fallback когда библиотека не даёт полей (аноним сессия): current может быть 0,
+                # тогда пробуем другие варианты.
+                if current in (None, 0):
+                    # Иногда viewer_count отсутствует, но есть top_viewer_count или member_count и т.п.
+                    # Здесь минималистично используем total если он > 0.
+                    if total and total > 0:
+                        current = min(total, current or total)
+                if current is None:
+                    current = 0
+                if total is None or total < current:
+                    total = current
+                self._viewer_current[user_id] = current
+                self._viewer_total[user_id] = total
+                logger.info(f"👥 Зрителей: current={current}, total={total}")
+                self._last_activity[user_id] = datetime.now()
+                if on_viewer_callback:
+                    try:
+                        await on_viewer_callback(current, total)
+                    except Exception as e:
+                        logger.error(f"Ошибка в viewer callback: {e}")
             
             @client.on(DisconnectEvent)
             async def on_disconnect(event: DisconnectEvent):
                 logger.warning(f"TikTok Live отключен: {tiktok_username}")
+                # Не обновляем last_activity здесь, чтобы watchdog мог перезапускать
             
             # Сохраняем клиент и запускаем с ретраями при временных ошибках подписи/лимитов
             self._clients[user_id] = client
@@ -267,6 +361,53 @@ class TikTokService:
                 raise last_err
             
             logger.info(f"TikTok клиент запущен для {user_id} (@{tiktok_username})")
+
+            # Запускаем watchdog: если нет активности N секунд — мягкий рестарт клиента
+            inactivity_limit = int(os.getenv("TT_WATCHDOG_INACTIVITY_SEC", "75"))
+            check_period = int(os.getenv("TT_WATCHDOG_CHECK_SEC", "15"))
+
+            async def watchdog_loop(uid: str):
+                try:
+                    while uid in self._clients:
+                        await asyncio.sleep(check_period)
+                        last = self._last_activity.get(uid)
+                        if not last:
+                            continue
+                        delta = (datetime.now() - last).total_seconds()
+                        if delta > inactivity_limit:
+                            logger.warning(
+                                f"🛟 Watchdog: нет активности {delta:.0f}s (> {inactivity_limit}s). Перезапуск клиента @{self._usernames.get(uid, '?')}"
+                            )
+                            # Сохраняем параметры для рестарта
+                            name = self._usernames.get(uid, tiktok_username)
+                            cbs = self._callbacks.get(uid, {})
+                            # Останавливаем и перезапускаем
+                            try:
+                                await self.stop_client(uid)
+                            except Exception as e:
+                                logger.error(f"Ошибка при остановке клиента watchdog'ом: {e}")
+                            await asyncio.sleep(2)
+                            try:
+                                await self.start_client(
+                                    uid,
+                                    name,
+                                    on_comment_callback=cbs.get("comment"),
+                                    on_gift_callback=cbs.get("gift"),
+                                    on_like_callback=cbs.get("like"),
+                                    on_join_callback=cbs.get("join"),
+                                    on_follow_callback=on_follow_callback,
+                                    on_subscribe_callback=on_subscribe_callback,
+                                )
+                            except Exception as e:
+                                logger.error(f"Ошибка при рестарте клиента watchdog'ом: {e}")
+                except asyncio.CancelledError:
+                    pass
+
+            # Отменяем предыдущий watchdog (если был) и запускаем новый
+            if user_id in self._watchdogs:
+                task = self._watchdogs.pop(user_id)
+                task.cancel()
+            self._watchdogs[user_id] = asyncio.create_task(watchdog_loop(user_id))
             
         except Exception as e:
             logger.error(f"Ошибка запуска TikTok клиента для {user_id}: {e}")
@@ -290,6 +431,13 @@ class TikTokService:
                 del self._callbacks[user_id]
             if user_id in self._connection_times:
                 del self._connection_times[user_id]
+            if user_id in self._last_activity:
+                del self._last_activity[user_id]
+            if user_id in self._usernames:
+                del self._usernames[user_id]
+            if user_id in self._watchdogs:
+                task = self._watchdogs.pop(user_id)
+                task.cancel()
             logger.info(f"TikTok клиент остановлен для {user_id}")
         except Exception as e:
             logger.error(f"Ошибка остановки TikTok клиента: {e}")

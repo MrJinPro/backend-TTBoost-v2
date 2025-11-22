@@ -165,6 +165,12 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
     async def on_subscribe(u: str):
         await websocket.send_text(json.dumps({"type": "subscribe", "user": u}, ensure_ascii=False))
 
+    async def on_share(u: str):
+        await websocket.send_text(json.dumps({"type": "share", "user": u}, ensure_ascii=False))
+
+    async def on_viewer(current: int, total: int):
+        await websocket.send_text(json.dumps({"type": "viewer", "current": current, "total": total}, ensure_ascii=False))
+
     # run tiktok client
     try:
         # Используем tiktok_username если задан, иначе username
@@ -186,6 +192,8 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
             on_join_callback=on_join,
             on_follow_callback=on_follow,
             on_subscribe_callback=on_subscribe,
+            on_share_callback=on_share,
+            on_viewer_callback=on_viewer,
         )
         # Отправляем подтверждение успешного подключения
         await websocket.send_text(json.dumps({

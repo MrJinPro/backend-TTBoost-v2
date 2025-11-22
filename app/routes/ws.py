@@ -140,7 +140,7 @@ async def ws_endpoint(websocket: WebSocket, ws_token: str):
             logger.error(f"Ошибка отправки комментария: {e}")
     
     # Callback для подарков
-    async def on_gift(user: str, gift_name: str, count: int, diamonds: int):
+    async def on_gift(user: str, gift_id: str, gift_name: str, count: int, diamonds: int):
         """Обработка подарка - использует кастомный звук если настроен"""
         try:
             sound_url: str
@@ -168,6 +168,7 @@ async def ws_endpoint(websocket: WebSocket, ws_token: str):
                 "sound_url": _abs_url(sound_url),
                 "user": user,
                 "diamonds": diamonds,
+                "gift_id": gift_id,
             }
             await websocket.send_text(json.dumps(payload, ensure_ascii=False))
             logger.info(f"TikTok подарок: {user} {gift_name} x{count}")
@@ -241,6 +242,20 @@ async def ws_endpoint(websocket: WebSocket, ws_token: str):
             logger.info(f"Супер-подписка: {user}")
         except Exception as e:
             logger.error(f"Ошибка обработки subscribe: {e}")
+
+    async def on_share(user: str):
+        try:
+            payload = {"type": "share", "user": user}
+            await websocket.send_text(json.dumps(payload, ensure_ascii=False))
+            logger.info(f"Share: {user}")
+        except Exception as e:
+            logger.error(f"Ошибка обработки share: {e}")
+
+    async def on_viewer(current: int, total: int):
+        try:
+            await websocket.send_text(json.dumps({"type": "viewer", "current": current, "total": total}, ensure_ascii=False))
+        except Exception as e:
+            logger.error(f"Ошибка отправки viewer метрик: {e}")
     
     try:
         # Подключаемся к TikTok Live если есть username
@@ -256,6 +271,8 @@ async def ws_endpoint(websocket: WebSocket, ws_token: str):
                     on_join_callback=on_join,
                     on_follow_callback=on_follow,
                     on_subscribe_callback=on_subscribe,
+                    on_share_callback=on_share,
+                    on_viewer_callback=on_viewer,
                 )
                 logger.info(f"✅ TikTok Live клиент запущен для @{tiktok_username}")
             except SignatureRateLimitError as e:
