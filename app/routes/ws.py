@@ -4,7 +4,9 @@ from app.services.event_dispatcher import dispatcher
 from app.services.tts_service import generate_tts
 from app.services.tiktok_service import tiktok_service
 from app.services.profile_service import get_or_create_profile, get_gift_sound, get_viewer_sound
-from app.services.triggers_service import find_applicable_trigger
+from app.services.triggers_service import find_applicable_trigger, add_or_update_trigger
+from app.db.database import SessionLocal
+from app.db import models as db_models
 from app.services.profile_service import get_or_create_profile
 from TikTokLive.client.errors import SignatureRateLimitError, SignAPIError, PremiumEndpointError
 import asyncio
@@ -85,6 +87,43 @@ async def ws_endpoint(websocket: WebSocket, ws_token: str):
 
     # Множество пользователей, которые уже отправили первое сообщение за текущий стрим
     first_message_seen = set()
+
+    # Синхронизируем триггеры из БД (v2) в in-memory сервис, чтобы gift/chat и др. работали
+    try:
+        db = SessionLocal()
+        try:
+            rows = (
+                db.query(db_models.Trigger)
+                .filter(db_models.Trigger.user_id == user_id, db_models.Trigger.enabled == True)
+                .all()
+            )
+            synced = 0
+            for r in rows:
+                # Преобразуем DB Trigger -> старый pydantic TriggerAction+Trigger
+                action_params = r.action_params or {}
+                if r.action == db_models.TriggerAction.tts:
+                    from app.models.triggers import TriggerAction, Trigger
+                    ta = TriggerAction(type="tts", text_template=action_params.get("text_template"))
+                else:
+                    from app.models.triggers import TriggerAction, Trigger
+                    ta = TriggerAction(type="play_sound", sound_file=action_params.get("sound_filename"))
+                trig_obj = Trigger(
+                    event_type=r.event_type,
+                    condition_key=r.condition_key,
+                    condition_value=r.condition_value,
+                    gift_id=None,  # заполнится в set trigger API; можно дополнительно парсить при необходимости
+                    action=ta,
+                    enabled=r.enabled,
+                    priority=r.priority,
+                )
+                await add_or_update_trigger(user_id, trig_obj)
+                synced += 1
+            if synced:
+                logger.info(f"Синхронизировано {synced} триггер(ов) из БД в память для user_id={user_id}")
+        finally:
+            db.close()
+    except Exception as e:
+        logger.warning(f"Не удалось синхронизировать триггеры из БД: {e}")
 
     # Callback для обработки комментариев TikTok
     async def on_comment(user: str, text: str):
