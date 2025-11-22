@@ -47,10 +47,17 @@ AVAILABLE_VOICES: Dict[str, list[dict]] = {
 
 
 def get_all_voices():
-    """Получить список всех доступных голосов"""
+    """Получить список всех доступных голосов.
+    Если отсутствует OPENAI_API_KEY или SDK — openai голоса помечаем флагом unavailable.
+    """
     all_voices = []
-    for engine_voices in AVAILABLE_VOICES.values():
-        all_voices.extend(engine_voices)
+    have_openai = OpenAI is not None and os.getenv("OPENAI_API_KEY")
+    for engine, engine_voices in AVAILABLE_VOICES.items():
+        for v in engine_voices:
+            v_copy = dict(v)
+            if engine == "openai" and not have_openai:
+                v_copy["unavailable"] = True
+            all_voices.append(v_copy)
     return all_voices
 
 
