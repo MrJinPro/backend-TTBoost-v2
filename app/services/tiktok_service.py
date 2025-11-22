@@ -51,6 +51,8 @@ class TikTokService:
         # Хранение метрик зрителей (текущие онлайн и накопительные всего посетившие)
         self._viewer_current: Dict[str, int] = {}
         self._viewer_total: Dict[str, int] = {}
+    # Анти-дублирование подарков: для каждого пользователя хранится (username+gift_id) -> (last_count, last_timestamp)
+    self._recent_gifts: Dict[str, Dict[str, tuple[int, datetime]]] = {}
 
         self._sign_api_key: Optional[str] = os.getenv("SIGN_API_KEY")
         self._sign_api_url: Optional[str] = os.getenv("SIGN_API_URL")
@@ -236,6 +238,23 @@ class TikTokService:
                 count = getattr(gift_obj, 'count', None) or getattr(event, 'repeat_count', None) or 1
                 diamond_unit = getattr(gift_obj, 'diamond_count', 0) or getattr(gift_obj, 'diamond', 0)
                 diamonds = diamond_unit * count
+                # Анти-дубль логика
+                now = datetime.now()
+                gift_map = self._recent_gifts.setdefault(user_id, {})
+                signature = f"{username}:{gift_id}"
+                prev = gift_map.get(signature)
+                streakable = getattr(gift_obj, 'streakable', False)
+                streaking = getattr(gift_obj, 'streaking', False)
+                # Если стриковый подарок в процессе streaking и число не изменилось — пропускаем
+                if streakable and streaking and prev and prev[0] == count:
+                    logger.debug(f"↺ Пропуск стрикового повторяющегося кадра подарка {signature} count={count}")
+                    return
+                # Если точный дубль (тот же count) приходит слишком быстро (<3s) — пропускаем
+                if prev and prev[0] == count and (now - prev[1]).total_seconds() < 3:
+                    logger.debug(f"⏱️ Пропуск дубликата подарка {signature} count={count} delta={(now - prev[1]).total_seconds():.2f}s")
+                    return
+                # Обновляем запись
+                gift_map[signature] = (count, now)
                 logger.info(
                     f"TikTok подарок от {username}: {gift_name} (ID: {gift_id}) x{count} (единица {diamond_unit}, всего {diamonds} алмазов)"
                 )
