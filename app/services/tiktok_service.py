@@ -134,7 +134,11 @@ class TikTokService:
 
             # Создаем клиент для конкретного стримера (без несуществующих kwargs)
             logger.info(f"🔧 Создаём TikTok клиент для @{tiktok_username}")
-            client: TikTokLiveClient = TikTokLiveClient(unique_id=f"@{tiktok_username}")
+            # ВАЖНО: Проверяем, не содержит ли username уже символ @
+            clean_username = tiktok_username.lstrip('@')  # Удаляем @ если есть
+            if clean_username != tiktok_username:
+                logger.warning(f"⚠️ Username содержал @, очищено: '{tiktok_username}' -> '{clean_username}'")
+            client: TikTokLiveClient = TikTokLiveClient(unique_id=f"@{clean_username}")
             
             # ВКЛЮЧАЕМ DEBUG РЕЖИМ БИБЛИОТЕКИ чтобы видеть ВСЕ raw события
             import logging as stdlib_logging

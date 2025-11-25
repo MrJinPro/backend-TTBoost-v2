@@ -223,6 +223,7 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
     try:
         # Используем tiktok_username если задан, иначе username
         target_username = user.tiktok_username if user.tiktok_username else user.username
+        print(f"🔍 WS Connect - User: {user.username}, TikTok Username (DB): '{user.tiktok_username}', Target: '{target_username}'")
         if not target_username:
             await websocket.send_text(json.dumps({
                 "type": "error",

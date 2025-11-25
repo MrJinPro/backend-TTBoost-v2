@@ -27,6 +27,8 @@ class SetTriggerRequest(BaseModel):
     action: str
     text_template: str | None = None
     sound_filename: str | None = None
+    trigger_name: str | None = None
+    combo_count: int = 0
 
 
 @router.post("/set")
@@ -55,6 +57,8 @@ def set_trigger(req: SetTriggerRequest, user=Depends(get_current_user), db: Sess
         priority=req.priority,
         action=models.TriggerAction(req.action),
         action_params=action_params,
+        trigger_name=req.trigger_name,
+        combo_count=req.combo_count,
     )
     db.add(trig)
     db.commit()
@@ -80,6 +84,8 @@ def list_triggers(user=Depends(get_current_user), db: Session = Depends(get_db))
             "action": t.action.value,
             "action_params": t.action_params,
             "executed_count": t.executed_count,
+            "trigger_name": t.trigger_name,
+            "combo_count": t.combo_count,
         }
         for t in items
     ]}
