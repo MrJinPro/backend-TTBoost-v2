@@ -5,7 +5,7 @@ aiofiles==24.1.0
 websockets==13.0
 python-multipart==0.0.9
 python-dotenv==1.0.1
-TikTokLive>=6.6.5
+TikTokLive>=7.0.0
 openai>=1.0.0
 gTTS==2.5.4
 edge-tts==6.1.12

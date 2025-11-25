@@ -407,7 +407,7 @@ class TikTokService:
 
             for attempt in range(1, attempts + 1):
                 try:
-                    logger.info(f"Запуск TikTok клиента (попытка {attempt}/{attempts}) для @{tiktok_username}")
+                    logger.info(f"Запуск TikTok клиента (попытка {attempt}/{attempts}) для @{clean_username}")
                     await client.start()
                     last_err = None
                     break
@@ -418,6 +418,15 @@ class TikTokService:
                     delay = backoff_base ** attempt
                     logger.warning(f"Не удалось запустить (попытка {attempt}/{attempts}): {e}. Повтор через {delay:.1f}с")
                     await asyncio.sleep(delay)
+                except Exception as e:
+                    # Любая другая ошибка (включая UserNotFoundError)
+                    import traceback
+                    logger.error(f"❌ Критическая ошибка при запуске TikTok клиента для @{clean_username}:")
+                    logger.error(f"   Тип ошибки: {type(e).__name__}")
+                    logger.error(f"   Сообщение: {str(e)}")
+                    logger.error(f"   Traceback:\n{traceback.format_exc()}")
+                    last_err = e
+                    break  # Не ретраим при критических ошибках
 
             if last_err is not None:
                 raise last_err
