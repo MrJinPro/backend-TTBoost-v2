@@ -31,7 +31,6 @@ class UserSettings(Base):
     gift_sounds_enabled = Column(Boolean, default=True)
     tts_volume = Column(Integer, default=100)
     gifts_volume = Column(Integer, default=100)
-    gift_tts_alongside = Column(Boolean, default=False)  # озвучивать TTS вместе со звуком подарка
 
     user = relationship("User", back_populates="settings")
 
@@ -73,6 +72,9 @@ class Trigger(Base):
     action_params = Column(JSON, nullable=True)  # {text_template?, sound_file_id?}
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     executed_count = Column(Integer, default=0, nullable=False)
+    # Новые поля для продвинутых триггеров
+    trigger_name = Column(String(100), nullable=True)  # пользовательское название триггера
+    combo_count = Column(Integer, default=0, nullable=False)  # порог combo для подарков (0 = любое количество)
 
 
 class Event(Base):

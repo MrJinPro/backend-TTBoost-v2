@@ -127,26 +127,40 @@ app.include_router(ws.router, tags=["ws"])
 
 # v2 API (логин/пароль, Bearer JWT, хранение в БД)
 init_db()
-# Простая попытка авто-ALTER для добавления gift_tts_alongside, если столбца нет
+# Простая попытка авто-ALTER для добавления новых полей
 try:
     from sqlalchemy import inspect, text as sql_text
     from app.db.database import engine
     insp = inspect(engine)
+    
+    # Удаляем gift_tts_alongside из user_settings (больше не используется)
     cols = [c['name'] for c in insp.get_columns('user_settings')]
-    if 'gift_tts_alongside' not in cols:
+    if 'gift_tts_alongside' in cols:
         with engine.connect() as conn:
-            conn.execute(sql_text('ALTER TABLE user_settings ADD COLUMN gift_tts_alongside BOOLEAN DEFAULT FALSE'))
+            conn.execute(sql_text('ALTER TABLE user_settings DROP COLUMN gift_tts_alongside'))
             conn.commit()
-        print('[DB] Added column user_settings.gift_tts_alongside')
+        print('[DB] Removed column user_settings.gift_tts_alongside (no longer needed)')
+    
+    # Добавляем новые поля в triggers
     trig_cols = [c['name'] for c in insp.get_columns('triggers')]
     if 'executed_count' not in trig_cols:
-        try:
-            with engine.connect() as conn:
-                conn.execute(sql_text('ALTER TABLE triggers ADD COLUMN executed_count INTEGER DEFAULT 0'))
-                conn.commit()
-            print('[DB] Added column triggers.executed_count')
-        except Exception as e:  # pragma: no cover
-            print(f'[DB] Failed to add executed_count: {e}')
+        with engine.connect() as conn:
+            conn.execute(sql_text('ALTER TABLE triggers ADD COLUMN executed_count INTEGER DEFAULT 0'))
+            conn.commit()
+        print('[DB] Added column triggers.executed_count')
+    
+    if 'trigger_name' not in trig_cols:
+        with engine.connect() as conn:
+            conn.execute(sql_text('ALTER TABLE triggers ADD COLUMN trigger_name VARCHAR(100)'))
+            conn.commit()
+        print('[DB] Added column triggers.trigger_name')
+    
+    if 'combo_count' not in trig_cols:
+        with engine.connect() as conn:
+            conn.execute(sql_text('ALTER TABLE triggers ADD COLUMN combo_count INTEGER DEFAULT 0'))
+            conn.commit()
+        print('[DB] Added column triggers.combo_count')
+        
 except Exception as e:  # pragma: no cover
     print(f'[DB] Column check/add failed: {e}')
 app.include_router(auth_v2.router, prefix="/v2/auth", tags=["v2-auth"])
