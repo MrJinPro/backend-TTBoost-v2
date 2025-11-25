@@ -79,6 +79,7 @@ def list_triggers(user=Depends(get_current_user), db: Session = Depends(get_db))
             "priority": t.priority,
             "action": t.action.value,
             "action_params": t.action_params,
+            "executed_count": t.executed_count,
         }
         for t in items
     ]}
@@ -96,3 +97,17 @@ def delete_trigger(req: DeleteTriggerRequest, user=Depends(get_current_user), db
     db.delete(t)
     db.commit()
     return {"status": "ok"}
+
+class UpdateTriggerEnabledRequest(BaseModel):
+    id: str
+    enabled: bool
+
+@router.post('/update-enabled')
+def update_trigger_enabled(req: UpdateTriggerEnabledRequest, user=Depends(get_current_user), db: Session = Depends(get_db)):
+    t = db.get(models.Trigger, req.id)
+    if not t or t.user_id != user.id:
+        raise HTTPException(404, detail='not found')
+    t.enabled = req.enabled
+    db.add(t)
+    db.commit()
+    return {'status': 'ok', 'id': t.id, 'enabled': t.enabled}

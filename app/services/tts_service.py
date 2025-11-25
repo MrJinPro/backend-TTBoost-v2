@@ -5,7 +5,7 @@
 import os
 import logging
 import asyncio
-from datetime import datetime
+from datetime import datetime, timedelta
 from enum import Enum
 from typing import Optional, Dict
 from gtts import gTTS
@@ -143,6 +143,7 @@ async def _generate_gtts(text: str, voice_info: dict, user_id: str = None) -> st
         url = f"{base_url.rstrip('/')}/{url_path}/{filename}"
         
         logger.info(f"Google TTS создан: {file_path}")
+        _post_tts_housekeeping(tts_dir, file_path)
         return url
         
     except Exception as e:
@@ -181,6 +182,7 @@ async def _generate_edge(text: str, voice_info: dict, user_id: str = None) -> st
         
         print(f"✅ Edge TTS успешно создан: {file_path}")
         logger.info(f"Edge TTS создан: {file_path}")
+        _post_tts_housekeeping(tts_dir, file_path)
         return url
         
     except Exception as e:
@@ -233,8 +235,61 @@ async def _generate_openai(text: str, voice_info: dict, user_id: str = None) -> 
         base_url = os.getenv("TTS_BASE_URL", "https://media.ttboost.pro")
         url = f"{base_url.rstrip('/')}/{url_path}/{filename}"
         logger.info(f"OpenAI TTS создан: {file_path} (voice={voice}, model={model})")
+        _post_tts_housekeeping(tts_dir, file_path)
         return url
     except Exception as e:  # pragma: no cover
         logger.error(f"Ошибка OpenAI TTS: {e}")
         return ""
+
+# --------------------------
+# Retention & cleanup logic
+# --------------------------
+def _get_retention_seconds() -> int:
+    """TTL (сек) для TTS файлов. По заданию: 5 минут (300с), можно переопределить env TTS_RETENTION_SECONDS."""
+    try:
+        return int(os.getenv("TTS_RETENTION_SECONDS", "300"))
+    except ValueError:
+        return 300
+
+
+def _post_tts_housekeeping(tts_dir: str, file_path: str) -> None:
+    ttl = _get_retention_seconds()
+    # Плановое удаление конкретного файла
+    try:
+        asyncio.get_running_loop().create_task(_delete_file_later(file_path, ttl))
+    except RuntimeError:
+        pass
+    # Немедленная зачистка старых
+    _cleanup_old_files(tts_dir, ttl)
+
+
+async def _delete_file_later(file_path: str, ttl: int):
+    await asyncio.sleep(ttl)
+    try:
+        if os.path.exists(file_path):
+            os.remove(file_path)
+            logger.debug(f"TTS файл удалён по TTL: {file_path}")
+    except Exception:
+        logger.debug(f"Не удалось удалить TTS файл: {file_path}")
+
+
+def _cleanup_old_files(tts_dir: str, ttl: int):
+    now = datetime.now()
+    try:
+        for name in os.listdir(tts_dir):
+            if not name.startswith("tts_"):
+                continue
+            full = os.path.join(tts_dir, name)
+            try:
+                stat = os.stat(full)
+                mtime = datetime.fromtimestamp(stat.st_mtime)
+                if (now - mtime) > timedelta(seconds=ttl):
+                    os.remove(full)
+                    logger.debug(f"Удалён просроченный TTS файл: {full}")
+            except FileNotFoundError:
+                continue
+            except Exception:
+                logger.debug(f"Ошибка при очистке файла: {full}")
+    except FileNotFoundError:
+        return
 

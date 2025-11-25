@@ -72,6 +72,7 @@ class Trigger(Base):
     action = Column(Enum(TriggerAction), nullable=False)
     action_params = Column(JSON, nullable=True)  # {text_template?, sound_file_id?}
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    executed_count = Column(Integer, default=0, nullable=False)
 
 
 class Event(Base):

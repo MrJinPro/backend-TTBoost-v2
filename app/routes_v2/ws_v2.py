@@ -78,13 +78,20 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
     await websocket.accept()
     first_message_seen = set()
 
-    def get_current_voice_id():
-        """Получить актуальный voice_id из базы"""
+    def get_current_settings():
+        """Получить актуальные настройки пользователя (голос + флаги)."""
         settings = db.query(models.UserSettings).filter(models.UserSettings.user_id == user.id).first()
-        return settings.voice_id if settings and settings.voice_id else "gtts-ru"
+        # дефолты если нет записей
+        return {
+            "voice_id": (settings.voice_id if settings and settings.voice_id else "gtts-ru"),
+            "tts_enabled": (settings.tts_enabled if settings else True),
+            "gift_sounds_enabled": (settings.gift_sounds_enabled if settings else True),
+            "gift_tts_alongside": (settings.gift_tts_alongside if settings else False),
+        }
 
     async def on_comment(u: str, text: str):
-        voice_id = get_current_voice_id()
+        s = get_current_settings()
+        voice_id = s["voice_id"]
         sanitized_text = _remove_emojis(text)
         # find trigger
         trig = (
@@ -102,10 +109,20 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
                     template = t.action_params.get("text_template") or "{message}"
                     phrase = template.replace("{user}", _remove_emojis(u)).replace("{message}", sanitized_text)
                     tts_url = await generate_tts(phrase, voice_id, user_id=str(user.id))
+                    try:
+                        t.executed_count += 1
+                        db.add(t)
+                        db.commit()
+                    except Exception:
+                        logger.warning("Не удалось обновить executed_count для триггера %s", t.id)
                     break
-        if not tts_url:
+        if not tts_url and s["tts_enabled"]:
             tts_url = await generate_tts(sanitized_text, voice_id, user_id=str(user.id))
-        await websocket.send_text(json.dumps({"type": "chat", "user": u, "message": text, "tts_url": tts_url}, ensure_ascii=False))
+        # если tts выключен — отправим без tts_url
+        payload = {"type": "chat", "user": u, "message": text}
+        if tts_url:
+            payload["tts_url"] = tts_url
+        await websocket.send_text(json.dumps(payload, ensure_ascii=False))
 
         if u not in first_message_seen:
             first_message_seen.add(u)
@@ -119,10 +136,17 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
                     fn = t.action_params.get("sound_filename") if t.action_params else None
                     if fn:
                         await websocket.send_text(json.dumps({"type": "viewer_first_message", "user": u, "sound_url": _abs_url(f"/static/sounds/{user.id}/{fn}")}, ensure_ascii=False))
+                        try:
+                            t.executed_count += 1
+                            db.add(t)
+                            db.commit()
+                        except Exception:
+                            logger.warning("Не удалось обновить executed_count для триггера %s", t.id)
                     break
 
     async def on_gift(u: str, gift_id: str, gift_name: str, count: int, diamonds: int = 0):
-        voice_id = get_current_voice_id()
+        s = get_current_settings()
+        voice_id = s["voice_id"]
         # trigger by gift_id
         trig = (
             db.query(models.Trigger)
@@ -131,17 +155,71 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
             .all()
         )
         sound_url = None
+        tts_url = None
         for t in trig:
             # Проверяем по gift_id
             if t.condition_key == "gift_id" and t.condition_value and t.condition_value == gift_id:
                 fn = t.action_params.get("sound_filename") if t.action_params else None
                 if fn:
-                    sound_url = _abs_url(f"/static/sounds/{user.id}/{fn}")
+                    if s["gift_sounds_enabled"]:
+                        sound_url = _abs_url(f"/static/sounds/{user.id}/{fn}")
+                    try:
+                        t.executed_count += 1
+                        db.add(t)
+                        db.commit()
+                    except Exception:
+                        logger.warning("Не удалось обновить executed_count для триггера %s", t.id)
                     break
-        if not sound_url:
+                # Поддержка TTS действия для подарка по gift_id
+                if t.action == models.TriggerAction.tts and t.action_params and s["tts_enabled"]:
+                    template = t.action_params.get("text_template") or "{user} отправил {gift_name} x{count}"
+                    phrase = template.replace("{user}", _remove_emojis(u)).replace("{gift_name}", _remove_emojis(gift_name)).replace("{count}", str(count))
+                    try:
+                        tts_url = await generate_tts(phrase, voice_id, user_id=str(user.id))
+                        t.executed_count += 1
+                        db.add(t)
+                        db.commit()
+                    except Exception:
+                        logger.warning("Не удалось обновить executed_count для TTS gift триггера %s", t.id)
+                    # Не break здесь — позволим более приоритетному звуку (если есть) тоже установиться
+            # Проверяем по gift_name
+            if t.condition_key == "gift_name" and t.condition_value and t.condition_value.lower() == gift_name.lower():
+                fn = t.action_params.get("sound_filename") if t.action_params else None
+                if fn:
+                    if s["gift_sounds_enabled"]:
+                        sound_url = _abs_url(f"/static/sounds/{user.id}/{fn}")
+                    try:
+                        t.executed_count += 1
+                        db.add(t)
+                        db.commit()
+                    except Exception:
+                        logger.warning("Не удалось обновить executed_count для триггера %s", t.id)
+                    break
+                # Поддержка TTS действия для подарка по gift_name
+                if t.action == models.TriggerAction.tts and t.action_params and s["tts_enabled"]:
+                    template = t.action_params.get("text_template") or "{user} отправил {gift_name} x{count}"
+                    phrase = template.replace("{user}", _remove_emojis(u)).replace("{gift_name}", _remove_emojis(gift_name)).replace("{count}", str(count))
+                    try:
+                        tts_url = await generate_tts(phrase, voice_id, user_id=str(user.id))
+                        t.executed_count += 1
+                        db.add(t)
+                        db.commit()
+                    except Exception:
+                        logger.warning("Не удалось обновить executed_count для TTS gift триггера %s", t.id)
+                    # Не break — позволяем найти звук тоже
+        # Генерация TTS для подарка, если включено
+        if s["tts_enabled"]:
             phrase = f"{_remove_emojis(u)} отправил подарок {_remove_emojis(gift_name)}, количество {count}"
-            sound_url = await generate_tts(phrase, voice_id, user_id=str(user.id))
-        await websocket.send_text(json.dumps({"type": "gift", "user": u, "gift_id": gift_id, "gift_name": gift_name, "count": count, "diamonds": diamonds, "sound_url": sound_url}, ensure_ascii=False))
+            # если нет пользовательского звука или включено одновременное воспроизведение
+            if (not sound_url or s["gift_tts_alongside"]) and not tts_url:
+                # Только если ещё не сгенерировано через TTS-триггер
+                tts_url = await generate_tts(phrase, voice_id, user_id=str(user.id))
+        payload = {"type": "gift", "user": u, "gift_id": gift_id, "gift_name": gift_name, "count": count, "diamonds": diamonds}
+        if sound_url:
+            payload["sound_url"] = sound_url
+        if tts_url:
+            payload["tts_url"] = tts_url
+        await websocket.send_text(json.dumps(payload, ensure_ascii=False))
 
     async def on_like(u: str, count: int):
         await websocket.send_text(json.dumps({"type": "like", "user": u, "count": count}, ensure_ascii=False))
@@ -157,6 +235,12 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
                 fn = t.action_params.get("sound_filename") if t.action_params else None
                 if fn:
                     await websocket.send_text(json.dumps({"type": "viewer_join", "user": u, "sound_url": _abs_url(f"/static/sounds/{user.id}/{fn}")}, ensure_ascii=False))
+                    try:
+                        t.executed_count += 1
+                        db.add(t)
+                        db.commit()
+                    except Exception:
+                        logger.warning("Не удалось обновить executed_count для триггера %s", t.id)
                 break
 
     async def on_follow(u: str):

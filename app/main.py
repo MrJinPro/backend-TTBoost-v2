@@ -138,6 +138,15 @@ try:
             conn.execute(sql_text('ALTER TABLE user_settings ADD COLUMN gift_tts_alongside BOOLEAN DEFAULT FALSE'))
             conn.commit()
         print('[DB] Added column user_settings.gift_tts_alongside')
+    trig_cols = [c['name'] for c in insp.get_columns('triggers')]
+    if 'executed_count' not in trig_cols:
+        try:
+            with engine.connect() as conn:
+                conn.execute(sql_text('ALTER TABLE triggers ADD COLUMN executed_count INTEGER DEFAULT 0'))
+                conn.commit()
+            print('[DB] Added column triggers.executed_count')
+        except Exception as e:  # pragma: no cover
+            print(f'[DB] Failed to add executed_count: {e}')
 except Exception as e:  # pragma: no cover
     print(f'[DB] Column check/add failed: {e}')
 app.include_router(auth_v2.router, prefix="/v2/auth", tags=["v2-auth"])
