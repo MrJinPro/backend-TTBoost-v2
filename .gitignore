@@ -13,6 +13,9 @@ build/
 .pytest_cache/
 .coverage
 
+# Backend has its own git repo
+backend/
+
 # Testing & Development
 live_tester/
 
