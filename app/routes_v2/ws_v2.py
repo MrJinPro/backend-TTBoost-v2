@@ -145,6 +145,7 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
 
     async def on_gift(u: str, gift_id: str, gift_name: str, count: int, diamonds: int = 0):
         s = get_current_settings()
+        print(f"on_gift: получен подарок от {u}: gift_id={gift_id}, gift_name={gift_name}, count={count}, diamonds={diamonds}")
         # Ищем триггер для подарка (только звуковые файлы, НЕ TTS!)
         trig = (
             db.query(models.Trigger)
@@ -152,13 +153,16 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
             .order_by(models.Trigger.priority.desc())
             .all()
         )
+        print(f"on_gift: найдено триггеров для gift: {len(trig)}")
         sound_url = None
         for t in trig:
+            print(f"on_gift: checking trigger {t.id} key={t.condition_key} val={t.condition_value} enabled={t.enabled}")
             # Проверяем по gift_id
             if t.condition_key == "gift_id" and t.condition_value and t.condition_value == gift_id:
                 fn = t.action_params.get("sound_filename") if t.action_params else None
                 if fn and s["gift_sounds_enabled"]:
                     sound_url = _abs_url(f"/static/sounds/{user.id}/{fn}")
+                    print(f"on_gift: matched by gift_id -> sound file={fn}, sound_url={sound_url}")
                     try:
                         t.executed_count += 1
                         db.add(t)
@@ -171,6 +175,7 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
                 fn = t.action_params.get("sound_filename") if t.action_params else None
                 if fn and s["gift_sounds_enabled"]:
                     sound_url = _abs_url(f"/static/sounds/{user.id}/{fn}")
+                    print(f"on_gift: matched by gift_name -> sound file={fn}, sound_url={sound_url}")
                     try:
                         t.executed_count += 1
                         db.add(t)
@@ -182,6 +187,7 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
         payload = {"type": "gift", "user": u, "gift_id": gift_id, "gift_name": gift_name, "count": count, "diamonds": diamonds}
         if sound_url:
             payload["sound_url"] = sound_url
+        print(f"on_gift: отправляем payload -> {payload}")
         await websocket.send_text(json.dumps(payload, ensure_ascii=False))
 
     async def on_like(u: str, count: int):
