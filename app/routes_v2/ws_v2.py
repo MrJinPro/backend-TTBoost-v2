@@ -86,6 +86,7 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
             "voice_id": (settings.voice_id if settings and settings.voice_id else "gtts-ru"),
             "tts_enabled": (settings.tts_enabled if settings else True),
             "gift_sounds_enabled": (settings.gift_sounds_enabled if settings else True),
+            "viewer_sounds_enabled": (settings.viewer_sounds_enabled if settings and hasattr(settings, 'viewer_sounds_enabled') else True),
         }
 
     async def on_comment(u: str, text: str):
@@ -194,16 +195,39 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
         await websocket.send_text(json.dumps({"type": "like", "user": u, "count": count}, ensure_ascii=False))
 
     async def on_join(u: str):
+        print(f"on_join: зритель присоединился: {u}")
         trig = (
             db.query(models.Trigger)
             .filter(models.Trigger.user_id == user.id, models.Trigger.event_type == "viewer_join", models.Trigger.enabled == True)
             .all()
         )
+        print(f"on_join: найдено триггеров для viewer_join: {len(trig)}")
+        
         for t in trig:
+            print(f"on_join: checking trigger {t.id} key={t.condition_key} val={t.condition_value}")
+            
+            # Если condition_key не задан или пустой — срабатывает на ЛЮБОГО зрителя
+            if not t.condition_key or t.condition_key == "":
+                fn = t.action_params.get("sound_filename") if t.action_params else None
+                if fn and s["viewer_sounds_enabled"]:
+                    sound_url = _abs_url(f"/static/sounds/{user.id}/{fn}")
+                    print(f"on_join: matched ANY viewer -> sound file={fn}, sound_url={sound_url}")
+                    await websocket.send_text(json.dumps({"type": "viewer_join", "user": u, "sound_url": sound_url}, ensure_ascii=False))
+                    try:
+                        t.executed_count += 1
+                        db.add(t)
+                        db.commit()
+                    except Exception:
+                        logger.warning("Не удалось обновить executed_count для триггера %s", t.id)
+                break
+            
+            # Триггер на конкретного пользователя по username
             if t.condition_key == "username" and t.condition_value == u:
                 fn = t.action_params.get("sound_filename") if t.action_params else None
-                if fn:
-                    await websocket.send_text(json.dumps({"type": "viewer_join", "user": u, "sound_url": _abs_url(f"/static/sounds/{user.id}/{fn}")}, ensure_ascii=False))
+                if fn and s["viewer_sounds_enabled"]:
+                    sound_url = _abs_url(f"/static/sounds/{user.id}/{fn}")
+                    print(f"on_join: matched username={u} -> sound file={fn}, sound_url={sound_url}")
+                    await websocket.send_text(json.dumps({"type": "viewer_join", "user": u, "sound_url": sound_url}, ensure_ascii=False))
                     try:
                         t.executed_count += 1
                         db.add(t)
