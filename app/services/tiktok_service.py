@@ -243,12 +243,16 @@ class TikTokService:
                 if on_comment_callback:
                     # Фильтрация: пропускаем события, которые были до подключения
                     # TikTokLive может отправить несколько старых событий при подключении
-                    logger.info(f"TikTok комментарий от {username}: {text}")
+                    print(f"💬 TikTok комментарий от {username}: {text}")
                     self._last_activity[user_id] = datetime.now()
                     try:
+                        print(f"🔥 Вызываем on_comment_callback...")
                         await on_comment_callback(username, text)
+                        print(f"✅ on_comment_callback выполнен успешно!")
                     except Exception as e:
-                        logger.error(f"Ошибка в comment callback: {e}")
+                        print(f"❌ Ошибка в comment callback: {e}")
+                        import traceback
+                        traceback.print_exc()
             
             @client.on(GiftEvent)
             async def on_gift(event: GiftEvent):
