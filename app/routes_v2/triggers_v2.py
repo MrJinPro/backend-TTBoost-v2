@@ -33,6 +33,8 @@ class SetTriggerRequest(BaseModel):
 
 @router.post("/set")
 def set_trigger(req: SetTriggerRequest, user=Depends(get_current_user), db: Session = Depends(get_db)):
+    print(f"🔵 set_trigger received: event={req.event_type}, key={req.condition_key}, value={req.condition_value}, action={req.action}, sound={req.sound_filename}, combo={req.combo_count}")
+    
     if req.action not in (models.TriggerAction.play_sound.value, models.TriggerAction.tts.value):
         raise HTTPException(400, detail="invalid action")
 
@@ -62,6 +64,7 @@ def set_trigger(req: SetTriggerRequest, user=Depends(get_current_user), db: Sess
     )
     db.add(trig)
     db.commit()
+    print(f"🟢 set_trigger saved: id={trig.id}, event={trig.event_type}, key={trig.condition_key}, value={trig.condition_value}")
     return {"status": "ok"}
 
 
