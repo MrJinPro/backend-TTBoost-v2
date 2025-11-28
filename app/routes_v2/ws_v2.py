@@ -205,6 +205,9 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
         print(f"on_join: зритель присоединился ПЕРВЫЙ РАЗ: {u}")
         
         s = get_current_settings()
+        sound_url = None
+        
+        # Проверяем триггеры для добавления звука (опционально)
         trig = (
             db.query(models.Trigger)
             .filter(models.Trigger.user_id == user.id, models.Trigger.event_type == "viewer_join", models.Trigger.enabled == True)
@@ -221,7 +224,6 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
                 if fn and s["viewer_sounds_enabled"]:
                     sound_url = _abs_url(f"/static/sounds/{user.id}/{fn}")
                     print(f"on_join: matched username={u} -> sound file={fn}, sound_url={sound_url}")
-                    await websocket.send_text(json.dumps({"type": "viewer_join", "user": u, "sound_url": sound_url}, ensure_ascii=False))
                     try:
                         t.executed_count += 1
                         db.add(t)
@@ -229,6 +231,14 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
                     except Exception:
                         logger.warning("Не удалось обновить executed_count для триггера %s", t.id)
                 break
+        
+        # ВСЕГДА отправляем событие на фронтенд (для отображения в UI)
+        payload = {"type": "viewer_join", "user": u}
+        if sound_url:
+            payload["sound_url"] = sound_url
+        
+        print(f"on_join: отправляем payload -> {payload}")
+        await websocket.send_text(json.dumps(payload, ensure_ascii=False))
 
     async def on_follow(u: str):
         await websocket.send_text(json.dumps({"type": "follow", "user": u}, ensure_ascii=False))
