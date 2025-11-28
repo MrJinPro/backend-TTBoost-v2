@@ -224,6 +224,7 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
         # Используем tiktok_username если задан, иначе username
         target_username = user.tiktok_username if user.tiktok_username else user.username
         print(f"🔍 WS Connect - User: {user.username}, TikTok Username (DB): '{user.tiktok_username}', Target: '{target_username}'")
+        logger.info(f"⚡ WS: Перед start_client для user_id={user.id}, target={target_username}")
         if not target_username:
             await websocket.send_text(json.dumps({
                 "type": "error",
@@ -232,6 +233,7 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
             await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
             return
         
+        logger.info(f"⚡ WS: Вызываем start_client...")
         await tiktok_service.start_client(
             user_id=user.id,
             tiktok_username=target_username,
@@ -244,6 +246,7 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
             on_share_callback=on_share,
             on_viewer_callback=on_viewer,
         )
+        logger.info(f"⚡ WS: start_client завершён успешно!")
         # Отправляем подтверждение успешного подключения
         await websocket.send_text(json.dumps({
             "type": "status",
