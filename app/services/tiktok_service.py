@@ -375,9 +375,11 @@ class TikTokService:
             @client.on(RoomUserSeqEvent)
             async def on_room_user_seq(event: RoomUserSeqEvent):
                 """Обработка счётчика зрителей"""
+                print(f"🔔 RoomUserSeqEvent received: {event}")
                 # В live_tester мы разделяем текущих онлайн и накопительный total.
                 current = getattr(event, 'viewer_count', None)
                 total = getattr(event, 'total', None)
+                print(f"📊 Raw viewer_count={current}, total={total}")
                 # Fallback когда библиотека не даёт полей (аноним сессия): current может быть 0,
                 # тогда пробуем другие варианты.
                 if current in (None, 0):

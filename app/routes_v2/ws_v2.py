@@ -240,6 +240,7 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
         await websocket.send_text(json.dumps({"type": "share", "user": u}, ensure_ascii=False))
 
     async def on_viewer(current: int, total: int):
+        print(f"on_viewer: current={current}, total={total}")
         await websocket.send_text(json.dumps({"type": "viewer", "current": current, "total": total}, ensure_ascii=False))
 
     # run tiktok client
