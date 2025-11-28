@@ -86,7 +86,6 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
             "voice_id": (settings.voice_id if settings and settings.voice_id else "gtts-ru"),
             "tts_enabled": (settings.tts_enabled if settings else True),
             "gift_sounds_enabled": (settings.gift_sounds_enabled if settings else True),
-            "gift_tts_alongside": (settings.gift_tts_alongside if settings else False),
         }
 
     async def on_comment(u: str, text: str):
