@@ -25,7 +25,6 @@ class UpdateSettingsRequest(BaseModel):
     gift_sounds_enabled: bool | None = None
     tts_volume: int | None = None
     gifts_volume: int | None = None
-    gift_tts_alongside: bool | None = None
 
 
 @router.post("/update")
@@ -60,8 +59,6 @@ def update_settings(req: UpdateSettingsRequest, user: models.User = Depends(get_
         s.tts_volume = int(req.tts_volume)
     if req.gifts_volume is not None:
         s.gifts_volume = int(req.gifts_volume)
-    if req.gift_tts_alongside is not None:
-        s.gift_tts_alongside = req.gift_tts_alongside
     
     print(f"Before commit - voice_id: {s.voice_id}")
     db.commit()
@@ -73,7 +70,6 @@ def update_settings(req: UpdateSettingsRequest, user: models.User = Depends(get_
         "gift_sounds_enabled": s.gift_sounds_enabled,
         "tts_volume": s.tts_volume,
         "gifts_volume": s.gifts_volume,
-        "gift_tts_alongside": s.gift_tts_alongside,
         "tiktok_username": user.tiktok_username,
     }}
 
@@ -84,7 +80,6 @@ class SettingsResponse(BaseModel):
     gift_sounds_enabled: bool
     tts_volume: int
     gifts_volume: int
-    gift_tts_alongside: bool
     tiktok_username: str | None = None
 
 
@@ -102,6 +97,5 @@ def get_settings(user: models.User = Depends(get_current_user), db: Session = De
         gift_sounds_enabled=s.gift_sounds_enabled,
         tts_volume=s.tts_volume,
         gifts_volume=s.gifts_volume,
-        gift_tts_alongside=s.gift_tts_alongside,
         tiktok_username=user.tiktok_username,
     )
