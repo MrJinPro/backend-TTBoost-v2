@@ -77,6 +77,7 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
         return
     await websocket.accept()
     first_message_seen = set()
+    joined_viewers = set()  # Отслеживание зрителей, которые уже заходили в этой сессии
 
     def get_current_settings():
         """Получить актуальные настройки пользователя (голос + флаги)."""
@@ -195,7 +196,15 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
         await websocket.send_text(json.dumps({"type": "like", "user": u, "count": count}, ensure_ascii=False))
 
     async def on_join(u: str):
-        print(f"on_join: зритель присоединился: {u}")
+        # Игнорируем повторные входы — озвучиваем только первый раз за сессию
+        if u in joined_viewers:
+            print(f"on_join: зритель {u} уже заходил в этой сессии, пропускаем")
+            return
+        
+        joined_viewers.add(u)
+        print(f"on_join: зритель присоединился ПЕРВЫЙ РАЗ: {u}")
+        
+        s = get_current_settings()
         trig = (
             db.query(models.Trigger)
             .filter(models.Trigger.user_id == user.id, models.Trigger.event_type == "viewer_join", models.Trigger.enabled == True)
@@ -205,21 +214,6 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
         
         for t in trig:
             print(f"on_join: checking trigger {t.id} key={t.condition_key} val={t.condition_value}")
-            
-            # Если condition_key не задан или пустой — срабатывает на ЛЮБОГО зрителя
-            if not t.condition_key or t.condition_key == "":
-                fn = t.action_params.get("sound_filename") if t.action_params else None
-                if fn and s["viewer_sounds_enabled"]:
-                    sound_url = _abs_url(f"/static/sounds/{user.id}/{fn}")
-                    print(f"on_join: matched ANY viewer -> sound file={fn}, sound_url={sound_url}")
-                    await websocket.send_text(json.dumps({"type": "viewer_join", "user": u, "sound_url": sound_url}, ensure_ascii=False))
-                    try:
-                        t.executed_count += 1
-                        db.add(t)
-                        db.commit()
-                    except Exception:
-                        logger.warning("Не удалось обновить executed_count для триггера %s", t.id)
-                break
             
             # Триггер на конкретного пользователя по username
             if t.condition_key == "username" and t.condition_value == u:
