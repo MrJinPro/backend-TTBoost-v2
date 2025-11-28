@@ -329,10 +329,30 @@ class TikTokService:
             @client.on(JoinEvent)
             async def on_join(event: JoinEvent):
                 """Обработка входа зрителя в стрим"""
+                username = event.user.nickname or event.user.unique_id
+                print(f"👤 JoinEvent: {username} присоединился к стриму")
+                logger.info(f"TikTok зритель присоединился: {username}")
+                self._last_activity[user_id] = datetime.now()
+                
+                # Fallback: если RoomUserSeqEvent не работает, считаем вручную
+                if user_id not in self._viewer_current:
+                    self._viewer_current[user_id] = 0
+                if user_id not in self._viewer_total:
+                    self._viewer_total[user_id] = 0
+                
+                self._viewer_total[user_id] += 1
+                # Предполагаем что текущие = total (упрощение, но лучше чем 0)
+                self._viewer_current[user_id] = self._viewer_total[user_id]
+                
+                # Уведомляем о счётчике зрителей
+                if on_viewer_callback:
+                    try:
+                        await on_viewer_callback(self._viewer_current[user_id], self._viewer_total[user_id])
+                    except Exception as e:
+                        logger.error(f"Ошибка в viewer callback (from JoinEvent): {e}")
+                
+                # Уведомляем о конкретном зрителе (для триггеров)
                 if on_join_callback:
-                    username = event.user.nickname or event.user.unique_id
-                    logger.info(f"TikTok зритель присоединился: {username}")
-                    self._last_activity[user_id] = datetime.now()
                     try:
                         await on_join_callback(username)
                     except Exception as e:
