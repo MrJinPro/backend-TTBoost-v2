@@ -22,7 +22,7 @@ def get_db():
 
 
 MAX_BYTES = 100 * 1024
-MAX_DURATION_SEC = 5
+MAX_DURATION_SEC = 10  # Увеличено для фраз на подарки
 
 
 def _media_root(user_id: str) -> str:
@@ -57,7 +57,7 @@ async def upload_sound(user: models.User = Depends(get_current_user), db: Sessio
         duration_sec = None
 
     if duration_sec is not None and duration_sec > MAX_DURATION_SEC:
-        raise HTTPException(400, detail="duration must be <= 5s")
+        raise HTTPException(400, detail="duration must be <= 10s")
 
     # store
     safe_name = file.filename.replace("/", "_").replace("\\", "_")
