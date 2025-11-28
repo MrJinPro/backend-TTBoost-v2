@@ -92,9 +92,9 @@ class TikTokService:
             on_share_callback: callback когда зритель делится стримом (user)
             on_viewer_callback: callback обновления метрик зрителей (current, total)
         """
-        logger.info(f"🚀 start_client вызван для user_id={user_id}, tiktok_username={tiktok_username}")
+        print(f"🚀 start_client вызван для user_id={user_id}, tiktok_username={tiktok_username}")
         if user_id in self._clients:
-            logger.warning(f"🔄 TikTok клиент уже запущен для {user_id}, перезапускаем с новыми колбеками")
+            print(f"🔄 TikTok клиент уже запущен для {user_id}, перезапускаем с новыми колбеками")
             await self.stop_client(user_id)
         
         try:
@@ -239,7 +239,7 @@ class TikTokService:
                 """Обработка комментариев - только новые события после подключения"""
                 username = event.user.nickname or event.user.unique_id
                 text = event.comment
-                logger.info(f"📨 CommentEvent получен от {username}: {text}, on_comment_callback={'ЕСТЬ' if on_comment_callback else 'НЕТ'}")
+                print(f"📨 CommentEvent получен от {username}: {text}, on_comment_callback={'ЕСТЬ' if on_comment_callback else 'НЕТ'}")
                 if on_comment_callback:
                     # Фильтрация: пропускаем события, которые были до подключения
                     # TikTokLive может отправить несколько старых событий при подключении
