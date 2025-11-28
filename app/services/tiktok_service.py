@@ -376,27 +376,46 @@ class TikTokService:
             @client.on(RoomUserSeqEvent)
             async def on_room_user_seq(event: RoomUserSeqEvent):
                 """Обработка счётчика зрителей"""
-                print(f"🔔 RoomUserSeqEvent received: {event}")
-                # В live_tester мы разделяем текущих онлайн и накопительный total.
-                current = getattr(event, 'viewer_count', None)
-                total = getattr(event, 'total', None)
-                print(f"📊 Raw viewer_count={current}, total={total}")
-                # Fallback когда библиотека не даёт полей (аноним сессия): current может быть 0,
-                # тогда пробуем другие варианты.
-                if current in (None, 0):
-                    # Иногда viewer_count отсутствует, но есть top_viewer_count или member_count и т.п.
-                    # Здесь минималистично используем total если он > 0.
-                    if total and total > 0:
-                        current = min(total, current or total)
-                if current is None:
-                    current = 0
-                if total is None or total < current:
+                print(f"🔔 RoomUserSeqEvent received")
+                
+                prev_current = self._viewer_current.get(user_id, 0)
+                prev_total = self._viewer_total.get(user_id, 0)
+                
+                # Собираем все возможные поля для текущих онлайн
+                current_candidates = [
+                    getattr(event, 'viewer_count', 0),
+                    getattr(event, 'user_count', 0),
+                    getattr(event, 'online_count', 0),
+                    getattr(event, 'onlineUserCount', 0),
+                ]
+                current = next((v for v in current_candidates if isinstance(v, (int, float)) and v > 0), 0)
+                
+                # Собираем все возможные поля для total
+                total_candidates = [
+                    getattr(event, 'total_user_count', 0),
+                    getattr(event, 'totalUserCount', 0),
+                    getattr(event, 'total_viewer_count', 0),
+                    getattr(event, 'total_viewer', 0),
+                    getattr(event, 'total', 0),
+                ]
+                totals = [v for v in total_candidates if isinstance(v, (int, float)) and v >= 0]
+                total = max(totals) if totals else prev_total
+                
+                # Логика: total не может быть меньше current
+                if total < current:
                     total = current
+                # Накопительный total не уменьшается
+                total = max(total, prev_total)
+                
                 self._viewer_current[user_id] = current
                 self._viewer_total[user_id] = total
+                
+                print(f"📊 Viewers: current={current}, total={total} (prev: {prev_current}/{prev_total})")
                 logger.info(f"👥 Зрителей: current={current}, total={total}")
                 self._last_activity[user_id] = datetime.now()
-                if on_viewer_callback:
+                
+                # Отправляем callback только если изменились
+                if (current != prev_current or total != prev_total) and on_viewer_callback:
                     try:
                         await on_viewer_callback(current, total)
                     except Exception as e:
