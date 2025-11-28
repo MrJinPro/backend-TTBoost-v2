@@ -93,8 +93,8 @@ class TikTokService:
             on_viewer_callback: callback обновления метрик зрителей (current, total)
         """
         if user_id in self._clients:
-            logger.warning(f"TikTok клиент уже запущен для {user_id}")
-            return
+            logger.warning(f"🔄 TikTok клиент уже запущен для {user_id}, перезапускаем с новыми колбеками")
+            await self.stop_client(user_id)
         
         try:
             # Применяем настройки подписи к глобальным WebDefaults перед созданием клиента
