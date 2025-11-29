@@ -234,16 +234,6 @@ class TikTokService:
                 logger.info(f"✅ TikTok Live подключен: {tiktok_username}")
                 self._last_activity[user_id] = datetime.now()
             
-            # Universal event logger - ловим ВСЕ события
-            @client.on("*")
-            async def on_any_event(event):
-                """Логируем все события для диагностики"""
-                event_type = type(event).__name__
-                # Пропускаем слишком частые события для уменьшения спама
-                if event_type not in ('ConnectEvent', 'RoomUserSeqEvent'):
-                    logger.info(f"📬 TikTok Event: {event_type}")
-                    print(f"📬 Получено событие: {event_type}")
-            
             @client.on(CommentEvent)
             async def on_comment(event: CommentEvent):
                 """Обработка комментариев - только новые события после подключения"""
