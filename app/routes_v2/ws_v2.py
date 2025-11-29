@@ -127,6 +127,32 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
 
         if u not in first_message_seen:
             first_message_seen.add(u)
+            
+            # Проверяем триггеры viewer_join (т.к. JoinEvent от TikTok не приходит)
+            # Используем первое сообщение как признак входа зрителя
+            print(f"🎯 Первое сообщение от {u} - проверяем триггеры viewer_join")
+            trig_join = (
+                db.query(models.Trigger)
+                .filter(models.Trigger.user_id == user.id, models.Trigger.event_type == "viewer_join", models.Trigger.enabled == True)
+                .all()
+            )
+            for t in trig_join:
+                print(f"  Checking join trigger: key={t.condition_key} val='{t.condition_value}' vs user='{u}'")
+                if t.condition_key == "username" and t.condition_value == u:
+                    fn = t.action_params.get("sound_filename") if t.action_params else None
+                    if fn and s["viewer_sounds_enabled"]:
+                        sound_url = _abs_url(f"/static/sounds/{user.id}/{fn}")
+                        print(f"  ✅ MATCHED! Sending viewer_join with sound: {sound_url}")
+                        await websocket.send_text(json.dumps({"type": "viewer_join", "user": u, "sound_url": sound_url}, ensure_ascii=False))
+                        try:
+                            t.executed_count += 1
+                            db.add(t)
+                            db.commit()
+                        except Exception:
+                            logger.warning("Не удалось обновить executed_count для триггера %s", t.id)
+                        break
+            
+            # Также проверяем viewer_first_message триггеры
             trig_v = (
                 db.query(models.Trigger)
                 .filter(models.Trigger.user_id == user.id, models.Trigger.event_type == "viewer_first_message", models.Trigger.enabled == True)
