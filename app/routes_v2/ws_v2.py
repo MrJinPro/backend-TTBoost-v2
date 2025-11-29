@@ -130,27 +130,33 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
             
             # Проверяем триггеры viewer_join (т.к. JoinEvent от TikTok не приходит)
             # Используем первое сообщение как признак входа зрителя
-            print(f"🎯 Первое сообщение от {u} - проверяем триггеры viewer_join")
+            print(f"🎯 Первое сообщение от '{u}' - проверяем триггеры viewer_join")
             trig_join = (
                 db.query(models.Trigger)
                 .filter(models.Trigger.user_id == user.id, models.Trigger.event_type == "viewer_join", models.Trigger.enabled == True)
                 .all()
             )
+            print(f"🔍 Найдено триггеров viewer_join: {len(trig_join)}")
             for t in trig_join:
-                print(f"  Checking join trigger: key={t.condition_key} val='{t.condition_value}' vs user='{u}'")
-                if t.condition_key == "username" and t.condition_value == u:
-                    fn = t.action_params.get("sound_filename") if t.action_params else None
-                    if fn and s["viewer_sounds_enabled"]:
-                        sound_url = _abs_url(f"/static/sounds/{user.id}/{fn}")
-                        print(f"  ✅ MATCHED! Sending viewer_join with sound: {sound_url}")
-                        await websocket.send_text(json.dumps({"type": "viewer_join", "user": u, "sound_url": sound_url}, ensure_ascii=False))
-                        try:
-                            t.executed_count += 1
-                            db.add(t)
-                            db.commit()
-                        except Exception:
-                            logger.warning("Не удалось обновить executed_count для триггера %s", t.id)
-                        break
+                print(f"   🔹 Проверяю триггер: key={t.condition_key} val='{t.condition_value}' vs user='{u}'")
+                if t.condition_key == "username" and t.condition_value:
+                    if t.condition_value == u:
+                        fn = t.action_params.get("sound_filename") if t.action_params else None
+                        if fn and s["viewer_sounds_enabled"]:
+                            sound_url = _abs_url(f"/static/sounds/{user.id}/{fn}")
+                            print(f"   ✅ MATCHED! Sending viewer_join with sound: {sound_url}")
+                            await websocket.send_text(json.dumps({"type": "viewer_join", "user": u, "sound_url": sound_url}, ensure_ascii=False))
+                            try:
+                                t.executed_count += 1
+                                db.add(t)
+                                db.commit()
+                            except Exception:
+                                logger.warning("Не удалось обновить executed_count для триггера %s", t.id)
+                            break
+                        else:
+                            print(f"   ⚠️ MATCHED но звук не отправлен: fn={fn}, viewer_sounds_enabled={s['viewer_sounds_enabled']}")
+                    else:
+                        print(f"   ❌ NO MATCH: '{t.condition_value}' != '{u}'")
             
             # Также проверяем viewer_first_message триггеры
             trig_v = (
@@ -173,7 +179,7 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
 
     async def on_gift(u: str, gift_id: str, gift_name: str, count: int, diamonds: int = 0):
         s = get_current_settings()
-        print(f"on_gift: получен подарок от {u}: gift_id={gift_id}, gift_name={gift_name}, count={count}, diamonds={diamonds}")
+        print(f"🎁 on_gift: получен подарок от {u}: gift_id={gift_id}, gift_name={gift_name}, count={count}, diamonds={diamonds}")
         # Ищем триггер для подарка (только звуковые файлы, НЕ TTS!)
         trig = (
             db.query(models.Trigger)
@@ -181,36 +187,48 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
             .order_by(models.Trigger.priority.desc())
             .all()
         )
-        print(f"on_gift: найдено триггеров для gift: {len(trig)}")
+        print(f"🔍 on_gift: найдено триггеров для gift: {len(trig)}")
         sound_url = None
         for t in trig:
-            print(f"on_gift: checking trigger {t.id} key={t.condition_key} val={t.condition_value} enabled={t.enabled}")
-            # Проверяем по gift_id
-            if t.condition_key == "gift_id" and t.condition_value and t.condition_value == gift_id:
-                fn = t.action_params.get("sound_filename") if t.action_params else None
-                if fn and s["gift_sounds_enabled"]:
-                    sound_url = _abs_url(f"/static/sounds/{user.id}/{fn}")
-                    print(f"on_gift: matched by gift_id -> sound file={fn}, sound_url={sound_url}")
-                    try:
-                        t.executed_count += 1
-                        db.add(t)
-                        db.commit()
-                    except Exception:
-                        logger.warning("Не удалось обновить executed_count для триггера %s", t.id)
-                    break
-            # Проверяем по gift_name
-            if t.condition_key == "gift_name" and t.condition_value and t.condition_value.lower() == gift_name.lower():
-                fn = t.action_params.get("sound_filename") if t.action_params else None
-                if fn and s["gift_sounds_enabled"]:
-                    sound_url = _abs_url(f"/static/sounds/{user.id}/{fn}")
-                    print(f"on_gift: matched by gift_name -> sound file={fn}, sound_url={sound_url}")
-                    try:
-                        t.executed_count += 1
-                        db.add(t)
-                        db.commit()
-                    except Exception:
-                        logger.warning("Не удалось обновить executed_count для триггера %s", t.id)
-                    break
+            print(f"   🔹 Проверяю триггер {t.id}")
+            print(f"      key={t.condition_key}, val='{t.condition_value}', enabled={t.enabled}")
+            print(f"      Сравниваю: gift_id={gift_id} (type={type(gift_id).__name__})")
+            print(f"                 gift_name={gift_name} (type={type(gift_name).__name__})")
+            
+            # Проверяем по gift_id (строгое сравнение строк)
+            if t.condition_key == "gift_id" and t.condition_value:
+                # Приводим оба значения к строке для сравнения
+                if str(t.condition_value) == str(gift_id):
+                    fn = t.action_params.get("sound_filename") if t.action_params else None
+                    if fn and s["gift_sounds_enabled"]:
+                        sound_url = _abs_url(f"/static/sounds/{user.id}/{fn}")
+                        print(f"   ✅ MATCHED by gift_id! sound={fn}")
+                        try:
+                            t.executed_count += 1
+                            db.add(t)
+                            db.commit()
+                        except Exception:
+                            logger.warning("Не удалось обновить executed_count для триггера %s", t.id)
+                        break
+                else:
+                    print(f"   ❌ NO MATCH: '{t.condition_value}' != '{gift_id}'")
+                    
+            # Проверяем по gift_name (регистронезависимое сравнение)
+            elif t.condition_key == "gift_name" and t.condition_value:
+                if t.condition_value.lower() == gift_name.lower():
+                    fn = t.action_params.get("sound_filename") if t.action_params else None
+                    if fn and s["gift_sounds_enabled"]:
+                        sound_url = _abs_url(f"/static/sounds/{user.id}/{fn}")
+                        print(f"   ✅ MATCHED by gift_name! sound={fn}")
+                        try:
+                            t.executed_count += 1
+                            db.add(t)
+                            db.commit()
+                        except Exception:
+                            logger.warning("Не удалось обновить executed_count для триггера %s", t.id)
+                        break
+                else:
+                    print(f"   ❌ NO MATCH: '{t.condition_value}' != '{gift_name}'")
         # Отправляем событие подарка (только с sound_url если триггер есть)
         payload = {"type": "gift", "user": u, "gift_id": gift_id, "gift_name": gift_name, "count": count, "diamonds": diamonds}
         if sound_url:
@@ -228,7 +246,7 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
             return
         
         joined_viewers.add(u)
-        print(f"on_join: зритель присоединился ПЕРВЫЙ РАЗ: {u}")
+        print(f"👋 on_join: зритель присоединился ПЕРВЫЙ РАЗ: {u}")
         
         s = get_current_settings()
         sound_url = None
@@ -239,24 +257,30 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
             .filter(models.Trigger.user_id == user.id, models.Trigger.event_type == "viewer_join", models.Trigger.enabled == True)
             .all()
         )
-        print(f"on_join: найдено триггеров для viewer_join: {len(trig)}")
+        print(f"🔍 on_join: найдено триггеров для viewer_join: {len(trig)}")
         
         for t in trig:
-            print(f"on_join: checking trigger {t.id} key={t.condition_key} val={t.condition_value}")
+            print(f"   🔹 Проверяю триггер {t.id}")
+            print(f"      key={t.condition_key}, val='{t.condition_value}'")
+            print(f"      Сравниваю с юзером: '{u}'")
             
-            # Триггер на конкретного пользователя по username
-            if t.condition_key == "username" and t.condition_value == u:
-                fn = t.action_params.get("sound_filename") if t.action_params else None
-                if fn and s["viewer_sounds_enabled"]:
-                    sound_url = _abs_url(f"/static/sounds/{user.id}/{fn}")
-                    print(f"on_join: matched username={u} -> sound file={fn}, sound_url={sound_url}")
-                    try:
-                        t.executed_count += 1
-                        db.add(t)
-                        db.commit()
-                    except Exception:
-                        logger.warning("Не удалось обновить executed_count для триггера %s", t.id)
-                break
+            # Триггер на конкретного пользователя по username (точное сравнение с учетом эмодзи)
+            if t.condition_key == "username" and t.condition_value:
+                # Сравниваем без изменений (с эмодзи)
+                if t.condition_value == u:
+                    fn = t.action_params.get("sound_filename") if t.action_params else None
+                    if fn and s["viewer_sounds_enabled"]:
+                        sound_url = _abs_url(f"/static/sounds/{user.id}/{fn}")
+                        print(f"   ✅ MATCHED username! sound={fn}")
+                        try:
+                            t.executed_count += 1
+                            db.add(t)
+                            db.commit()
+                        except Exception:
+                            logger.warning("Не удалось обновить executed_count для триггера %s", t.id)
+                    break
+                else:
+                    print(f"   ❌ NO MATCH: '{t.condition_value}' != '{u}'")
         
         # ВСЕГДА отправляем событие на фронтенд (для отображения в UI)
         payload = {"type": "viewer_join", "user": u}
