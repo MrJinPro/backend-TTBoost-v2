@@ -33,6 +33,8 @@ else:
         "http://127.0.0.1",
         "http://localhost:3000",
         "http://127.0.0.1:3000",
+        # фронтенд на production
+        "https://mobile.ttboost.pro",
         server_host.replace("https://", "http://"),
         server_host,
     ]
