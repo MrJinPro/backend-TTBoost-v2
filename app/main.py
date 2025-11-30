@@ -23,8 +23,16 @@ START_TIME = datetime.utcnow()
 
 ALLOWED_ORIGINS_ENV = os.getenv("ALLOWED_ORIGINS")
 ALLOW_LOCALHOST_DEV = os.getenv("ALLOW_LOCALHOST_DEV", "1")  # если 1, то любые http://localhost:<port> и http://127.0.0.1:<port>
+
+# Безопасно парсим ALLOWED_ORIGINS: если переменная отсутствует или не содержит валидных
+# значений (пустая строка, пустые значения через запятую), используем дефолтный набор.
+parsed_allowed = []
 if ALLOWED_ORIGINS_ENV:
-    allowed_origins = [o.strip() for o in ALLOWED_ORIGINS_ENV.split(",") if o.strip()]
+    # Разделяем по запятой и убираем пустые/пробельные элементы
+    parsed_allowed = [o.strip() for o in ALLOWED_ORIGINS_ENV.split(",") if o and o.strip()]
+
+if parsed_allowed:
+    allowed_origins = parsed_allowed
 else:
     # По умолчанию разрешаем localhost и 127.* (Flutter web dev) + прод домен из SERVER_HOST
     server_host = os.getenv("SERVER_HOST", "https://api.ttboost.pro").rstrip("/")
