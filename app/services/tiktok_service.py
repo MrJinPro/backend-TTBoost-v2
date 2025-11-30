@@ -237,7 +237,9 @@ class TikTokService:
             @client.on(CommentEvent)
             async def on_comment(event: CommentEvent):
                 """Обработка комментариев - только новые события после подключения"""
-                username = event.user.nickname or event.user.unique_id
+                # ВАЖНО: Используем unique_id (логин) вместо nickname для стабильности
+                print(f"🔍 DEBUG: event.user.unique_id = '{event.user.unique_id}', event.user.nickname = '{event.user.nickname}'")
+                username = event.user.unique_id or event.user.nickname
                 text = event.comment
                 print(f"📨 CommentEvent получен от {username}: {text}, on_comment_callback={'ЕСТЬ' if on_comment_callback else 'НЕТ'}")
                 if on_comment_callback:
@@ -264,7 +266,8 @@ class TikTokService:
                 # В live_tester мы НЕ задерживаем стриковые подарки, сразу отдаём каждое обновление.
                 # Повторяем ту же логику здесь: убираем фильтр streaking.
                 gift_obj = event.gift
-                username = event.user.nickname or event.user.unique_id
+                # ВАЖНО: Используем unique_id (логин) вместо nickname для стабильности
+                username = event.user.unique_id or event.user.nickname
                 # Надёжное извлечение ID и имени
                 gift_id = getattr(gift_obj, 'id', None) or getattr(gift_obj, 'name', 'unknown_gift')
                 gift_name = getattr(gift_obj, 'name', str(gift_id))
@@ -317,7 +320,7 @@ class TikTokService:
             async def on_like(event: LikeEvent):
                 """Обработка лайков"""
                 if on_like_callback:
-                    username = event.user.nickname or event.user.unique_id
+                    username = event.user.unique_id or event.user.nickname
                     count = event.count
                     logger.info(f"TikTok лайки от {username}: {count}")
                     self._last_activity[user_id] = datetime.now()
@@ -329,7 +332,7 @@ class TikTokService:
             @client.on(JoinEvent)
             async def on_join(event: JoinEvent):
                 """Обработка входа зрителя в стрим"""
-                username = event.user.nickname or event.user.unique_id
+                username = event.user.unique_id or event.user.nickname
                 print(f"👤 JoinEvent: {username} присоединился к стриму")
                 logger.info(f"TikTok зритель присоединился: {username}")
                 self._last_activity[user_id] = datetime.now()
@@ -342,7 +345,7 @@ class TikTokService:
             if FollowEvent is not None and on_follow_callback is not None:
                 @client.on(FollowEvent)
                 async def on_follow(event):  # type: ignore
-                    username = getattr(event.user, 'nickname', None) or getattr(event.user, 'unique_id', '')
+                    username = getattr(event.user, 'unique_id', None) or getattr(event.user, 'nickname', '')
                     logger.info(f"TikTok подписка: {username}")
                     try:
                         await on_follow_callback(username)
@@ -352,7 +355,7 @@ class TikTokService:
             if SubscribeEvent is not None and on_subscribe_callback is not None:
                 @client.on(SubscribeEvent)
                 async def on_subscribe(event):  # type: ignore
-                    username = getattr(event.user, 'nickname', None) or getattr(event.user, 'unique_id', '')
+                    username = getattr(event.user, 'unique_id', None) or getattr(event.user, 'nickname', '')
                     logger.info(f"TikTok супер-подписка: {username}")
                     try:
                         await on_subscribe_callback(username)
@@ -363,7 +366,7 @@ class TikTokService:
             @client.on(ShareEvent)
             async def on_share(event: ShareEvent):
                 """Обработка события когда кто-то делится стримом"""
-                username = getattr(event.user, 'nickname', None) or getattr(event.user, 'unique_id', 'Unknown')
+                username = getattr(event.user, 'unique_id', None) or getattr(event.user, 'nickname', 'Unknown')
                 logger.info(f"📤 TikTok Share: {username} поделился стримом")
                 self._last_activity[user_id] = datetime.now()
                 if on_share_callback:

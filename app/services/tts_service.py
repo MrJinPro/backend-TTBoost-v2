@@ -1,7 +1,3 @@
-"""
-Универсальный TTS сервис с поддержкой нескольких движков
-Поддерживает: gTTS (Google), Edge-TTS (Microsoft), OpenAI TTS (модели *-tts)
-"""
 import os
 import logging
 import asyncio
@@ -10,22 +6,22 @@ from enum import Enum
 from typing import Optional, Dict
 from gtts import gTTS
 import edge_tts
-try:  # pragma: no cover
-    from openai import OpenAI  # openai>=1.0.0
-except Exception:  # pragma: no cover
-    OpenAI = None  # type: ignore
+try:
+    from openai import OpenAI
+except Exception:
+    OpenAI = None
 
 logger = logging.getLogger(__name__)
 
 
 class TTSEngine(str, Enum):
     """Доступные TTS движки"""
-    GTTS = "gtts"      # Google TTS
-    EDGE = "edge"      # Microsoft Edge TTS
-    OPENAI = "openai"  # OpenAI TTS (gpt-4o-mini-tts и др.)
+    GTTS = "gtts"
+    EDGE = "edge"
+    OPENAI = "openai"
 
 
-# Список доступных голосов для каждого движка
+
 AVAILABLE_VOICES: Dict[str, list[dict]] = {
     "gtts": [
         {"id": "gtts-ru", "name": "Google Русский (женский)", "lang": "ru", "engine": "gtts"},
@@ -100,7 +96,7 @@ async def generate_tts(text: str, voice_id: str = "gtts-ru", user_id: str = None
         logger.error(f"Неизвестный движок: {engine}")
         result = ""
 
-    # Фолбэк: если выбратьный движок не сгенерировал звук, пытаемся через gTTS (ru)
+
     if not result:
         try:
             logger.warning(f"TTS движок '{engine}' не вернул результат, пробуем gTTS (ru)")
@@ -113,10 +109,10 @@ async def generate_tts(text: str, voice_id: str = "gtts-ru", user_id: str = None
 
 async def _generate_gtts(text: str, voice_info: dict, user_id: str = None) -> str:
     """Генерация через Google TTS"""
-    # Используем MEDIA_ROOT из .env
+
     media_root = os.getenv("MEDIA_ROOT", "/opt/ttboost/static")
     
-    # Создаем путь с user_id если указан
+
     if user_id:
         tts_dir = os.path.join(media_root, "tts", user_id)
         url_path = f"static/tts/{user_id}"
@@ -155,10 +151,10 @@ async def _generate_edge(text: str, voice_info: dict, user_id: str = None) -> st
     """Генерация через Microsoft Edge TTS"""
     print(f"🎙️ Attempting Edge TTS with voice: {voice_info['id']}")
     
-    # Используем MEDIA_ROOT из .env
+
     media_root = os.getenv("MEDIA_ROOT", "/opt/ttboost/static")
     
-    # Создаем путь с user_id если указан
+
     if user_id:
         tts_dir = os.path.join(media_root, "tts", user_id)
         url_path = f"static/tts/{user_id}"
@@ -218,7 +214,6 @@ async def _generate_openai(text: str, voice_info: dict, user_id: str = None) -> 
 
     try:
         client = OpenAI(api_key=api_key)
-        # Новый SDK метод audio.speech.create
         resp = await asyncio.to_thread(
             lambda: client.audio.speech.create(
                 model=model,
@@ -237,13 +232,11 @@ async def _generate_openai(text: str, voice_info: dict, user_id: str = None) -> 
         logger.info(f"OpenAI TTS создан: {file_path} (voice={voice}, model={model})")
         _post_tts_housekeeping(tts_dir, file_path)
         return url
-    except Exception as e:  # pragma: no cover
+    except Exception as e:
         logger.error(f"Ошибка OpenAI TTS: {e}")
         return ""
 
-# --------------------------
-# Retention & cleanup logic
-# --------------------------
+
 def _get_retention_seconds() -> int:
     """TTL (сек) для TTS файлов. По заданию: 5 минут (300с), можно переопределить env TTS_RETENTION_SECONDS."""
     try:
@@ -254,12 +247,10 @@ def _get_retention_seconds() -> int:
 
 def _post_tts_housekeeping(tts_dir: str, file_path: str) -> None:
     ttl = _get_retention_seconds()
-    # Плановое удаление конкретного файла
     try:
         asyncio.get_running_loop().create_task(_delete_file_later(file_path, ttl))
     except RuntimeError:
         pass
-    # Немедленная зачистка старых
     _cleanup_old_files(tts_dir, ttl)
 
 
