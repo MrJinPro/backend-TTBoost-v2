@@ -12,6 +12,14 @@ from app.services.security import decode_token
 from app.services.tts_service import generate_tts
 from app.services.tiktok_service import tiktok_service
 
+try:
+    # В новых версиях TikTokLive есть отдельное исключение, дающее понятный текст
+    from TikTokLive.client.errors import UserNotFoundError  # type: ignore
+except Exception:  # pragma: no cover
+    # Фолбэк, если используем стараую версию библиотеки без этого класса
+    class UserNotFoundError(Exception):  # type: ignore
+        pass
+
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
@@ -341,16 +349,29 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
         while True:
             await websocket.receive_text()
     except WebSocketDisconnect:
+        # Клиент сам отключился — ничего не отправляем
         pass
+    except UserNotFoundError:
+        # Особый случай: TikTokLive не нашёл пользователя/стрим
+        try:
+            await websocket.send_text(json.dumps({
+                "type": "error",
+                "message": (
+                    "TikTok пользователь не найден. "
+                    "Проверьте, что ник указан без '@', и что стрим запущен."
+                ) + (f" (username: @{target_username})" if 'target_username' in locals() and target_username else "")
+            }, ensure_ascii=False))
+        except Exception:
+            pass
     except Exception as e:
-        # Отправляем ошибку перед закрытием
+        # Отправляем любую другую ошибку перед закрытием
         error_msg = str(e)
         try:
             await websocket.send_text(json.dumps({
                 "type": "error",
                 "message": f"Ошибка подключения к TikTok Live: {error_msg}"
             }, ensure_ascii=False))
-        except:
+        except Exception:
             pass
     finally:
         if tiktok_service.is_running(user.id):
