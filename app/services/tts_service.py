@@ -6,6 +6,7 @@ from enum import Enum
 from typing import Optional, Dict
 from gtts import gTTS
 import edge_tts
+import httpx
 try:
     from openai import OpenAI
 except Exception:
@@ -19,6 +20,7 @@ class TTSEngine(str, Enum):
     GTTS = "gtts"
     EDGE = "edge"
     OPENAI = "openai"
+    ELEVEN = "eleven"
 
 
 
@@ -39,6 +41,15 @@ AVAILABLE_VOICES: Dict[str, list[dict]] = {
         {"id": "openai-coral", "name": "OpenAI Coral", "voice": "coral", "engine": "openai"},
         {"id": "openai-verse", "name": "OpenAI Verse", "voice": "verse", "engine": "openai"},
     ],
+    # Премиальный TTS ElevenLabs. ID конкретного голоса берётся из env ELEVENLABS_VOICE_ID.
+    # Пользователь выбирает этот voice_id в настройках NovaBoost, а реальный voice UUID настраивается на сервере.
+    "eleven": [
+        {
+            "id": "eleven-premium-main",
+            "name": "ElevenLabs Premium (основной)",
+            "engine": "eleven",
+        },
+    ],
 }
 
 
@@ -48,10 +59,13 @@ def get_all_voices():
     """
     all_voices = []
     have_openai = OpenAI is not None and os.getenv("OPENAI_API_KEY")
+    have_eleven = bool(os.getenv("ELEVENLABS_API_KEY"))
     for engine, engine_voices in AVAILABLE_VOICES.items():
         for v in engine_voices:
             v_copy = dict(v)
             if engine == "openai" and not have_openai:
+                v_copy["unavailable"] = True
+            if engine == "eleven" and not have_eleven:
                 v_copy["unavailable"] = True
             all_voices.append(v_copy)
     return all_voices
@@ -92,6 +106,8 @@ async def generate_tts(text: str, voice_id: str = "gtts-ru", user_id: str = None
         result = await _generate_edge(text, voice_info, user_id)
     elif engine == "openai":
         result = await _generate_openai(text, voice_info, user_id)
+    elif engine == "eleven":
+        result = await _generate_elevenlabs(text, voice_info, user_id)
     else:
         logger.error(f"Неизвестный движок: {engine}")
         result = ""
@@ -234,6 +250,82 @@ async def _generate_openai(text: str, voice_info: dict, user_id: str = None) -> 
         return url
     except Exception as e:
         logger.error(f"Ошибка OpenAI TTS: {e}")
+        return ""
+
+
+async def _generate_elevenlabs(text: str, voice_info: dict, user_id: str = None) -> str:
+    """Генерация через ElevenLabs TTS.
+
+    Требует переменных окружения:
+      - ELEVENLABS_API_KEY  – секретный API ключ
+      - ELEVENLABS_VOICE_ID – ID выбранного premium-голоса (uuid из ElevenLabs)
+      - ELEVENLABS_TTS_MODEL (опц.) – модель, по умолчанию eleven_multilingual_v2
+    """
+    api_key = os.getenv("ELEVENLABS_API_KEY")
+    if not api_key:
+        logger.warning("ELEVENLABS_API_KEY не задан – ElevenLabs TTS недоступен")
+        return ""
+
+    voice_id = voice_info.get("voice_id") or os.getenv("ELEVENLABS_VOICE_ID")
+    if not voice_id:
+        logger.warning("ELEVENLABS_VOICE_ID не задан – неизвестно, какой голос использовать")
+        return ""
+
+    model_id = os.getenv("ELEVENLABS_TTS_MODEL", "eleven_multilingual_v2")
+    base_api = os.getenv("ELEVENLABS_API_BASE", "https://api.elevenlabs.io")
+    url = f"{base_api.rstrip('/')}/v1/text-to-speech/{voice_id}"
+
+    media_root = os.getenv("MEDIA_ROOT", "/opt/ttboost/static")
+    if user_id:
+        tts_dir = os.path.join(media_root, "tts", user_id)
+        url_path = f"static/tts/{user_id}"
+    else:
+        tts_dir = os.path.join(media_root, "tts")
+        url_path = "static/tts"
+    os.makedirs(tts_dir, exist_ok=True)
+
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S_%f')
+    filename = f"tts_{timestamp}.mp3"
+    file_path = os.path.join(tts_dir, filename)
+
+    headers = {
+        "xi-api-key": api_key,
+        "Accept": "audio/mpeg",
+        "Content-Type": "application/json",
+    }
+    payload = {
+        "text": text,
+        "model_id": model_id,
+        "voice_settings": {
+            "stability": float(os.getenv("ELEVENLABS_VOICE_STABILITY", "0.5")),
+            "similarity_boost": float(os.getenv("ELEVENLABS_VOICE_SIMILARITY", "0.75")),
+        },
+    }
+
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            resp = await client.post(url, headers=headers, json=payload)
+        if resp.status_code != 200:
+            logger.error(
+                "Ошибка ElevenLabs TTS: %s %s", resp.status_code, resp.text[:200]
+            )
+            return ""
+
+        with open(file_path, "wb") as f:
+            f.write(resp.content)
+
+        base_url = os.getenv("TTS_BASE_URL", "https://media.ttboost.pro")
+        public_url = f"{base_url.rstrip('/')}/{url_path}/{filename}"
+        logger.info(
+            "ElevenLabs TTS создан: %s (voice_id=%s, model=%s)",
+            file_path,
+            voice_id,
+            model_id,
+        )
+        _post_tts_housekeeping(tts_dir, file_path)
+        return public_url
+    except Exception as e:
+        logger.error(f"Ошибка ElevenLabs TTS: {e}")
         return ""
 
 
