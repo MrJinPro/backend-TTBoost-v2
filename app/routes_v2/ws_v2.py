@@ -2,6 +2,8 @@ import json
 import logging
 import os
 import re
+import time
+import asyncio
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, status, Depends, HTTPException
 from sqlalchemy.orm import Session
 
@@ -23,6 +25,8 @@ except Exception:  # pragma: no cover
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+
+WS_DEBUG = str(os.getenv("WS_DEBUG", "")).strip() in ("1", "true", "yes", "on")
 
 
 def get_db():
@@ -85,8 +89,34 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
         return
     await websocket.accept()
-    first_message_seen = set()
-    joined_viewers = set()  # Отслеживание зрителей, которые уже заходили в этой сессии
+    first_message_seen = set()  # Отслеживание зрителей, которые уже писали в чат в этой сессии
+    seen_viewers = set()  # Отслеживание зрителей, которых уже «видели» в этой сессии (join или first_message)
+    _cooldown = {}  # (scope, trigger_id, username_or_star) -> last_time_monotonic
+
+    def _cooldown_allows(trigger_id: int, seconds: float | int | None, username: str | None = None) -> bool:
+        if not seconds:
+            return True
+        try:
+            seconds_f = float(seconds)
+        except Exception:
+            return True
+        if seconds_f <= 0:
+            return True
+        now = time.monotonic()
+        key = ("global", int(trigger_id), username or "*")
+        last = _cooldown.get(key)
+        if last is not None and (now - float(last)) < seconds_f:
+            return False
+        _cooldown[key] = now
+        return True
+
+    def _matches_always(t: models.Trigger) -> bool:
+        if not t.condition_key or t.condition_key == "always":
+            if not t.condition_value:
+                return True
+            v = str(t.condition_value).strip().lower()
+            return v in ("true", "1", "yes", "*")
+        return False
 
     def get_current_settings():
         """Получить актуальные настройки пользователя (голос + флаги)."""
@@ -116,6 +146,8 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
         for t in trig:
             if t.condition_key == "message_contains" and t.condition_value and t.condition_value.lower() in text.lower():
                 if t.action == models.TriggerAction.tts and t.action_params:
+                    if not _cooldown_allows(t.id, (t.action_params or {}).get("cooldown_seconds"), username=u):
+                        continue
                     template = t.action_params.get("text_template") or "{message}"
                     phrase = template.replace("{user}", _remove_emojis(u)).replace("{message}", sanitized_text)
                     tts_url = await generate_tts(phrase, voice_id, user_id=str(user.id))
@@ -136,47 +168,30 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
 
         if u not in first_message_seen:
             first_message_seen.add(u)
-            
-            # Проверяем триггеры viewer_join (т.к. JoinEvent от TikTok не приходит)
-            # Используем первое сообщение как признак входа зрителя
-            print(f"🎯 Первое сообщение от '{u}' - проверяем триггеры viewer_join")
-            trig_join = (
-                db.query(models.Trigger)
-                .filter(models.Trigger.user_id == user.id, models.Trigger.event_type == "viewer_join", models.Trigger.enabled == True)
-                .all()
-            )
-            print(f"🔍 Найдено триггеров viewer_join: {len(trig_join)}")
-            for t in trig_join:
-                print(f"   🔹 Проверяю триггер: key={t.condition_key} val='{t.condition_value}' vs user='{u}'")
-                if t.condition_key == "username" and t.condition_value:
-                    if t.condition_value == u:
-                        fn = t.action_params.get("sound_filename") if t.action_params else None
-                        if fn and s["viewer_sounds_enabled"]:
-                            sound_url = _abs_url(f"/static/sounds/{user.id}/{fn}")
-                            print(f"   ✅ MATCHED! Sending viewer_join with sound: {sound_url}")
-                            await websocket.send_text(json.dumps({"type": "viewer_join", "user": u, "sound_url": sound_url}, ensure_ascii=False))
-                            try:
-                                t.executed_count += 1
-                                db.add(t)
-                                db.commit()
-                            except Exception:
-                                logger.warning("Не удалось обновить executed_count для триггера %s", t.id)
-                            break
-                        else:
-                            print(f"   ⚠️ MATCHED но звук не отправлен: fn={fn}, viewer_sounds_enabled={s['viewer_sounds_enabled']}")
-                    else:
-                        print(f"   ❌ NO MATCH: '{t.condition_value}' != '{u}'")
+            # JoinEvent от TikTok может отсутствовать: используем первое сообщение как «первое появление» зрителя.
+            # Важно: не дублируем, если join уже был обработан.
+            if u not in seen_viewers:
+                if WS_DEBUG:
+                    logger.debug("First message from '%s' -> treat as viewer_join (first seen in session)", u)
+                await on_join(u)
             
             # Также проверяем viewer_first_message триггеры
             trig_v = (
                 db.query(models.Trigger)
                 .filter(models.Trigger.user_id == user.id, models.Trigger.event_type == "viewer_first_message", models.Trigger.enabled == True)
+                .order_by(models.Trigger.priority.desc())
                 .all()
             )
             for t in trig_v:
-                if t.condition_key == "username" and t.condition_value and t.condition_value == u:
+                matched = False
+                if _matches_always(t):
+                    matched = True
+                elif t.condition_key == "username" and t.condition_value:
+                    matched = (t.condition_value == u)
+
+                if matched:
                     fn = t.action_params.get("sound_filename") if t.action_params else None
-                    if fn:
+                    if fn and _cooldown_allows(t.id, (t.action_params or {}).get("cooldown_seconds"), username=u):
                         await websocket.send_text(json.dumps({"type": "viewer_first_message", "user": u, "sound_url": _abs_url(f"/static/sounds/{user.id}/{fn}")}, ensure_ascii=False))
                         try:
                             t.executed_count += 1
@@ -188,7 +203,8 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
 
     async def on_gift(u: str, gift_id: str, gift_name: str, count: int, diamonds: int = 0):
         s = get_current_settings()
-        print(f"🎁 on_gift: получен подарок от {u}: gift_id={gift_id}, gift_name={gift_name}, count={count}, diamonds={diamonds}")
+        if WS_DEBUG:
+            logger.debug("on_gift: user=%s gift_id=%s gift_name=%s count=%s diamonds=%s", u, gift_id, gift_name, count, diamonds)
         # Ищем триггер для подарка (только звуковые файлы, НЕ TTS!)
         trig = (
             db.query(models.Trigger)
@@ -196,22 +212,27 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
             .order_by(models.Trigger.priority.desc())
             .all()
         )
-        print(f"🔍 on_gift: найдено триггеров для gift: {len(trig)}")
+        if WS_DEBUG:
+            logger.debug("on_gift: triggers=%d", len(trig))
         sound_url = None
         for t in trig:
-            print(f"   🔹 Проверяю триггер {t.id}")
-            print(f"      key={t.condition_key}, val='{t.condition_value}', enabled={t.enabled}")
-            print(f"      Сравниваю: gift_id={gift_id} (type={type(gift_id).__name__})")
-            print(f"                 gift_name={gift_name} (type={type(gift_name).__name__})")
+            if WS_DEBUG:
+                logger.debug(
+                    "on_gift: check trigger=%s key=%s val=%r enabled=%s", t.id, t.condition_key, t.condition_value, t.enabled
+                )
             
             # Проверяем по gift_id (строгое сравнение строк)
             if t.condition_key == "gift_id" and t.condition_value:
                 # Приводим оба значения к строке для сравнения
                 if str(t.condition_value) == str(gift_id):
+                    # combo_count: 0 = любое количество, иначе требуем count >= combo_count
+                    if getattr(t, "combo_count", 0) and int(count) < int(t.combo_count):
+                        continue
                     fn = t.action_params.get("sound_filename") if t.action_params else None
-                    if fn and s["gift_sounds_enabled"]:
+                    if fn and s["gift_sounds_enabled"] and _cooldown_allows(t.id, (t.action_params or {}).get("cooldown_seconds")):
                         sound_url = _abs_url(f"/static/sounds/{user.id}/{fn}")
-                        print(f"   ✅ MATCHED by gift_id! sound={fn}")
+                        if WS_DEBUG:
+                            logger.debug("on_gift: matched by gift_id trigger=%s sound=%s", t.id, fn)
                         try:
                             t.executed_count += 1
                             db.add(t)
@@ -220,15 +241,19 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
                             logger.warning("Не удалось обновить executed_count для триггера %s", t.id)
                         break
                 else:
-                    print(f"   ❌ NO MATCH: '{t.condition_value}' != '{gift_id}'")
+                    if WS_DEBUG:
+                        logger.debug("on_gift: no match gift_id trigger=%s %r != %r", t.id, t.condition_value, gift_id)
                     
             # Проверяем по gift_name (регистронезависимое сравнение)
             elif t.condition_key == "gift_name" and t.condition_value:
                 if t.condition_value.lower() == gift_name.lower():
+                    if getattr(t, "combo_count", 0) and int(count) < int(t.combo_count):
+                        continue
                     fn = t.action_params.get("sound_filename") if t.action_params else None
-                    if fn and s["gift_sounds_enabled"]:
+                    if fn and s["gift_sounds_enabled"] and _cooldown_allows(t.id, (t.action_params or {}).get("cooldown_seconds")):
                         sound_url = _abs_url(f"/static/sounds/{user.id}/{fn}")
-                        print(f"   ✅ MATCHED by gift_name! sound={fn}")
+                        if WS_DEBUG:
+                            logger.debug("on_gift: matched by gift_name trigger=%s sound=%s", t.id, fn)
                         try:
                             t.executed_count += 1
                             db.add(t)
@@ -237,7 +262,8 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
                             logger.warning("Не удалось обновить executed_count для триггера %s", t.id)
                         break
                 else:
-                    print(f"   ❌ NO MATCH: '{t.condition_value}' != '{gift_name}'")
+                    if WS_DEBUG:
+                        logger.debug("on_gift: no match gift_name trigger=%s %r != %r", t.id, t.condition_value, gift_name)
 
         # Фолбэк: если нет пользовательского триггера — используем глобальный звук подарка
         if not sound_url and s["gift_sounds_enabled"]:
@@ -251,20 +277,23 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
         payload = {"type": "gift", "user": u, "gift_id": gift_id, "gift_name": gift_name, "count": count, "diamonds": diamonds}
         if sound_url:
             payload["sound_url"] = sound_url
-        print(f"on_gift: отправляем payload -> {payload}")
+        if WS_DEBUG:
+            logger.debug("on_gift: send payload=%s", payload)
         await websocket.send_text(json.dumps(payload, ensure_ascii=False))
 
     async def on_like(u: str, count: int):
         await websocket.send_text(json.dumps({"type": "like", "user": u, "count": count}, ensure_ascii=False))
 
     async def on_join(u: str):
-        # Игнорируем повторные входы — озвучиваем только первый раз за сессию
-        if u in joined_viewers:
-            print(f"on_join: зритель {u} уже заходил в этой сессии, пропускаем")
+        # Игнорируем повторные входы — считаем только первый раз «увидели» за сессию
+        if u in seen_viewers:
+            if WS_DEBUG:
+                logger.debug("on_join: user %s already seen in session, skip", u)
             return
-        
-        joined_viewers.add(u)
-        print(f"👋 on_join: зритель присоединился ПЕРВЫЙ РАЗ: {u}")
+
+        seen_viewers.add(u)
+        if WS_DEBUG:
+            logger.debug("on_join: first time in session user=%s", u)
         
         s = get_current_settings()
         sound_url = None
@@ -273,39 +302,43 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
         trig = (
             db.query(models.Trigger)
             .filter(models.Trigger.user_id == user.id, models.Trigger.event_type == "viewer_join", models.Trigger.enabled == True)
+            .order_by(models.Trigger.priority.desc())
             .all()
         )
-        print(f"🔍 on_join: найдено триггеров для viewer_join: {len(trig)}")
+        if WS_DEBUG:
+            logger.debug("on_join: triggers=%d", len(trig))
         
         for t in trig:
-            print(f"   🔹 Проверяю триггер {t.id}")
-            print(f"      key={t.condition_key}, val='{t.condition_value}'")
-            print(f"      Сравниваю с юзером: '{u}'")
+            if WS_DEBUG:
+                logger.debug("on_join: check trigger=%s key=%s val=%r", t.id, t.condition_key, t.condition_value)
             
-            # Триггер на конкретного пользователя по username (точное сравнение с учетом эмодзи)
-            if t.condition_key == "username" and t.condition_value:
-                # Сравниваем без изменений (с эмодзи)
-                if t.condition_value == u:
-                    fn = t.action_params.get("sound_filename") if t.action_params else None
-                    if fn and s["viewer_sounds_enabled"]:
-                        sound_url = _abs_url(f"/static/sounds/{user.id}/{fn}")
-                        print(f"   ✅ MATCHED username! sound={fn}")
-                        try:
-                            t.executed_count += 1
-                            db.add(t)
-                            db.commit()
-                        except Exception:
-                            logger.warning("Не удалось обновить executed_count для триггера %s", t.id)
-                    break
-                else:
-                    print(f"   ❌ NO MATCH: '{t.condition_value}' != '{u}'")
+            matched = False
+            if _matches_always(t):
+                matched = True
+            elif t.condition_key == "username" and t.condition_value:
+                matched = (t.condition_value == u)
+
+            if matched:
+                fn = t.action_params.get("sound_filename") if t.action_params else None
+                if fn and s["viewer_sounds_enabled"] and _cooldown_allows(t.id, (t.action_params or {}).get("cooldown_seconds")):
+                    sound_url = _abs_url(f"/static/sounds/{user.id}/{fn}")
+                    if WS_DEBUG:
+                        logger.debug("on_join: matched trigger=%s sound=%s", t.id, fn)
+                    try:
+                        t.executed_count += 1
+                        db.add(t)
+                        db.commit()
+                    except Exception:
+                        logger.warning("Не удалось обновить executed_count для триггера %s", t.id)
+                break
         
         # ВСЕГДА отправляем событие на фронтенд (для отображения в UI)
         payload = {"type": "viewer_join", "user": u}
         if sound_url:
             payload["sound_url"] = sound_url
         
-        print(f"on_join: отправляем payload -> {payload}")
+        if WS_DEBUG:
+            logger.debug("on_join: send payload=%s", payload)
         await websocket.send_text(json.dumps(payload, ensure_ascii=False))
 
     async def on_follow(u: str):
@@ -328,7 +361,7 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
 
             if matched:
                 fn = t.action_params.get("sound_filename") if t.action_params else None
-                if fn and s["viewer_sounds_enabled"]:
+                if fn and s["viewer_sounds_enabled"] and _cooldown_allows(t.id, (t.action_params or {}).get("cooldown_seconds")):
                     sound_url = _abs_url(f"/static/sounds/{user.id}/{fn}")
                     try:
                         t.executed_count += 1
@@ -363,7 +396,7 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
 
             if matched:
                 fn = t.action_params.get("sound_filename") if t.action_params else None
-                if fn and s["viewer_sounds_enabled"]:
+                if fn and s["viewer_sounds_enabled"] and _cooldown_allows(t.id, (t.action_params or {}).get("cooldown_seconds")):
                     sound_url = _abs_url(f"/static/sounds/{user.id}/{fn}")
                     try:
                         t.executed_count += 1
@@ -382,15 +415,15 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
         await websocket.send_text(json.dumps({"type": "share", "user": u}, ensure_ascii=False))
 
     async def on_viewer(current: int, total: int):
-        print(f"on_viewer: current={current}, total={total}")
+        if WS_DEBUG:
+            logger.debug("on_viewer: current=%s total=%s", current, total)
         await websocket.send_text(json.dumps({"type": "viewer", "current": current, "total": total}, ensure_ascii=False))
 
     # run tiktok client
     try:
         # Используем tiktok_username если задан, иначе username
         target_username = user.tiktok_username if user.tiktok_username else user.username
-        print(f"🔍 WS Connect - User: {user.username}, TikTok Username (DB): '{user.tiktok_username}', Target: '{target_username}'")
-        print(f"⚡ WS: Перед start_client для user_id={user.id}, target={target_username}")
+        logger.info("WS Connect user=%s target=%s", user.username, target_username)
         if not target_username:
             await websocket.send_text(json.dumps({
                 "type": "error",
@@ -398,8 +431,37 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
             }, ensure_ascii=False))
             await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
             return
+
+        async def _safe_send(payload: dict):
+            try:
+                await websocket.send_text(json.dumps(payload, ensure_ascii=False))
+            except Exception:
+                # websocket может уже быть закрыт
+                return
+
+        async def _on_tiktok_connect(username: str):
+            await _safe_send({
+                "type": "status",
+                "message": f"Подключено к TikTok Live @{username}",
+                "connected": True,
+            })
+
+        async def _on_tiktok_disconnect(username: str):
+            await _safe_send({
+                "type": "status",
+                "message": f"TikTok Live отключен @{username}",
+                "connected": False,
+            })
+
+        # Сразу сообщаем, что запуск начался (реальное подключение подтвердим через ConnectEvent)
+        await _safe_send({
+            "type": "status",
+            "message": f"Подключаемся к TikTok Live @{target_username}…",
+            "connected": False,
+        })
         
-        print(f"⚡ WS: Вызываем start_client...")
+        if WS_DEBUG:
+            logger.debug("WS: calling start_client user_id=%s target=%s", user.id, target_username)
         await tiktok_service.start_client(
             user_id=user.id,
             tiktok_username=target_username,
@@ -411,14 +473,11 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
             on_subscribe_callback=on_subscribe,
             on_share_callback=on_share,
             on_viewer_callback=on_viewer,
+            on_connect_callback=_on_tiktok_connect,
+            on_disconnect_callback=_on_tiktok_disconnect,
         )
-        print(f"⚡ WS: start_client завершён успешно!")
-        # Отправляем подтверждение успешного подключения
-        await websocket.send_text(json.dumps({
-            "type": "status",
-            "message": f"Подключено к TikTok Live @{target_username}",
-            "connected": True
-        }, ensure_ascii=False))
+        if WS_DEBUG:
+            logger.debug("WS: start_client finished OK user_id=%s", user.id)
         
         while True:
             await websocket.receive_text()

@@ -78,6 +78,8 @@ class TikTokService:
         on_subscribe_callback: Optional[Callable] = None,
         on_share_callback: Optional[Callable] = None,
         on_viewer_callback: Optional[Callable] = None,
+        on_connect_callback: Optional[Callable] = None,
+        on_disconnect_callback: Optional[Callable] = None,
     ):
         """
         Запускает клиент TikTok Live для указанного пользователя
@@ -159,8 +161,12 @@ class TikTokService:
                 "gift": on_gift_callback,
                 "like": on_like_callback,
                 "join": on_join_callback,
+                "follow": on_follow_callback,
+                "subscribe": on_subscribe_callback,
                 "share": on_share_callback,
                 "viewer": on_viewer_callback,
+                "connect": on_connect_callback,
+                "disconnect": on_disconnect_callback,
             }
             
             # Регистрируем обработчики событий
@@ -233,6 +239,11 @@ class TikTokService:
             async def on_connect(event: ConnectEvent):
                 logger.info(f"✅ TikTok Live подключен: {tiktok_username}")
                 self._last_activity[user_id] = datetime.now()
+                if on_connect_callback:
+                    try:
+                        await on_connect_callback(tiktok_username)
+                    except Exception as e:
+                        logger.error(f"Ошибка в connect callback: {e}")
             
             @client.on(CommentEvent)
             async def on_comment(event: CommentEvent):
@@ -428,6 +439,11 @@ class TikTokService:
             async def on_disconnect(event: DisconnectEvent):
                 logger.warning(f"TikTok Live отключен: {tiktok_username}")
                 # Не обновляем last_activity здесь, чтобы watchdog мог перезапускать
+                if on_disconnect_callback:
+                    try:
+                        await on_disconnect_callback(tiktok_username)
+                    except Exception as e:
+                        logger.error(f"Ошибка в disconnect callback: {e}")
             
             # Сохраняем клиент и запускаем с ретраями при временных ошибках подписи/лимитов
             self._clients[user_id] = client
@@ -497,8 +513,12 @@ class TikTokService:
                                     on_gift_callback=cbs.get("gift"),
                                     on_like_callback=cbs.get("like"),
                                     on_join_callback=cbs.get("join"),
-                                    on_follow_callback=on_follow_callback,
-                                    on_subscribe_callback=on_subscribe_callback,
+                                    on_follow_callback=cbs.get("follow"),
+                                    on_subscribe_callback=cbs.get("subscribe"),
+                                    on_share_callback=cbs.get("share"),
+                                    on_viewer_callback=cbs.get("viewer"),
+                                    on_connect_callback=cbs.get("connect"),
+                                    on_disconnect_callback=cbs.get("disconnect"),
                                 )
                             except Exception as e:
                                 logger.error(f"Ошибка при рестарте клиента watchdog'ом: {e}")
