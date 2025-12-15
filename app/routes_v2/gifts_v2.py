@@ -3,6 +3,8 @@ from pydantic import BaseModel
 import json
 from pathlib import Path
 
+from app.services.gift_sounds import get_global_gift_sound_path
+
 router = APIRouter()
 
 
@@ -37,8 +39,15 @@ GIFTS_LIBRARY: list[Gift] = load_gifts_library()
 @router.get("/library")
 def get_gifts_library():
     """Получить полную библиотеку подарков с русскими названиями и изображениями"""
+    gifts = []
+    for g in GIFTS_LIBRARY:
+        d = g.model_dump()
+        sound = get_global_gift_sound_path(g.gift_id)
+        if sound:
+            d["sound"] = sound
+        gifts.append(d)
     return {
-        "gifts": [g.model_dump() for g in GIFTS_LIBRARY],
+        "gifts": gifts,
         "total": len(GIFTS_LIBRARY)
     }
 

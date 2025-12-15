@@ -11,6 +11,7 @@ from .auth_v2 import get_current_user
 from app.services.security import decode_token
 from app.services.tts_service import generate_tts
 from app.services.tiktok_service import tiktok_service
+from app.services.gift_sounds import get_global_gift_sound_path
 
 try:
     # В новых версиях TikTokLive есть отдельное исключение, дающее понятный текст
@@ -237,6 +238,15 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
                         break
                 else:
                     print(f"   ❌ NO MATCH: '{t.condition_value}' != '{gift_name}'")
+
+        # Фолбэк: если нет пользовательского триггера — используем глобальный звук подарка
+        if not sound_url and s["gift_sounds_enabled"]:
+            try:
+                global_sound = get_global_gift_sound_path(int(gift_id))
+            except Exception:
+                global_sound = None
+            if global_sound:
+                sound_url = _abs_url(global_sound)
         # Отправляем событие подарка (только с sound_url если триггер есть)
         payload = {"type": "gift", "user": u, "gift_id": gift_id, "gift_name": gift_name, "count": count, "diamonds": diamonds}
         if sound_url:
