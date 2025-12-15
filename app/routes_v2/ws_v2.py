@@ -23,6 +23,11 @@ except Exception:  # pragma: no cover
     class UserNotFoundError(Exception):  # type: ignore
         pass
 
+try:
+    from TikTokLive.client.errors import WebcastBlocked200Error  # type: ignore
+except Exception:  # pragma: no cover
+    WebcastBlocked200Error = None  # type: ignore
+
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
@@ -497,15 +502,29 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
         except Exception:
             pass
     except Exception as e:
-        # Отправляем любую другую ошибку перед закрытием
-        error_msg = str(e)
-        try:
-            await websocket.send_text(json.dumps({
-                "type": "error",
-                "message": f"Ошибка подключения к TikTok Live: {error_msg}"
-            }, ensure_ascii=False))
-        except Exception:
-            pass
+        # DEVICE_BLOCKED и подобные блокировки лучше объяснять явно
+        if WebcastBlocked200Error is not None and isinstance(e, WebcastBlocked200Error):
+            try:
+                await websocket.send_text(json.dumps({
+                    "type": "error",
+                    "message": (
+                        "TikTok заблокировал WebSocket (DEVICE_BLOCKED). "
+                        "На VPS/датацентровом IP это бывает очень часто. "
+                        "Решение: используйте residential proxy (TIKTOK_PROXY) и/или авторизованные cookies (TIKTOK_COOKIES)."
+                    )
+                }, ensure_ascii=False))
+            except Exception:
+                pass
+        else:
+            # Отправляем любую другую ошибку перед закрытием
+            error_msg = str(e)
+            try:
+                await websocket.send_text(json.dumps({
+                    "type": "error",
+                    "message": f"Ошибка подключения к TikTok Live: {error_msg}"
+                }, ensure_ascii=False))
+            except Exception:
+                pass
     finally:
         if tiktok_service.is_running(user.id):
             await tiktok_service.stop_client(user.id)

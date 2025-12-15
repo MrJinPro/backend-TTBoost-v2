@@ -31,9 +31,15 @@ import logging
 import os
 from TikTokLive.client.web.web_settings import WebDefaults
 import asyncio
+import inspect
 from typing import Dict, Callable, Optional
 from datetime import datetime
 from TikTokLive.client.errors import SignAPIError, SignatureRateLimitError
+
+try:
+    from TikTokLive.client.errors import WebcastBlocked200Error  # type: ignore
+except Exception:  # pragma: no cover
+    WebcastBlocked200Error = None  # type: ignore
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +54,11 @@ class TikTokService:
         self._last_activity = {}
         self._watchdogs = {}
         self._usernames = {}
+        self._client_tasks = {}
+        self._connect_events = {}
+        self._fail_events = {}
+        self._last_start_error = {}
+        self._last_start_exc = {}
         # Метрики зрителей
         self._viewer_current = {}
         self._viewer_total = {}
@@ -121,6 +132,17 @@ class TikTokService:
             # ===== Дополнительная авторизация через куки (для получения Gift / расширенного потока) =====
             # Ожидаемый формат: TIKTOK_COOKIES="sessionid=xxxx; ttwid=yyyy; passport_csrf_token=zzz"
             cookies_env = os.getenv("TIKTOK_COOKIES")
+
+            # Часто критично при DEVICE_BLOCKED на VPS
+            user_agent_env = (os.getenv("TIKTOK_USER_AGENT") or "").strip()
+            proxy_env = (os.getenv("TIKTOK_PROXY") or "").strip()
+            if proxy_env:
+                # Фолбэк: некоторые клиенты читают прокси из env
+                os.environ.setdefault("HTTPS_PROXY", proxy_env)
+                os.environ.setdefault("HTTP_PROXY", proxy_env)
+                os.environ.setdefault("ALL_PROXY", proxy_env)
+                logger.info("🧭 TIKTOK_PROXY задан (выставлены env HTTP(S)_PROXY/ALL_PROXY)")
+
             if cookies_env:
                 try:
                     # В библиотеке нет публичного API для куки, но многие версии читают request_headers
@@ -128,6 +150,8 @@ class TikTokService:
                     base_headers = getattr(WebDefaults, "request_headers", {}) or {}
                     # Не перетираем другие заголовки (например User-Agent)
                     base_headers["Cookie"] = cookies_env.strip()
+                    if user_agent_env:
+                        base_headers["User-Agent"] = user_agent_env
                     WebDefaults.request_headers = base_headers
                     logger.info("🍪 TikTok cookies добавлены в WebDefaults (Cookie заголовок установлен)")
                 except Exception as e:
@@ -135,13 +159,52 @@ class TikTokService:
             else:
                 logger.info("🍪 TIKTOK_COOKIES не заданы (анонимное подключение может не получать подарки)")
 
+            if user_agent_env:
+                try:
+                    base_headers = getattr(WebDefaults, "request_headers", {}) or {}
+                    base_headers.setdefault("User-Agent", user_agent_env)
+                    WebDefaults.request_headers = base_headers
+                    logger.info("🧩 TIKTOK_USER_AGENT применён в WebDefaults.request_headers")
+                except Exception as e:
+                    logger.warning(f"Не удалось применить TIKTOK_USER_AGENT: {e}")
+
             # Создаем клиент для конкретного стримера (без несуществующих kwargs)
             logger.info(f"🔧 Создаём TikTok клиент для @{tiktok_username}")
             # ВАЖНО: Проверяем, не содержит ли username уже символ @
             clean_username = tiktok_username.lstrip('@')  # Удаляем @ если есть
             if clean_username != tiktok_username:
                 logger.warning(f"⚠️ Username содержал @, очищено: '{tiktok_username}' -> '{clean_username}'")
-            client: TikTokLiveClient = TikTokLiveClient(unique_id=f"@{clean_username}")
+
+            # Подбираем kwargs динамически (разные версии TikTokLive имеют разный __init__)
+            client_kwargs: dict = {}
+            try:
+                init_params = set(inspect.signature(TikTokLiveClient.__init__).parameters.keys())
+            except Exception:
+                init_params = set()
+
+            effective_headers: dict = {}
+            try:
+                effective_headers = dict(getattr(WebDefaults, "request_headers", {}) or {})
+            except Exception:
+                effective_headers = {}
+            if cookies_env:
+                effective_headers["Cookie"] = cookies_env.strip()
+            if user_agent_env:
+                effective_headers["User-Agent"] = user_agent_env
+
+            if effective_headers:
+                if "request_headers" in init_params:
+                    client_kwargs["request_headers"] = effective_headers
+                elif "headers" in init_params:
+                    client_kwargs["headers"] = effective_headers
+
+            if proxy_env:
+                for key in ("proxy", "http_proxy", "https_proxy"):
+                    if key in init_params:
+                        client_kwargs[key] = proxy_env
+                        break
+
+            client: TikTokLiveClient = TikTokLiveClient(unique_id=f"@{clean_username}", **client_kwargs)
             
             # ВКЛЮЧАЕМ DEBUG РЕЖИМ БИБЛИОТЕКИ чтобы видеть ВСЕ raw события
             import logging as stdlib_logging
@@ -168,6 +231,10 @@ class TikTokService:
                 "connect": on_connect_callback,
                 "disconnect": on_disconnect_callback,
             }
+
+            # Для UX/диагностики: ждём реального ConnectEvent или явной ошибки запуска
+            connect_event = asyncio.Event()
+            self._connect_events[user_id] = connect_event
             
             # Регистрируем обработчики событий
             
@@ -238,6 +305,7 @@ class TikTokService:
             @client.on(ConnectEvent)
             async def on_connect(event: ConnectEvent):
                 logger.info(f"✅ TikTok Live подключен: {tiktok_username}")
+                connect_event.set()
                 self._last_activity[user_id] = datetime.now()
                 if on_connect_callback:
                     try:
@@ -455,7 +523,51 @@ class TikTokService:
             for attempt in range(1, attempts + 1):
                 try:
                     logger.info(f"Запуск TikTok клиента (попытка {attempt}/{attempts}) для @{clean_username}")
-                    await client.start()
+                    fail_event = asyncio.Event()
+                    self._fail_events[user_id] = fail_event
+                    self._last_start_error.pop(user_id, None)
+                    self._last_start_exc.pop(user_id, None)
+
+                    start_task = asyncio.create_task(client.start())
+                    self._client_tasks[user_id] = start_task
+
+                    def _done_cb(t: asyncio.Task):
+                        try:
+                            exc = t.exception()
+                        except Exception as cb_e:  # pragma: no cover
+                            self._last_start_error[user_id] = f"{type(cb_e).__name__}: {cb_e}"
+                            self._last_start_exc[user_id] = cb_e
+                            fail_event.set()
+                            return
+                        if exc is not None:
+                            self._last_start_error[user_id] = f"{type(exc).__name__}: {exc}"
+                            self._last_start_exc[user_id] = exc
+                            fail_event.set()
+
+                    start_task.add_done_callback(_done_cb)
+
+                    connect_timeout = float(os.getenv("TT_CONNECT_TIMEOUT_SEC", "25"))
+                    done, pending = await asyncio.wait(
+                        [asyncio.create_task(connect_event.wait()), asyncio.create_task(fail_event.wait())],
+                        timeout=connect_timeout,
+                        return_when=asyncio.FIRST_COMPLETED,
+                    )
+                    for p in pending:
+                        p.cancel()
+
+                    if not done:
+                        raise TimeoutError(
+                            f"Не удалось подключиться к TikTok Live за {connect_timeout:.0f}с. "
+                            f"Частая причина на VPS: DEVICE_BLOCKED (нужен residential proxy / cookies)."
+                        )
+
+                    if fail_event.is_set():
+                        exc = self._last_start_exc.get(user_id)
+                        if exc is None:
+                            raise RuntimeError(self._last_start_error.get(user_id, "Ошибка запуска TikTokLive"))
+                        raise exc
+
+                    # connected
                     last_err = None
                     break
                 except (SignAPIError, SignatureRateLimitError) as e:
@@ -465,17 +577,19 @@ class TikTokService:
                     delay = backoff_base ** attempt
                     logger.warning(f"Не удалось запустить (попытка {attempt}/{attempts}): {e}. Повтор через {delay:.1f}с")
                     await asyncio.sleep(delay)
+                except TimeoutError as e:
+                    last_err = e
+                    break
                 except Exception as e:
-                    # Любая другая ошибка (включая UserNotFoundError)
-                    import traceback
-                    logger.error(f"❌ Критическая ошибка при запуске TikTok клиента для @{clean_username}:")
-                    logger.error(f"   Тип ошибки: {type(e).__name__}")
-                    logger.error(f"   Сообщение: {str(e)}")
-                    logger.error(f"   Traceback:\n{traceback.format_exc()}")
                     last_err = e
                     break  # Не ретраим при критических ошибках
 
             if last_err is not None:
+                # Убираем за собой на ошибке, чтобы не оставлять "мертвые" клиенты
+                try:
+                    await self.stop_client(user_id)
+                except Exception:
+                    pass
                 raise last_err
             
             logger.info(f"TikTok клиент запущен для {user_id} (@{tiktok_username})")
@@ -548,6 +662,10 @@ class TikTokService:
         try:
             client = self._clients[user_id]
             await client.disconnect()
+
+            task = self._client_tasks.pop(user_id, None)
+            if task is not None and not task.done():
+                task.cancel()
             del self._clients[user_id]
             if user_id in self._callbacks:
                 del self._callbacks[user_id]
@@ -560,6 +678,14 @@ class TikTokService:
             if user_id in self._watchdogs:
                 task = self._watchdogs.pop(user_id)
                 task.cancel()
+            if user_id in self._connect_events:
+                del self._connect_events[user_id]
+            if user_id in self._fail_events:
+                del self._fail_events[user_id]
+            if user_id in self._last_start_error:
+                del self._last_start_error[user_id]
+            if user_id in self._last_start_exc:
+                del self._last_start_exc[user_id]
             logger.info(f"TikTok клиент остановлен для {user_id}")
         except Exception as e:
             logger.error(f"Ошибка остановки TikTok клиента: {e}")
