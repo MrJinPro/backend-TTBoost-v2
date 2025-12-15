@@ -26,8 +26,18 @@ MAX_DURATION_SEC = 10  # Увеличено для фраз на подарки
 
 
 def _media_root(user_id: str) -> str:
-    root = os.getenv("MEDIA_ROOT", os.path.join(os.path.dirname(__file__), "..", "static", "sounds"))
-    root = os.path.abspath(os.path.join(root))
+    """Базовая директория для пользовательских звуков.
+
+    Если задан MEDIA_ROOT (как корень для /static), кладём звуки в MEDIA_ROOT/sounds/<user_id>.
+    Иначе используем локальную app/static/sounds/<user_id>.
+    Это должно соответствовать URL /static/sounds/<user_id>/<filename>.
+    """
+    media_root = os.getenv("MEDIA_ROOT")
+    if media_root:
+        root = os.path.join(media_root, "sounds")
+    else:
+        root = os.path.join(os.path.dirname(__file__), "..", "static", "sounds")
+    root = os.path.abspath(root)
     path = os.path.join(root, user_id)
     os.makedirs(path, exist_ok=True)
     return path
