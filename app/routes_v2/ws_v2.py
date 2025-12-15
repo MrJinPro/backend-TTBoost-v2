@@ -299,10 +299,74 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
         await websocket.send_text(json.dumps(payload, ensure_ascii=False))
 
     async def on_follow(u: str):
-        await websocket.send_text(json.dumps({"type": "follow", "user": u}, ensure_ascii=False))
+        s = get_current_settings()
+        sound_url = None
+
+        trig = (
+            db.query(models.Trigger)
+            .filter(models.Trigger.user_id == user.id, models.Trigger.event_type == "follow", models.Trigger.enabled == True)
+            .order_by(models.Trigger.priority.desc())
+            .all()
+        )
+        for t in trig:
+            matched = False
+            if not t.condition_key or t.condition_key == "always":
+                if not t.condition_value or str(t.condition_value).lower() in ("true", "1", "yes", "*"):
+                    matched = True
+            elif t.condition_key == "username" and t.condition_value:
+                matched = (t.condition_value == u)
+
+            if matched:
+                fn = t.action_params.get("sound_filename") if t.action_params else None
+                if fn and s["viewer_sounds_enabled"]:
+                    sound_url = _abs_url(f"/static/sounds/{user.id}/{fn}")
+                    try:
+                        t.executed_count += 1
+                        db.add(t)
+                        db.commit()
+                    except Exception:
+                        logger.warning("Не удалось обновить executed_count для триггера %s", t.id)
+                break
+
+        payload = {"type": "follow", "user": u}
+        if sound_url:
+            payload["sound_url"] = sound_url
+        await websocket.send_text(json.dumps(payload, ensure_ascii=False))
 
     async def on_subscribe(u: str):
-        await websocket.send_text(json.dumps({"type": "subscribe", "user": u}, ensure_ascii=False))
+        s = get_current_settings()
+        sound_url = None
+
+        trig = (
+            db.query(models.Trigger)
+            .filter(models.Trigger.user_id == user.id, models.Trigger.event_type == "subscribe", models.Trigger.enabled == True)
+            .order_by(models.Trigger.priority.desc())
+            .all()
+        )
+        for t in trig:
+            matched = False
+            if not t.condition_key or t.condition_key == "always":
+                if not t.condition_value or str(t.condition_value).lower() in ("true", "1", "yes", "*"):
+                    matched = True
+            elif t.condition_key == "username" and t.condition_value:
+                matched = (t.condition_value == u)
+
+            if matched:
+                fn = t.action_params.get("sound_filename") if t.action_params else None
+                if fn and s["viewer_sounds_enabled"]:
+                    sound_url = _abs_url(f"/static/sounds/{user.id}/{fn}")
+                    try:
+                        t.executed_count += 1
+                        db.add(t)
+                        db.commit()
+                    except Exception:
+                        logger.warning("Не удалось обновить executed_count для триггера %s", t.id)
+                break
+
+        payload = {"type": "subscribe", "user": u}
+        if sound_url:
+            payload["sound_url"] = sound_url
+        await websocket.send_text(json.dumps(payload, ensure_ascii=False))
 
     async def on_share(u: str):
         await websocket.send_text(json.dumps({"type": "share", "user": u}, ensure_ascii=False))
