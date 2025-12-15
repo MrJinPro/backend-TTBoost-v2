@@ -41,14 +41,26 @@ AVAILABLE_VOICES: Dict[str, list[dict]] = {
         {"id": "openai-coral", "name": "OpenAI Coral", "voice": "coral", "engine": "openai"},
         {"id": "openai-verse", "name": "OpenAI Verse", "voice": "verse", "engine": "openai"},
     ],
-    # Премиальный TTS ElevenLabs. ID конкретного голоса берётся из env ELEVENLABS_VOICE_ID.
-    # Пользователь выбирает этот voice_id в настройках NovaBoost, а реальный voice UUID настраивается на сервере.
+    # Премиальный TTS ElevenLabs.
+    # Пользователь выбирает один из voice_id ниже, а сервер использует соответствующий Eleven voice UUID.
+    # Важно: сохраняем id "eleven-premium-main" (уже используется в настройках), но переименовываем его в Nova.
     "eleven": [
-        {
-            "id": "eleven-premium-main",
-            "name": "ElevenLabs Premium (основной)",
-            "engine": "eleven",
-        },
+        # Основной (уже использовался ранее)
+        {"id": "eleven-premium-main", "name": "Nova", "engine": "eleven", "voice_id": "LHi3adMlU7AICv8Yxpmm"},
+
+        # Женские
+        {"id": "eleven-mariana", "name": "Мариана", "engine": "eleven", "voice_id": "ETBmMkYUh8i2exSl2h3P"},
+        {"id": "eleven-veronika", "name": "Вероника", "engine": "eleven", "voice_id": "OowtKaZH9N7iuGbsd00l"},
+        {"id": "eleven-viktoriya", "name": "Виктория", "engine": "eleven", "voice_id": "gelrownZgbRhxH6LI78J"},
+        {"id": "eleven-ekaterina", "name": "Екатерина", "engine": "eleven", "voice_id": "GN4wbsbejSnGSa1AzjH5"},
+        {"id": "eleven-mariya", "name": "Мария", "engine": "eleven", "voice_id": "EDpEYNf6XIeKYRzYcx4I"},
+
+        # Мужские
+        {"id": "eleven-artem", "name": "Артём", "engine": "eleven", "voice_id": "blxHPCXhpXOsc7mCKk0P"},
+        {"id": "eleven-mayson", "name": "Мыйсон", "engine": "eleven", "voice_id": "huXlXYhtMIZkTYxM93t6"},
+        {"id": "eleven-artur", "name": "Артур", "engine": "eleven", "voice_id": "vpUqfpCIn34tjFW4KHjt"},
+        {"id": "eleven-mark", "name": "Марк", "engine": "eleven", "voice_id": "ZHIn0jcgR6VIvVAXkwWV"},
+        {"id": "eleven-egor", "name": "Егор", "engine": "eleven", "voice_id": "BHMDqCKgYeHHupc0I8VD"},
     ],
 }
 
