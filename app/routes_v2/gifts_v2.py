@@ -32,13 +32,41 @@ def load_gifts_library() -> list[Gift]:
         return []
 
 
-# Кэш библиотеки подарков (загружается один раз при старте)
+def _library_path() -> Path:
+    return Path(__file__).parent.parent.parent / "data" / "gifts_library.json"
+
+
+def _library_mtime() -> float | None:
+    try:
+        return _library_path().stat().st_mtime
+    except Exception:
+        return None
+
+
+# Кэш библиотеки подарков
 GIFTS_LIBRARY: list[Gift] = load_gifts_library()
+_GIFTS_LIBRARY_MTIME: float | None = _library_mtime()
+
+
+def _ensure_gifts_library_loaded() -> None:
+    """Подгружает/перезагружает библиотеку, если файл появился или изменился.
+
+    Это важно для деплоя: если файл добавили через git pull после старта сервиса,
+    старый процесс иначе навсегда останется с пустым списком.
+    """
+    global GIFTS_LIBRARY, _GIFTS_LIBRARY_MTIME
+    m = _library_mtime()
+    if m is None:
+        return
+    if _GIFTS_LIBRARY_MTIME != m or not GIFTS_LIBRARY:
+        GIFTS_LIBRARY = load_gifts_library()
+        _GIFTS_LIBRARY_MTIME = m
 
 
 @router.get("/library")
 def get_gifts_library():
     """Получить полную библиотеку подарков с русскими названиями и изображениями"""
+    _ensure_gifts_library_loaded()
     gifts = []
     for g in GIFTS_LIBRARY:
         d = g.model_dump()
