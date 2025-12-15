@@ -59,6 +59,8 @@ class TikTokService:
         self._fail_events = {}
         self._last_start_error = {}
         self._last_start_exc = {}
+        self._reconnect_tasks = {}
+        self._stopping = {}
         # Метрики зрителей
         self._viewer_current = {}
         self._viewer_total = {}
@@ -109,6 +111,9 @@ class TikTokService:
         if user_id in self._clients:
             print(f"🔄 TikTok клиент уже запущен для {user_id}, перезапускаем с новыми колбеками")
             await self.stop_client(user_id)
+
+        # Сброс флага остановки
+        self._stopping[user_id] = False
         
         try:
             # Применяем настройки подписи к глобальным WebDefaults перед созданием клиента
@@ -512,6 +517,72 @@ class TikTokService:
                         await on_disconnect_callback(tiktok_username)
                     except Exception as e:
                         logger.error(f"Ошибка в disconnect callback: {e}")
+
+                # Автопереподключение (если включено)
+                auto_reconnect = str(os.getenv("TT_AUTO_RECONNECT", "1")).strip().lower() in ("1", "true", "yes", "on")
+                if not auto_reconnect:
+                    return
+                if self._stopping.get(user_id):
+                    return
+                if user_id not in self._clients:
+                    return
+                if user_id in self._reconnect_tasks and self._reconnect_tasks[user_id] and not self._reconnect_tasks[user_id].done():
+                    return
+
+                base_delay = float(os.getenv("TT_RECONNECT_BASE_DELAY_SEC", "2"))
+                max_delay = float(os.getenv("TT_RECONNECT_MAX_DELAY_SEC", "30"))
+                max_attempts = int(os.getenv("TT_RECONNECT_ATTEMPTS", "5"))
+
+                async def _reconnect_loop():
+                    delay = base_delay
+                    for attempt in range(1, max_attempts + 1):
+                        if self._stopping.get(user_id):
+                            return
+                        try:
+                            logger.warning(
+                                "🔁 Auto-reconnect TikTokLive (attempt %s/%s) for @%s in %.1fs",
+                                attempt,
+                                max_attempts,
+                                self._usernames.get(user_id, tiktok_username),
+                                delay,
+                            )
+                            await asyncio.sleep(delay)
+
+                            # Важно: перезапускаем с сохранёнными колбэками
+                            name = self._usernames.get(user_id, tiktok_username)
+                            cbs = self._callbacks.get(user_id, {})
+                            try:
+                                await self.stop_client(user_id)
+                            except Exception:
+                                pass
+                            await asyncio.sleep(0.5)
+                            await self.start_client(
+                                user_id,
+                                name,
+                                on_comment_callback=cbs.get("comment"),
+                                on_gift_callback=cbs.get("gift"),
+                                on_like_callback=cbs.get("like"),
+                                on_join_callback=cbs.get("join"),
+                                on_follow_callback=cbs.get("follow"),
+                                on_subscribe_callback=cbs.get("subscribe"),
+                                on_share_callback=cbs.get("share"),
+                                on_viewer_callback=cbs.get("viewer"),
+                                on_connect_callback=cbs.get("connect"),
+                                on_disconnect_callback=cbs.get("disconnect"),
+                            )
+                            return
+                        except Exception as e:
+                            # DEVICE_BLOCKED имеет смысл не ретраить (будет бесконечная дерготня)
+                            if WebcastBlocked200Error is not None and isinstance(e, WebcastBlocked200Error):
+                                logger.error("⛔ DEVICE_BLOCKED на авто-reconnect, прекращаем попытки: %s", e)
+                                return
+                            if "DEVICE_BLOCKED" in str(e):
+                                logger.error("⛔ DEVICE_BLOCKED на авто-reconnect, прекращаем попытки: %s", e)
+                                return
+                            logger.warning("Auto-reconnect failed: %s", e)
+                            delay = min(max_delay, delay * 2)
+
+                self._reconnect_tasks[user_id] = asyncio.create_task(_reconnect_loop())
             
             # Сохраняем клиент и запускаем с ретраями при временных ошибках подписи/лимитов
             self._clients[user_id] = client
@@ -660,6 +731,13 @@ class TikTokService:
             return
         
         try:
+            self._stopping[user_id] = True
+
+            # Отменяем pending reconnect
+            rt = self._reconnect_tasks.pop(user_id, None)
+            if rt is not None and not rt.done():
+                rt.cancel()
+
             client = self._clients[user_id]
             await client.disconnect()
 
@@ -686,6 +764,8 @@ class TikTokService:
                 del self._last_start_error[user_id]
             if user_id in self._last_start_exc:
                 del self._last_start_exc[user_id]
+            if user_id in self._stopping:
+                del self._stopping[user_id]
             logger.info(f"TikTok клиент остановлен для {user_id}")
         except Exception as e:
             logger.error(f"Ошибка остановки TikTok клиента: {e}")

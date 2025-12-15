@@ -452,9 +452,10 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
             })
 
         async def _on_tiktok_disconnect(username: str):
+            auto_reconnect = str(os.getenv("TT_AUTO_RECONNECT", "1")).strip().lower() in ("1", "true", "yes", "on")
             await _safe_send({
                 "type": "status",
-                "message": f"TikTok Live отключен @{username}",
+                "message": f"TikTok Live отключен @{username}" + (" — переподключаемся…" if auto_reconnect else ""),
                 "connected": False,
             })
 
