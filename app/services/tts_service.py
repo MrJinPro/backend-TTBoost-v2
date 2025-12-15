@@ -314,9 +314,51 @@ async def _generate_elevenlabs(text: str, voice_info: dict, user_id: str = None)
         },
     }
 
+    def _contains_cyrillic(s: str) -> bool:
+        for ch in s:
+            o = ord(ch)
+            if 0x0400 <= o <= 0x04FF or 0x0500 <= o <= 0x052F:
+                return True
+        return False
+
+    def _contains_latin(s: str) -> bool:
+        return any(('A' <= ch <= 'Z') or ('a' <= ch <= 'z') for ch in s)
+
+    # Управление языком (опционально):
+    # - ELEVENLABS_LANGUAGE_MODE=off (по умолчанию): не передаём language_code, Eleven сам решает.
+    # - ELEVENLABS_LANGUAGE_MODE=auto: если есть кириллица -> ru, иначе можно (опц.) принудить en.
+    # - ELEVENLABS_LANGUAGE_MODE=force: всегда передаём ELEVENLABS_LANGUAGE_CODE.
+    language_mode = (os.getenv("ELEVENLABS_LANGUAGE_MODE") or "off").strip().lower()
+    language_code = (os.getenv("ELEVENLABS_LANGUAGE_CODE") or "").strip()
+
+    language_code_to_send = ""
+    if language_mode == "force":
+        language_code_to_send = language_code
+    elif language_mode == "auto":
+        if _contains_cyrillic(text):
+            language_code_to_send = (os.getenv("ELEVENLABS_LANGUAGE_AUTO_RU") or "ru").strip()
+        elif _contains_latin(text):
+            # Важно: латиница может быть как английский, так и русская транслитерация.
+            # Поэтому EN делаем строго опциональным.
+            language_code_to_send = (os.getenv("ELEVENLABS_LANGUAGE_AUTO_EN") or "").strip()
+
     try:
         async with httpx.AsyncClient(timeout=30.0) as client:
-            resp = await client.post(url, headers=headers, json=payload)
+            if language_code_to_send:
+                payload_with_lang = dict(payload)
+                payload_with_lang["language_code"] = language_code_to_send
+                resp = await client.post(url, headers=headers, json=payload_with_lang)
+                # Некоторые аккаунты/эндпоинты могут не принимать language_code.
+                # В этом случае делаем один безопасный повтор без параметра.
+                if resp.status_code != 200 and resp.status_code in (400, 422) and "language_code" in (resp.text or ""):
+                    logger.warning(
+                        "ElevenLabs не принял language_code=%s, повтор без него (status=%s)",
+                        language_code_to_send,
+                        resp.status_code,
+                    )
+                    resp = await client.post(url, headers=headers, json=payload)
+            else:
+                resp = await client.post(url, headers=headers, json=payload)
         if resp.status_code != 200:
             logger.error(
                 "Ошибка ElevenLabs TTS: %s %s", resp.status_code, resp.text[:200]
