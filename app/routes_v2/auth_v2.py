@@ -62,6 +62,16 @@ class RedeemLicenseResponse(BaseModel):
     plan: str | None = None
 
 
+class UpgradeLicenseRequest(BaseModel):
+    license_key: str
+
+
+class UpgradeLicenseResponse(BaseModel):
+    status: str = "ok"
+    plan: str | None = None
+    license_expires_at: str | None = None
+
+
 @router.post("/register", response_model=AuthResponse)
 def register(req: RegisterRequest, db: Session = Depends(get_db)):
     init_db()
@@ -166,6 +176,41 @@ def get_current_user(authorization: str | None = Header(default=None), db: Sessi
     if not user:
         raise HTTPException(status_code=401, detail="user not found")
     return user
+
+
+@router.post("/upgrade-license", response_model=UpgradeLicenseResponse)
+def upgrade_license(
+    req: UpgradeLicenseRequest,
+    user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Применить лицензионный ключ к текущему пользователю (апгрейд тарифа из UI).
+
+    - Не требует пароля (пользователь уже аутентифицирован).
+    - Привязывает лицензию к user_id, если она свободна.
+    - Если ключ уже привязан к другому пользователю — ошибка.
+    """
+    key = (req.license_key or "").strip()
+    if not key:
+        raise HTTPException(400, detail="license not found")
+
+    lic = db.query(models.LicenseKey).filter(models.LicenseKey.key == key).first()
+    if not lic:
+        raise HTTPException(404, detail="license not found")
+    if lic.status != models.LicenseStatus.active:
+        raise HTTPException(403, detail="license not active")
+    if lic.expires_at and lic.expires_at < datetime.utcnow():
+        raise HTTPException(403, detail="license expired")
+    if lic.user_id and lic.user_id != user.id:
+        raise HTTPException(409, detail="license already bound to another user")
+    if not lic.user_id:
+        lic.user_id = user.id
+        db.commit()
+
+    return UpgradeLicenseResponse(
+        plan=lic.plan,
+        license_expires_at=lic.expires_at.isoformat() if lic.expires_at else None,
+    )
 
 
 class MeResponse(BaseModel):
