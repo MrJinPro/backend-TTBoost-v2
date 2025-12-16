@@ -5,7 +5,7 @@ import os
 import secrets
 from datetime import datetime, timedelta
 
-from app.db.database import SessionLocal
+from app.db.database import SessionLocal, init_db
 from app.db import models
 from app.services.plans import canonicalize_license_plan
 
@@ -25,10 +25,21 @@ class IssueLicenseRequest(BaseModel):
     ttl_days: int | None = 30
 
 
+class IssueBulkRequest(BaseModel):
+    plan: str | None = None
+    ttl_days: int | None = 30
+    count: int = 10
+    prefix: str | None = None
+
+
 class IssueLicenseResponse(BaseModel):
     key: str
     plan: str | None = None
     expires_at: str | None = None
+
+
+class IssueBulkResponse(BaseModel):
+    items: list[IssueLicenseResponse]
 
 
 class LicenseItem(BaseModel):
@@ -75,6 +86,7 @@ def _require_admin(admin_api_key: str | None) -> None:
 @router.post("/issue", response_model=IssueLicenseResponse)
 def issue_license(req: IssueLicenseRequest, db: Session = Depends(get_db), admin_api_key: str | None = Header(default=None, alias="Admin-Api-Key")):
     _require_admin(admin_api_key)
+    init_db()
 
     try:
         plan = canonicalize_license_plan(req.plan)
@@ -89,6 +101,49 @@ def issue_license(req: IssueLicenseRequest, db: Session = Depends(get_db), admin
     return IssueLicenseResponse(key=key, plan=plan, expires_at=expires_at.isoformat())
 
 
+@router.post("/issue-bulk", response_model=IssueBulkResponse)
+def issue_bulk(
+    req: IssueBulkRequest,
+    db: Session = Depends(get_db),
+    admin_api_key: str | None = Header(default=None, alias="Admin-Api-Key"),
+):
+    """Сгенерировать пачку ключей и записать в БД (удобно раздавать друзьям)."""
+    _require_admin(admin_api_key)
+    init_db()
+
+    if req.count <= 0 or req.count > 500:
+        raise HTTPException(status_code=400, detail="invalid count")
+
+    try:
+        plan = canonicalize_license_plan(req.plan)
+    except Exception:
+        raise HTTPException(status_code=400, detail="invalid plan")
+
+    ttl = req.ttl_days or 30
+    if ttl <= 0 or ttl > 3650:
+        raise HTTPException(status_code=400, detail="invalid ttl_days")
+
+    prefix = (req.prefix or "TTB").strip().upper()[:10] or "TTB"
+    expires_at = datetime.utcnow() + timedelta(days=ttl)
+
+    items: list[IssueLicenseResponse] = []
+    # Генерируем с защитой от редкой коллизии
+    for _ in range(int(req.count)):
+        for _attempt in range(5):
+            key = _generate_key(prefix=prefix)
+            exists = db.query(models.LicenseKey).filter(models.LicenseKey.key == key).first()
+            if exists:
+                continue
+            db.add(models.LicenseKey(key=key, plan=plan, expires_at=expires_at, status=models.LicenseStatus.active))
+            items.append(IssueLicenseResponse(key=key, plan=plan, expires_at=expires_at.isoformat()))
+            break
+        else:
+            raise HTTPException(status_code=500, detail="failed to generate unique key")
+
+    db.commit()
+    return IssueBulkResponse(items=items)
+
+
 @router.get("/list", response_model=ListLicensesResponse)
 def list_licenses(
     limit: int = 200,
@@ -97,6 +152,7 @@ def list_licenses(
     admin_api_key: str | None = Header(default=None, alias="Admin-Api-Key"),
 ):
     _require_admin(admin_api_key)
+    init_db()
     limit = max(1, min(limit, 1000))
     offset = max(0, offset)
     q = db.query(models.LicenseKey).order_by(models.LicenseKey.issued_at.desc()).offset(offset).limit(limit)
@@ -124,6 +180,7 @@ def revoke_license(
     admin_api_key: str | None = Header(default=None, alias="Admin-Api-Key"),
 ):
     _require_admin(admin_api_key)
+    init_db()
     lic = db.query(models.LicenseKey).filter(models.LicenseKey.key == req.key.strip()).first()
     if not lic:
         raise HTTPException(status_code=404, detail="not found")
@@ -148,6 +205,7 @@ def extend_license(
     admin_api_key: str | None = Header(default=None, alias="Admin-Api-Key"),
 ):
     _require_admin(admin_api_key)
+    init_db()
     lic = db.query(models.LicenseKey).filter(models.LicenseKey.key == req.key.strip()).first()
     if not lic:
         raise HTTPException(status_code=404, detail="not found")
@@ -180,6 +238,7 @@ def set_plan(
     admin_api_key: str | None = Header(default=None, alias="Admin-Api-Key"),
 ):
     _require_admin(admin_api_key)
+    init_db()
     lic = db.query(models.LicenseKey).filter(models.LicenseKey.key == req.key.strip()).first()
     if not lic:
         raise HTTPException(status_code=404, detail="not found")
@@ -203,6 +262,7 @@ def set_plan(
 
 @router.get("/check")
 def check_license(key: str, db: Session = Depends(get_db)):
+    init_db()
     lic = db.query(models.LicenseKey).filter(models.LicenseKey.key == key).first()
     if not lic:
         raise HTTPException(status_code=404, detail="not found")
