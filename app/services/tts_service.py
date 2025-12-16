@@ -8,7 +8,7 @@ from gtts import gTTS
 import edge_tts
 import httpx
 try:
-    from openai import OpenAI
+    from openai import OpenAI  # type: ignore[import-not-found]
 except Exception:
     OpenAI = None
 

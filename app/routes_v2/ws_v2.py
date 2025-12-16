@@ -11,9 +11,10 @@ from app.db.database import SessionLocal
 from app.db import models
 from .auth_v2 import get_current_user
 from app.services.security import decode_token
-from app.services.tts_service import generate_tts
+from app.services.tts_service import generate_tts, AVAILABLE_VOICES
 from app.services.tiktok_service import tiktok_service
 from app.services.gift_sounds import get_global_gift_sound_path
+from app.services.plans import resolve_tariff, normalize_platform
 
 try:
     # В новых версиях TikTokLive есть отдельное исключение, дающее понятный текст
@@ -93,7 +94,34 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
     if not user:
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
         return
+    # platform can come from query (?platform=mobile) or header
+    platform_raw = websocket.headers.get("X-Client-Platform")
+    raw_q = websocket.scope.get("query_string", b"").decode()
+    if raw_q:
+        for part in raw_q.split("&"):
+            k, _, v = part.partition("=")
+            if k == "platform" and v:
+                platform_raw = v
+                break
+    platform = normalize_platform(platform_raw)
+    tariff, _lic = resolve_tariff(db, user.id)
+
     await websocket.accept()
+    if platform not in tariff.allowed_platforms:
+        try:
+            await websocket.send_text(
+                json.dumps(
+                    {
+                        "type": "status",
+                        "connected": False,
+                        "message": f"Тариф '{tariff.name}' не позволяет использовать платформу '{platform}'.",
+                    },
+                    ensure_ascii=False,
+                )
+            )
+        finally:
+            await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+        return
     first_message_seen = set()  # Отслеживание зрителей, которые уже писали в чат в этой сессии
     seen_viewers = set()  # Отслеживание зрителей, которых уже «видели» в этой сессии (join или first_message)
     _cooldown = {}  # (scope, trigger_id, username_or_star) -> last_time_monotonic
@@ -126,9 +154,23 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
     def get_current_settings():
         """Получить актуальные настройки пользователя (голос + флаги)."""
         settings = db.query(models.UserSettings).filter(models.UserSettings.user_id == user.id).first()
+        voice_id = (settings.voice_id if settings and settings.voice_id else "gtts-ru")
+
+        # NovaFree: only allow gtts voices
+        engine = None
+        for voices in AVAILABLE_VOICES.values():
+            for v in voices:
+                if v.get("id") == voice_id:
+                    engine = v.get("engine")
+                    break
+            if engine:
+                break
+        if engine and engine not in tariff.allowed_tts_engines:
+            voice_id = "gtts-ru"
+
         # дефолты если нет записей
         return {
-            "voice_id": (settings.voice_id if settings and settings.voice_id else "gtts-ru"),
+            "voice_id": voice_id,
             "tts_enabled": (settings.tts_enabled if settings else True),
             "gift_sounds_enabled": (settings.gift_sounds_enabled if settings else True),
             "viewer_sounds_enabled": (settings.viewer_sounds_enabled if settings and hasattr(settings, 'viewer_sounds_enabled') else True),

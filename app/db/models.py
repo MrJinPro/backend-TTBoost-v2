@@ -20,6 +20,20 @@ class User(Base):
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     settings = relationship("UserSettings", back_populates="user", uselist=False, cascade="all, delete-orphan")
+    tiktok_accounts = relationship("UserTikTokAccount", back_populates="user", cascade="all, delete-orphan")
+
+
+class UserTikTokAccount(Base):
+    __tablename__ = "user_tiktok_accounts"
+    id = Column(String, primary_key=True, default=_uuid)
+    user_id = Column(String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    username = Column(String(64), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    last_used_at = Column(DateTime, nullable=True)
+
+    user = relationship("User", back_populates="tiktok_accounts")
+
+    __table_args__ = (UniqueConstraint('user_id', 'username', name='uq_user_tiktok_username'),)
 
 
 class UserSettings(Base):

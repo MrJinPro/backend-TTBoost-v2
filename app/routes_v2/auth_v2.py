@@ -7,9 +7,28 @@ from app.db.database import SessionLocal, init_db
 from app.db import models
 from app.services.security import hash_password, verify_password, create_access_token, decode_token
 from datetime import datetime
+import re
+from app.services.plans import resolve_tariff
 
 
 router = APIRouter()
+
+
+_USERNAME_RE = re.compile(r"^[a-z0-9._-]{2,64}$")
+
+
+def _normalize_username(raw: str) -> str:
+    return raw.strip().lower().replace("@", "")
+
+
+def _validate_username(username: str) -> None:
+    if not _USERNAME_RE.match(username):
+        raise HTTPException(400, detail="invalid username")
+
+
+def _validate_password(password: str) -> None:
+    if not password or len(password) < 6:
+        raise HTTPException(400, detail="invalid password")
 
 
 def get_db():
@@ -46,9 +65,9 @@ class RedeemLicenseResponse(BaseModel):
 @router.post("/register", response_model=AuthResponse)
 def register(req: RegisterRequest, db: Session = Depends(get_db)):
     init_db()
-    username = req.username.strip().lower().replace("@", "")
-    if len(username) < 2:
-        raise HTTPException(400, detail="invalid username")
+    username = _normalize_username(req.username)
+    _validate_username(username)
+    _validate_password(req.password)
     exists = db.query(models.User).filter(models.User.username == username).first()
     if exists:
         raise HTTPException(409, detail="user exists")
@@ -70,7 +89,7 @@ class LoginRequest(BaseModel):
 
 @router.post("/login", response_model=AuthResponse)
 def login(req: LoginRequest, db: Session = Depends(get_db)):
-    username = req.username.strip().lower().replace("@", "")
+    username = _normalize_username(req.username)
     user = db.query(models.User).filter(models.User.username == username).first()
     auth_debug = os.getenv("AUTH_DEBUG") == "1"
     if not user:
@@ -100,9 +119,9 @@ def redeem_license(req: RedeemLicenseRequest, db: Session = Depends(get_db)):
     3. Привязываем лицензию к пользователю (user_id), если не привязана.
     4. Возвращаем JWT и данные по сроку лицензии.
     """
-    username = req.username.strip().lower().replace("@", "")
-    if len(username) < 2:
-        raise HTTPException(400, detail="invalid username")
+    username = _normalize_username(req.username)
+    _validate_username(username)
+    _validate_password(req.password)
 
     lic = db.query(models.LicenseKey).filter(models.LicenseKey.key == req.license_key.strip()).first()
     if not lic:
@@ -152,6 +171,11 @@ def get_current_user(authorization: str | None = Header(default=None), db: Sessi
 class MeResponse(BaseModel):
     id: str
     username: str
+    plan: str | None = None  # tariff id
+    tariff_name: str | None = None
+    allowed_platforms: list[str] | None = None
+    max_tiktok_accounts: int | None = None
+    license_expires_at: str | None = None
     tiktok_username: str | None = None
     voice_id: str
     tts_enabled: bool
@@ -163,9 +187,15 @@ class MeResponse(BaseModel):
 @router.get("/me", response_model=MeResponse)
 def me(user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
     settings = user.settings
+    tariff, lic = resolve_tariff(db, user.id)
     return MeResponse(
         id=user.id,
         username=user.username,
+        plan=tariff.id,
+        tariff_name=tariff.name,
+        allowed_platforms=sorted(list(tariff.allowed_platforms)),
+        max_tiktok_accounts=tariff.max_tiktok_accounts,
+        license_expires_at=lic.expires_at.isoformat() if (lic and lic.expires_at) else None,
         tiktok_username=user.tiktok_username,
         voice_id=settings.voice_id if settings else "ru-RU-SvetlanaNeural",
         tts_enabled=settings.tts_enabled if settings else True,
