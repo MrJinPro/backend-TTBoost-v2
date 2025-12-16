@@ -210,12 +210,17 @@ class TikTokService:
                         break
 
             client: TikTokLiveClient = TikTokLiveClient(unique_id=f"@{clean_username}", **client_kwargs)
-            
-            # ВКЛЮЧАЕМ DEBUG РЕЖИМ БИБЛИОТЕКИ чтобы видеть ВСЕ raw события
-            import logging as stdlib_logging
-            stdlib_logging.basicConfig(level=stdlib_logging.DEBUG)
-            client.logger.setLevel(stdlib_logging.DEBUG)
-            logger.info("🐛 DEBUG режим TikTokLive включён - будут видны все raw события")
+
+            # Опционально включаем DEBUG режим TikTokLive (очень многословно, для прод лучше держать выключенным)
+            tt_debug = str(os.getenv("TT_TIKTOKLIVE_DEBUG", "0")).strip().lower() in ("1", "true", "yes", "on")
+            if tt_debug:
+                try:
+                    import logging as stdlib_logging
+                    stdlib_logging.getLogger("TikTokLive").setLevel(stdlib_logging.DEBUG)
+                    client.logger.setLevel(stdlib_logging.DEBUG)
+                    logger.info("🐛 DEBUG режим TikTokLive включён (TT_TIKTOKLIVE_DEBUG=1)")
+                except Exception:
+                    logger.warning("Не удалось включить DEBUG режим TikTokLive")
             
             # Сохраняем время подключения для фильтрации старых событий
             connection_time = datetime.now()
@@ -668,6 +673,14 @@ class TikTokService:
             # Запускаем watchdog: если нет активности N секунд — мягкий рестарт клиента
             inactivity_limit = int(os.getenv("TT_WATCHDOG_INACTIVITY_SEC", "75"))
             check_period = int(os.getenv("TT_WATCHDOG_CHECK_SEC", "15"))
+
+            # Можно отключить watchdog полностью (полезно, если эфир "тихий" и рестарты мешают)
+            if inactivity_limit <= 0:
+                if user_id in self._watchdogs:
+                    task = self._watchdogs.pop(user_id)
+                    task.cancel()
+                logger.info("🛟 Watchdog отключён (TT_WATCHDOG_INACTIVITY_SEC=%s)", inactivity_limit)
+                return
 
             async def watchdog_loop(uid: str):
                 try:
