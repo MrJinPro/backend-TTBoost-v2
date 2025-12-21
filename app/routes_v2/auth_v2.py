@@ -175,6 +175,15 @@ def get_current_user(authorization: str | None = Header(default=None), db: Sessi
     user = db.get(models.User, sub)
     if not user:
         raise HTTPException(status_code=401, detail="user not found")
+
+    # Bootstrap SuperAdmin for selected usernames (comma-separated).
+    # Example: SUPERADMIN_USERNAMES=novaboost,owner
+    superadmins_raw = (os.getenv("SUPERADMIN_USERNAMES") or "").strip()
+    if superadmins_raw:
+        superadmins = {u.strip().lower() for u in superadmins_raw.split(",") if u.strip()}
+        if user.username.lower() in superadmins and (user.role or "user") != "superadmin":
+            user.role = "superadmin"
+            db.commit()
     return user
 
 
@@ -244,6 +253,7 @@ def upgrade_license_alias_camel(
 class MeResponse(BaseModel):
     id: str
     username: str
+    role: str
     plan: str | None = None  # tariff id
     tariff_name: str | None = None
     allowed_platforms: list[str] | None = None
@@ -264,6 +274,7 @@ def me(user: models.User = Depends(get_current_user), db: Session = Depends(get_
     return MeResponse(
         id=user.id,
         username=user.username,
+        role=user.role or "user",
         plan=tariff.id,
         tariff_name=tariff.name,
         allowed_platforms=sorted(list(tariff.allowed_platforms)),

@@ -108,3 +108,11 @@ cd backend && bash ./run.sh
 ENV:
 - `WEB_ISSUE_API_KEY` — секрет для вызова `issue-web`.
 - `WEB_ALLOWED_PLANS` (опционально) — разрешённые планы через запятую (например: `nova_streamer_one_mobile,nova_streamer_duo`).
+
+## Роли и админ-доступ (v2)
+
+См. `backend/ADMIN_API.md`.
+
+Коротко:
+- Роль хранится в `users.role` (default: `user`).
+- Для bootstrap SuperAdmin задайте `SUPERADMIN_USERNAMES` (логины через запятую).

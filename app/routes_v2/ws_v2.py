@@ -331,18 +331,37 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
     async def on_like(u: str, count: int):
         await websocket.send_text(json.dumps({"type": "like", "user": u, "count": count}, ensure_ascii=False))
 
-    async def on_join(u: str):
-        # Нормализуем логин TikTok для сравнения/кэша
-        u_norm = (u or "").strip().lstrip("@").lower()
-        if not u_norm:
+    def _norm_tiktok_login(s: str | None) -> str:
+        return (s or "").strip().lstrip("@").lower()
+
+    async def on_join(viewer):
+        # viewer может быть str (старый формат) или dict {username, nickname}
+        login_raw = None
+        nickname_raw = None
+        if isinstance(viewer, dict):
+            login_raw = viewer.get("username") or viewer.get("unique_id") or viewer.get("user")
+            nickname_raw = viewer.get("nickname") or viewer.get("display_name")
+        else:
+            login_raw = str(viewer) if viewer is not None else None
+
+        login_norm = _norm_tiktok_login(login_raw)
+        nick_norm = _norm_tiktok_login(nickname_raw)
+        viewer_key = login_norm or nick_norm
+        if not viewer_key:
             return
 
-        first_time = u_norm not in seen_viewers
+        first_time = viewer_key not in seen_viewers
         if first_time:
-            seen_viewers.add(u_norm)
+            seen_viewers.add(viewer_key)
 
         if WS_DEBUG:
-            logger.debug("on_join: user=%s first_time=%s", u_norm, first_time)
+            logger.debug(
+                "on_join: login=%s nickname=%s key=%s first_time=%s",
+                login_norm,
+                nick_norm,
+                viewer_key,
+                first_time,
+            )
         
         s = get_current_settings()
         sound_url = None
@@ -373,7 +392,7 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
                 matched = True
             elif t.condition_key == "username" and t.condition_value:
                 cv = str(t.condition_value).strip().lstrip("@").lower()
-                matched = (cv == u_norm)
+                matched = (cv == login_norm) or (not login_norm and cv == nick_norm) or (nick_norm and cv == nick_norm)
 
             if matched:
                 fn = ap.get("sound_filename")
@@ -391,7 +410,15 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
                 break
         
         # ВСЕГДА отправляем событие на фронтенд (для отображения в UI)
-        payload = {"type": "viewer_join", "user": u_norm}
+        # Для UI отдаём читабельные значения, но сохраняем и нормализованное поле
+        display_user = (login_raw or nickname_raw or viewer_key)
+        payload = {
+            "type": "viewer_join",
+            "user": display_user,
+            "username": login_raw or None,
+            "nickname": nickname_raw or None,
+            "user_norm": viewer_key,
+        }
         if sound_url:
             payload["sound_url"] = sound_url
             if autoplay_sound is False:

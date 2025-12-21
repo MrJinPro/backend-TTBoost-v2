@@ -17,6 +17,7 @@ class User(Base):
     username = Column(String(64), unique=True, index=True, nullable=False)  # Логин для входа
     tiktok_username = Column(String(64), nullable=True)  # TikTok аккаунт для Live
     password_hash = Column(String(255), nullable=False)
+    role = Column(String(32), default="user", nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     settings = relationship("UserSettings", back_populates="user", uselist=False, cascade="all, delete-orphan")

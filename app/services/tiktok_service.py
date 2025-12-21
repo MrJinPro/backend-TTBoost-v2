@@ -13,6 +13,73 @@ from TikTokLive.events import (
     ShareEvent,  # Событие когда кто-то делится стримом
     RoomUserSeqEvent,  # Счётчик зрителей в реальном времени
 )
+
+
+def _first_non_empty_str(*values):
+    for v in values:
+        if isinstance(v, str):
+            s = v.strip()
+            if s:
+                return s
+    return None
+
+
+def _extract_user_identifiers(user) -> tuple[str | None, str | None]:
+    """Возвращает (login, nickname) из объекта пользователя TikTokLive.
+
+    В разных событиях/версиях TikTokLive поля могут называться по-разному.
+    Для триггеров важнее login (unique id), но для UI полезен nickname.
+    """
+    if user is None:
+        return None, None
+
+    # dict-like
+    if isinstance(user, dict):
+        login = _first_non_empty_str(
+            user.get("unique_id"),
+            user.get("uniqueId"),
+            user.get("uniqueID"),
+            user.get("username"),
+        )
+        nickname = _first_non_empty_str(
+            user.get("nickname"),
+            user.get("display_name"),
+            user.get("displayName"),
+            user.get("name"),
+        )
+        return login, nickname
+
+    # object-like
+    login = _first_non_empty_str(
+        getattr(user, "unique_id", None),
+        getattr(user, "uniqueId", None),
+        getattr(user, "uniqueID", None),
+        getattr(user, "username", None),
+    )
+    nickname = _first_non_empty_str(
+        getattr(user, "nickname", None),
+        getattr(user, "display_name", None),
+        getattr(user, "displayName", None),
+        getattr(user, "name", None),
+    )
+
+    # some versions keep raw dict on the user
+    raw = getattr(user, "raw", None) or getattr(user, "data", None) or getattr(user, "_data", None)
+    if isinstance(raw, dict):
+        login = login or _first_non_empty_str(
+            raw.get("unique_id"),
+            raw.get("uniqueId"),
+            raw.get("uniqueID"),
+            raw.get("username"),
+        )
+        nickname = nickname or _first_non_empty_str(
+            raw.get("nickname"),
+            raw.get("display_name"),
+            raw.get("displayName"),
+            raw.get("name"),
+        )
+
+    return login, nickname
 # Импорт для работы с RAW protobuf событиями
 try:
     from TikTokLive.proto import WebcastResponse, WebcastPushFrame
@@ -421,13 +488,16 @@ class TikTokService:
             @client.on(JoinEvent)
             async def on_join(event: JoinEvent):
                 """Обработка входа зрителя в стрим"""
-                username = event.user.unique_id or event.user.nickname
+                login, nickname = _extract_user_identifiers(getattr(event, "user", None))
+                username = login or nickname
                 print(f"👤 JoinEvent: {username} присоединился к стриму")
-                logger.info(f"TikTok зритель присоединился: {username}")
+                logger.info(f"TikTok зритель присоединился: login={login} nickname={nickname}")
                 self._last_activity[user_id] = datetime.now()
                 if on_join_callback:
                     try:
-                        await on_join_callback(username)
+                        # Передаём структурированные данные, чтобы ws мог показывать имя
+                        # и матчить триггеры даже если login/никнейм отличаются.
+                        await on_join_callback({"username": login, "nickname": nickname})
                     except Exception as e:
                         logger.error(f"Ошибка в join callback: {e}")
 
