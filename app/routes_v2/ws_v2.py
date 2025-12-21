@@ -543,13 +543,6 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
                     await _safe_send({"type": "error", "message": "Username is required"})
                     continue
 
-                if not tariff.get("tiktok_enabled", True):
-                    await _safe_send({
-                        "type": "error",
-                        "message": "TikTok подключение недоступно в вашем тарифном плане",
-                    })
-                    continue
-
                 # Stop previous session if any
                 if tiktok_service.is_running(user.id):
                     try:
@@ -678,10 +671,9 @@ async def connect_tiktok(request: ConnectTikTokRequest, user=Depends(get_current
     if not username:
         raise HTTPException(400, detail="Username is required")
     
-    # Проверяем тарифный план
-    tariff_info = resolve_tariff(user.tariff or "free")
-    if not tariff_info.get("tiktok_enabled", True):
-        raise HTTPException(403, detail="TikTok подключение недоступно в вашем тарифном плане")
+    # Тариф проверяем через текущую модель тарифов (как в WS):
+    # ограничения по TikTok подключению сейчас не вводим, чтобы не ломать мобильный поток.
+    resolve_tariff(db, user.id)
     
     # Если уже подключен - отключаем сначала
     if tiktok_service.is_running(user.id):
