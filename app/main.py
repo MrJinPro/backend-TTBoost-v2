@@ -5,6 +5,7 @@ import os
 import logging
 from logging.handlers import RotatingFileHandler
 from dotenv import load_dotenv
+from urllib.parse import urlparse
 
 # Важно: загружаем .env до импорта роутов, чтобы переменные окружения
 # были доступны во всех сервисах при инициализации (например, SIGN_SERVER_URL)
@@ -41,11 +42,54 @@ else:
         "http://127.0.0.1",
         "http://localhost:3000",
         "http://127.0.0.1:3000",
+        # основной веб-домен (покупка/активация лицензии)
+        "https://ttboost.pro",
+        "https://www.ttboost.pro",
         # фронтенд на production
         "https://mobile.ttboost.pro",
         server_host.replace("https://", "http://"),
         server_host,
     ]
+
+
+def _normalize_allowed_origins(entries: list[str]) -> tuple[list[str], list[str]]:
+    """Нормализует ALLOWED_ORIGINS.
+
+    Поддерживаем варианты:
+    - https://example.com
+    - https://example.com/
+    - https://example.com/path
+    - example.com
+    - example.com:3000
+    """
+    origin_prefixes: list[str] = []
+    hosts: list[str] = []
+
+    for raw in entries or []:
+        if not raw:
+            continue
+        s = raw.strip()
+        if not s:
+            continue
+        s = s.rstrip("/")
+
+        if "://" in s:
+            p = urlparse(s)
+            if p.scheme and p.netloc:
+                origin_prefixes.append(f"{p.scheme}://{p.netloc}")
+            else:
+                # Fallback: оставляем как есть (лучше, чем потерять правило)
+                origin_prefixes.append(s)
+        else:
+            # host[:port][/path] -> host[:port]
+            if "/" in s:
+                s = s.split("/", 1)[0]
+            hosts.append(s)
+
+    return origin_prefixes, hosts
+
+
+_ALLOWED_ORIGIN_PREFIXES, _ALLOWED_HOSTS = _normalize_allowed_origins(allowed_origins)
 
 # ВАЖНО: если allow_credentials=True, нельзя использовать "*" как origin, иначе браузер отбросит ответ.
 app.add_middleware(
@@ -80,12 +124,40 @@ async def dynamic_origin(request: Request, call_next):
     """
     origin = request.headers.get("origin") or request.headers.get("Origin")
 
+    def _parse_origin(o: str):
+        try:
+            p = urlparse(o)
+        except Exception:
+            return None, None, None
+        if not p.scheme or not p.netloc:
+            return None, None, None
+        origin_base = f"{p.scheme}://{p.netloc}"
+        return origin_base, p.netloc, p.hostname
+
     def is_allowed_origin(o: str) -> bool:
         if not o:
             return False
-        # Явное или prefix совпадение (оставляем возможность указать origin без порта)
-        if any(o.startswith(allowed.rstrip("/")) for allowed in allowed_origins):
+
+        origin_base, origin_netloc, origin_host = _parse_origin(o)
+        if not origin_base:
+            return False
+
+        # 1) Явное или prefix совпадение по origin (scheme://host[:port])
+        if any(origin_base.startswith(prefix) for prefix in _ALLOWED_ORIGIN_PREFIXES):
             return True
+
+        # 2) Совпадение по hostname / host:port (если в ALLOWED_ORIGINS указали без схемы)
+        if origin_host:
+            for h in _ALLOWED_HOSTS:
+                if not h:
+                    continue
+                if ":" in h:
+                    if origin_netloc == h:
+                        return True
+                else:
+                    if origin_host == h or origin_host.endswith(f".{h}"):
+                        return True
+
         if ALLOW_LOCALHOST_DEV == "1":
             if o.startswith("http://localhost:") or o.startswith("http://127.0.0.1:"):
                 return True

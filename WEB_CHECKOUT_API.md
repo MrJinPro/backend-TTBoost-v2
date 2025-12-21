@@ -12,6 +12,20 @@
 
 Все запросы ниже идут в `${BACKEND_BASE_URL}`.
 
+### CORS (важно для browser fetch)
+
+Чтобы браузерный `fetch()` к `${BACKEND_BASE_URL}` работал, backend должен разрешать origin вашего сайта.
+
+- На backend есть переменная окружения `ALLOWED_ORIGINS` (через запятую), например:
+  - `ALLOWED_ORIGINS=https://ttboost.pro,https://www.ttboost.pro,https://mobile.ttboost.pro`
+
+Важно:
+- В `ALLOWED_ORIGINS` нужно указывать именно **origin** (scheme + host + port). Путь (`/profile`) в `Origin` не входит.
+  - Пример: если страница `https://novaboost.lovable.app/profile`, то `Origin` будет `https://novaboost.lovable.app`.
+- Допускается и формат без схемы (только хост): `novaboost.lovable.app`, но предпочтительнее явный `https://...`.
+
+Если CORS не настроен, в DevTools часто видно `401`/`200` в Network, но в Console будет ошибка вида «Не удалось загрузить Fetch» — это блокировка CORS.
+
 ### Секреты (только server-side)
 
 - `WEB_ISSUE_API_KEY` — секрет для `POST /v2/license/issue-web`.
