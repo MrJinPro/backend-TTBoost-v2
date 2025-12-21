@@ -332,15 +332,17 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
         await websocket.send_text(json.dumps({"type": "like", "user": u, "count": count}, ensure_ascii=False))
 
     async def on_join(u: str):
-        # Игнорируем повторные входы — считаем только первый раз «увидели» за сессию
-        if u in seen_viewers:
-            if WS_DEBUG:
-                logger.debug("on_join: user %s already seen in session, skip", u)
+        # Нормализуем логин TikTok для сравнения/кэша
+        u_norm = (u or "").strip().lstrip("@").lower()
+        if not u_norm:
             return
 
-        seen_viewers.add(u)
+        first_time = u_norm not in seen_viewers
+        if first_time:
+            seen_viewers.add(u_norm)
+
         if WS_DEBUG:
-            logger.debug("on_join: first time in session user=%s", u)
+            logger.debug("on_join: user=%s first_time=%s", u_norm, first_time)
         
         s = get_current_settings()
         sound_url = None
@@ -355,18 +357,27 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
         if WS_DEBUG:
             logger.debug("on_join: triggers=%d", len(trig))
         
+        autoplay_sound: bool | None = None
         for t in trig:
             if WS_DEBUG:
                 logger.debug("on_join: check trigger=%s key=%s val=%r", t.id, t.condition_key, t.condition_value)
+
+            ap = t.action_params or {}
+            once_per_stream = ap.get("once_per_stream", True)
+            # Если триггер настроен на "только 1 раз за стрим" — не срабатываем на повторные join этого же зрителя.
+            if once_per_stream and not first_time:
+                continue
             
             matched = False
             if _matches_always(t):
                 matched = True
             elif t.condition_key == "username" and t.condition_value:
-                matched = (t.condition_value == u)
+                cv = str(t.condition_value).strip().lstrip("@").lower()
+                matched = (cv == u_norm)
 
             if matched:
-                fn = t.action_params.get("sound_filename") if t.action_params else None
+                fn = ap.get("sound_filename")
+                autoplay_sound = ap.get("autoplay_sound", True)
                 if fn and s["viewer_sounds_enabled"] and _cooldown_allows(t.id, (t.action_params or {}).get("cooldown_seconds")):
                     sound_url = _abs_url(f"/static/sounds/{user.id}/{fn}")
                     if WS_DEBUG:
@@ -380,9 +391,11 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
                 break
         
         # ВСЕГДА отправляем событие на фронтенд (для отображения в UI)
-        payload = {"type": "viewer_join", "user": u}
+        payload = {"type": "viewer_join", "user": u_norm}
         if sound_url:
             payload["sound_url"] = sound_url
+            if autoplay_sound is False:
+                payload["autoplay_sound"] = False
         
         if WS_DEBUG:
             logger.debug("on_join: send payload=%s", payload)

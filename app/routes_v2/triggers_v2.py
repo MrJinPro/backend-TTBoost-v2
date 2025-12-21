@@ -30,6 +30,8 @@ class SetTriggerRequest(BaseModel):
     trigger_name: str | None = None
     combo_count: int = 0
     cooldown_seconds: int | None = None
+    once_per_stream: bool | None = None
+    autoplay_sound: bool | None = None
 
 
 @router.post("/set")
@@ -54,6 +56,12 @@ def set_trigger(req: SetTriggerRequest, user=Depends(get_current_user), db: Sess
         action_params["sound_filename"] = req.sound_filename
         if req.cooldown_seconds is not None and req.cooldown_seconds > 0:
             action_params["cooldown_seconds"] = req.cooldown_seconds
+
+        # Доп. опции поведения (актуально для viewer_join, но храним универсально)
+        if req.once_per_stream is not None:
+            action_params["once_per_stream"] = bool(req.once_per_stream)
+        if req.autoplay_sound is not None:
+            action_params["autoplay_sound"] = bool(req.autoplay_sound)
 
     trig = models.Trigger(
         user_id=user.id,
@@ -147,6 +155,8 @@ class UpdateTriggerRequest(BaseModel):
     text_template: str | None = None
     sound_filename: str | None = None
     cooldown_seconds: int | None = None
+    once_per_stream: bool | None = None
+    autoplay_sound: bool | None = None
 
 
 @router.post('/update')
@@ -197,6 +207,11 @@ def update_trigger(req: UpdateTriggerRequest, user=Depends(get_current_user), db
             action_params.pop('cooldown_seconds', None)
         else:
             action_params['cooldown_seconds'] = req.cooldown_seconds
+
+    if req.once_per_stream is not None:
+        action_params['once_per_stream'] = bool(req.once_per_stream)
+    if req.autoplay_sound is not None:
+        action_params['autoplay_sound'] = bool(req.autoplay_sound)
 
     t.action_params = action_params
 
