@@ -178,8 +178,7 @@ def get_current_user(authorization: str | None = Header(default=None), db: Sessi
     return user
 
 
-@router.post("/upgrade-license", response_model=UpgradeLicenseResponse)
-def upgrade_license(
+def _upgrade_license_impl(
     req: UpgradeLicenseRequest,
     user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -211,6 +210,35 @@ def upgrade_license(
         plan=lic.plan,
         license_expires_at=lic.expires_at.isoformat() if lic.expires_at else None,
     )
+
+
+# Primary (documented) path
+@router.post("/upgrade-license", response_model=UpgradeLicenseResponse)
+def upgrade_license(
+    req: UpgradeLicenseRequest,
+    user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    return _upgrade_license_impl(req=req, user=user, db=db)
+
+
+# Backward/compat aliases (some deployments/clients used underscore or camelCase)
+@router.post("/upgrade_license", response_model=UpgradeLicenseResponse, include_in_schema=False)
+def upgrade_license_alias_underscore(
+    req: UpgradeLicenseRequest,
+    user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    return _upgrade_license_impl(req=req, user=user, db=db)
+
+
+@router.post("/upgradeLicense", response_model=UpgradeLicenseResponse, include_in_schema=False)
+def upgrade_license_alias_camel(
+    req: UpgradeLicenseRequest,
+    user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    return _upgrade_license_impl(req=req, user=user, db=db)
 
 
 class MeResponse(BaseModel):

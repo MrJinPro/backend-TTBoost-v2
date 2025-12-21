@@ -238,6 +238,33 @@ create table if not exists web_orders (
 
 ## 5) Как активировать ключ (в приложении)
 
+## 5A) Как активировать ключ прямо на вебе (после оплаты)
+
+Веб может активировать ключ сразу (без копипаста в приложение), **если пользователь залогинен** (есть JWT).
+
+`POST ${BACKEND_BASE_URL}/v2/auth/upgrade-license`
+
+Headers:
+- `Authorization: Bearer <JWT>`
+
+Body:
+```json
+{ "license_key": "TTB-AAAA-BBBB-CCCC" }
+```
+
+Response:
+```json
+{
+  "status": "ok",
+  "plan": "nova_streamer_one_mobile",
+  "license_expires_at": "2026-01-20T12:34:56.789Z"
+}
+```
+
+Примечания:
+- Если получаете `404 Not Found` — на сервере задеплоена старая версия backend без этого endpoint’а (нужно обновить деплой).
+- На некоторых старых клиентах/деплоях может встречаться алиас `POST /v2/auth/upgrade_license`.
+
 ### Рекомендуемый вариант: апгрейд в профиле (пользователь уже вошёл)
 
 `POST ${BACKEND_BASE_URL}/v2/auth/upgrade-license`
