@@ -127,3 +127,22 @@ class LicenseKey(Base):
     user_id = Column(String, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)  # может быть привязана к пользователю
     max_devices = Column(Integer, default=1)
     devices_bound = Column(Integer, default=0)
+
+
+class WebPurchase(Base):
+    """Запись об оплате/заказе из веб-приложения для выдачи лицензии.
+
+    Нужна для идемпотентности: один order_id -> один license_key.
+    Валидацию оплаты делает внешний сервис/веб-бэкенд; здесь только выдача ключа.
+    """
+
+    __tablename__ = "web_purchases"
+    id = Column(String, primary_key=True, default=_uuid)
+    order_id = Column(String(128), unique=True, index=True, nullable=False)
+    email = Column(String(256), nullable=True)
+    plan = Column(String(64), nullable=True)
+    ttl_days = Column(Integer, nullable=True)
+    amount = Column(Integer, nullable=True)  # обычно в минимальных единицах (копейки/центы)
+    currency = Column(String(8), nullable=True)
+    license_key = Column(String(100), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)

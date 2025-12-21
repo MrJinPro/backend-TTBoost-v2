@@ -75,3 +75,36 @@ cd backend && bash ./run.sh
 - Формирование WebSocket URL в продакшене: `wss://<домен>/ws/{token}` при `ENV=prod` (TLS обязателен при HTTPS API).
 - Хранилище лицензий и токенов — в памяти (для MVP).
 - Статические файлы доступны по `/static/...`.
+
+## Выдача ключей для веб-оплаты (v2)
+
+Для веб-приложения с оплатой добавлен endpoint выдачи ключей повышения тарифа:
+
+- `POST /v2/license/issue-web`
+  - Header: `Web-Api-Key: <WEB_ISSUE_API_KEY>`
+  - Body:
+
+```json
+{
+  "order_id": "order_12345",
+  "plan": "nova_streamer_one_mobile",
+  "ttl_days": 30,
+  "email": "user@example.com",
+  "amount": 9900,
+  "currency": "RUB"
+}
+```
+
+Ответ:
+
+```json
+{ "key": "TTB-AAAA-BBBB-CCCC", "plan": "nova_streamer_one_mobile", "expires_at": "..." }
+```
+
+Особенности:
+- Идемпотентность по `order_id`: повторный запрос вернёт тот же ключ.
+- `Web-Api-Key` должен храниться только server-side (не в браузере).
+
+ENV:
+- `WEB_ISSUE_API_KEY` — секрет для вызова `issue-web`.
+- `WEB_ALLOWED_PLANS` (опционально) — разрешённые планы через запятую (например: `nova_streamer_one_mobile,nova_streamer_duo`).

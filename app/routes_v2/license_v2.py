@@ -7,7 +7,13 @@ from datetime import datetime, timedelta
 
 from app.db.database import SessionLocal, init_db
 from app.db import models
-from app.services.plans import canonicalize_license_plan
+from app.services.plans import (
+    TARIFF_DUO,
+    TARIFF_FREE,
+    TARIFF_ONE_DESKTOP,
+    TARIFF_ONE_MOBILE,
+    canonicalize_license_plan,
+)
 
 router = APIRouter()
 
@@ -71,6 +77,38 @@ class SetPlanRequest(BaseModel):
     plan: str | None = None
 
 
+class PlanItem(BaseModel):
+    id: str
+    name: str
+    allowed_platforms: list[str]
+
+
+class ListPlansResponse(BaseModel):
+    items: list[PlanItem]
+
+
+@router.get("/plans", response_model=ListPlansResponse)
+def list_plans():
+    """Список тарифов (для веб-витрины/чекаута).
+
+    По умолчанию отдаём только платные планы. Ограничение можно задать через env
+    `WEB_ALLOWED_PLANS` (ids через запятую).
+    """
+
+    all_paid = [TARIFF_ONE_MOBILE, TARIFF_ONE_DESKTOP, TARIFF_DUO]
+    allowed_raw = (os.getenv("WEB_ALLOWED_PLANS") or "").strip()
+    if allowed_raw:
+        allowed_ids = {canonicalize_license_plan(p.strip()) for p in allowed_raw.split(",") if p.strip()}
+        all_paid = [t for t in all_paid if t.id in allowed_ids]
+
+    return ListPlansResponse(
+        items=[
+            PlanItem(id=t.id, name=t.name, allowed_platforms=sorted(list(t.allowed_platforms)))
+            for t in all_paid
+        ]
+    )
+
+
 def _generate_key(prefix: str = "TTB") -> str:
     # Генерируем ключ вида TTB-XXXX-XXXX-XXXX
     parts = [secrets.token_hex(2).upper() for _ in range(3)]
@@ -81,6 +119,26 @@ def _require_admin(admin_api_key: str | None) -> None:
     key_required = os.getenv("ADMIN_API_KEY")
     if key_required and admin_api_key != key_required:
         raise HTTPException(status_code=401, detail="unauthorized")
+
+
+def _require_web(web_api_key: str | None) -> None:
+    """Отдельный ключ доступа для веб-выдачи лицензий.
+
+    Этот ключ должен храниться только server-side (веб-бэкенд/серверлесс).
+    Никогда не кладите его в браузерный фронтенд.
+    """
+    key_required = os.getenv("WEB_ISSUE_API_KEY")
+    if key_required and web_api_key != key_required:
+        raise HTTPException(status_code=401, detail="unauthorized")
+
+
+class IssueWebLicenseRequest(BaseModel):
+    order_id: str
+    plan: str
+    ttl_days: int | None = 30
+    email: str | None = None
+    amount: int | None = None
+    currency: str | None = None
 
 
 @router.post("/issue", response_model=IssueLicenseResponse)
@@ -97,6 +155,88 @@ def issue_license(req: IssueLicenseRequest, db: Session = Depends(get_db), admin
     expires_at = datetime.utcnow() + timedelta(days=req.ttl_days or 30)
     lic = models.LicenseKey(key=key, plan=plan, expires_at=expires_at, status=models.LicenseStatus.active)
     db.add(lic)
+    db.commit()
+    return IssueLicenseResponse(key=key, plan=plan, expires_at=expires_at.isoformat())
+
+
+@router.post("/issue-web", response_model=IssueLicenseResponse)
+def issue_license_web(
+    req: IssueWebLicenseRequest,
+    db: Session = Depends(get_db),
+    web_api_key: str | None = Header(default=None, alias="Web-Api-Key"),
+):
+    """Выдать ключ для веб-покупки.
+
+    Endpoint должен вызываться только вашим веб-бэкендом после подтверждения оплаты.
+    """
+
+    _require_web(web_api_key)
+    init_db()
+
+    order_id = (req.order_id or "").strip()
+    if not order_id:
+        raise HTTPException(status_code=400, detail="order_id is required")
+
+    try:
+        plan = canonicalize_license_plan(req.plan)
+    except Exception:
+        raise HTTPException(status_code=400, detail="invalid plan")
+
+    ttl = req.ttl_days or 30
+    if ttl <= 0 or ttl > 3650:
+        raise HTTPException(status_code=400, detail="invalid ttl_days")
+
+    # Ограничим список допустимых планов через env, если задан
+    allowed_raw = (os.getenv("WEB_ALLOWED_PLANS") or "").strip()
+    if allowed_raw:
+        allowed = {canonicalize_license_plan(p.strip()) for p in allowed_raw.split(",") if p.strip()}
+        if plan not in allowed:
+            raise HTTPException(status_code=403, detail="plan not allowed")
+
+    # Идемпотентность по order_id
+    existing = db.query(models.WebPurchase).filter(models.WebPurchase.order_id == order_id).first()
+    if existing and existing.license_key:
+        lic = db.query(models.LicenseKey).filter(models.LicenseKey.key == existing.license_key).first()
+        if lic:
+            return IssueLicenseResponse(
+                key=lic.key,
+                plan=lic.plan,
+                expires_at=lic.expires_at.isoformat() if lic.expires_at else None,
+            )
+
+    expires_at = datetime.utcnow() + timedelta(days=ttl)
+
+    # Генерируем с защитой от редкой коллизии
+    for _attempt in range(5):
+        key = _generate_key()
+        exists = db.query(models.LicenseKey).filter(models.LicenseKey.key == key).first()
+        if exists:
+            continue
+        db.add(models.LicenseKey(key=key, plan=plan, expires_at=expires_at, status=models.LicenseStatus.active))
+        break
+    else:
+        raise HTTPException(status_code=500, detail="failed to generate unique key")
+
+    if not existing:
+        db.add(
+            models.WebPurchase(
+                order_id=order_id,
+                email=(req.email or None),
+                plan=plan,
+                ttl_days=ttl,
+                amount=req.amount,
+                currency=(req.currency or None),
+                license_key=key,
+            )
+        )
+    else:
+        existing.plan = plan
+        existing.ttl_days = ttl
+        existing.email = (req.email or existing.email)
+        existing.amount = req.amount if req.amount is not None else existing.amount
+        existing.currency = (req.currency or existing.currency)
+        existing.license_key = key
+
     db.commit()
     return IssueLicenseResponse(key=key, plan=plan, expires_at=expires_at.isoformat())
 
