@@ -21,8 +21,8 @@ def get_db():
         db.close()
 
 
-MAX_BYTES = 100 * 1024
-MAX_DURATION_SEC = 10  # Увеличено для фраз на подарки
+# Ограничение только по размеру файла (1 MiB)
+MAX_BYTES = 1024 * 1024
 
 
 def _media_root(user_id: str) -> str:
@@ -51,7 +51,7 @@ def _media_base_url() -> str:
 async def upload_sound(user: models.User = Depends(get_current_user), db: Session = Depends(get_db), file: UploadFile = File(...)):
     content = await file.read()
     if len(content) > MAX_BYTES:
-        raise HTTPException(400, detail="file too large (100KB max)")
+        raise HTTPException(400, detail="file too large (1MB max)")
 
     # Try read duration
     duration_sec = None
@@ -65,9 +65,6 @@ async def upload_sound(user: models.User = Depends(get_current_user), db: Sessio
         os.remove(tmp_path)
     except Exception:
         duration_sec = None
-
-    if duration_sec is not None and duration_sec > MAX_DURATION_SEC:
-        raise HTTPException(400, detail="duration must be <= 10s")
 
     # store
     safe_name = file.filename.replace("/", "_").replace("\\", "_")

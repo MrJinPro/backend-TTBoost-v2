@@ -466,24 +466,12 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
             logger.debug("on_viewer: current=%s total=%s", current, total)
         await websocket.send_text(json.dumps({"type": "viewer", "current": current, "total": total}, ensure_ascii=False))
 
-    # run tiktok client
+    # WS control loop
     try:
-        # Используем tiktok_username если задан, иначе username
-        target_username = user.tiktok_username if user.tiktok_username else user.username
-        logger.info("WS Connect user=%s target=%s", user.username, target_username)
-        if not target_username:
-            await websocket.send_text(json.dumps({
-                "type": "error",
-                "message": "TikTok username не указан. Укажите его в настройках."
-            }, ensure_ascii=False))
-            await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
-            return
-
         async def _safe_send(payload: dict):
             try:
                 await websocket.send_text(json.dumps(payload, ensure_ascii=False))
             except Exception:
-                # websocket может уже быть закрыт
                 return
 
         async def _on_tiktok_connect(username: str):
@@ -491,6 +479,7 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
                 "type": "status",
                 "message": f"Подключено к TikTok Live @{username}",
                 "connected": True,
+                "tiktok_username": username,
             })
 
         async def _on_tiktok_disconnect(username: str):
@@ -499,36 +488,132 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
                 "type": "status",
                 "message": f"TikTok Live отключен @{username}" + (" — переподключаемся…" if auto_reconnect else ""),
                 "connected": False,
+                "tiktok_username": username,
             })
 
-        # Сразу сообщаем, что запуск начался (реальное подключение подтвердим через ConnectEvent)
+        # Initial status
         await _safe_send({
             "type": "status",
-            "message": f"Подключаемся к TikTok Live @{target_username}…",
-            "connected": False,
+            "connected": tiktok_service.is_running(user.id),
+            "message": "WS подключен. Подключение к LIVE выполняется по команде.",
+            "tiktok_username": (user.tiktok_username or None),
         })
-        
-        if WS_DEBUG:
-            logger.debug("WS: calling start_client user_id=%s target=%s", user.id, target_username)
-        await tiktok_service.start_client(
-            user_id=user.id,
-            tiktok_username=target_username,
-            on_comment_callback=on_comment,
-            on_gift_callback=on_gift,
-            on_like_callback=on_like,
-            on_join_callback=on_join,
-            on_follow_callback=on_follow,
-            on_subscribe_callback=on_subscribe,
-            on_share_callback=on_share,
-            on_viewer_callback=on_viewer,
-            on_connect_callback=_on_tiktok_connect,
-            on_disconnect_callback=_on_tiktok_disconnect,
-        )
-        if WS_DEBUG:
-            logger.debug("WS: start_client finished OK user_id=%s", user.id)
-        
+
+        # Backwards compatibility: optional autostart on WS connect (disabled by default)
+        ws_autostart = str(os.getenv("TT_WS_AUTOSTART", "0")).strip().lower() in ("1", "true", "yes", "on")
+        if ws_autostart and (user.tiktok_username or user.username):
+            target_username = (user.tiktok_username or user.username).strip().lstrip("@").lower()
+            if target_username:
+                await _safe_send({
+                    "type": "status",
+                    "message": f"Подключаемся к TikTok Live @{target_username}…",
+                    "connected": False,
+                    "tiktok_username": target_username,
+                })
+                await tiktok_service.start_client(
+                    user_id=user.id,
+                    tiktok_username=target_username,
+                    on_comment_callback=on_comment,
+                    on_gift_callback=on_gift,
+                    on_like_callback=on_like,
+                    on_join_callback=on_join,
+                    on_follow_callback=on_follow,
+                    on_subscribe_callback=on_subscribe,
+                    on_share_callback=on_share,
+                    on_viewer_callback=on_viewer,
+                    on_connect_callback=_on_tiktok_connect,
+                    on_disconnect_callback=_on_tiktok_disconnect,
+                )
+
         while True:
-            await websocket.receive_text()
+            raw = await websocket.receive_text()
+            try:
+                data = json.loads(raw) if raw else {}
+            except Exception:
+                continue
+
+            if not isinstance(data, dict):
+                continue
+
+            action = str(data.get("action") or "").strip().lower()
+
+            if action == "connect_tiktok":
+                username = str(data.get("username") or "").strip().lstrip("@").lower()
+                if not username:
+                    await _safe_send({"type": "error", "message": "Username is required"})
+                    continue
+
+                if not tariff.get("tiktok_enabled", True):
+                    await _safe_send({
+                        "type": "error",
+                        "message": "TikTok подключение недоступно в вашем тарифном плане",
+                    })
+                    continue
+
+                # Stop previous session if any
+                if tiktok_service.is_running(user.id):
+                    try:
+                        await tiktok_service.stop_client(user.id)
+                    except Exception:
+                        pass
+
+                await _safe_send({
+                    "type": "status",
+                    "message": f"Подключаемся к TikTok Live @{username}…",
+                    "connected": False,
+                    "tiktok_username": username,
+                })
+
+                try:
+                    await tiktok_service.start_client(
+                        user_id=user.id,
+                        tiktok_username=username,
+                        on_comment_callback=on_comment,
+                        on_gift_callback=on_gift,
+                        on_like_callback=on_like,
+                        on_join_callback=on_join,
+                        on_follow_callback=on_follow,
+                        on_subscribe_callback=on_subscribe,
+                        on_share_callback=on_share,
+                        on_viewer_callback=on_viewer,
+                        on_connect_callback=_on_tiktok_connect,
+                        on_disconnect_callback=_on_tiktok_disconnect,
+                    )
+                except UserNotFoundError:
+                    await _safe_send({
+                        "type": "error",
+                        "message": (
+                            "TikTok пользователь не найден. "
+                            "Проверьте, что ник указан без '@', и что стрим запущен."
+                        ) + (f" (username: @{username})" if username else ""),
+                    })
+                except Exception as e:
+                    if WebcastBlocked200Error is not None and isinstance(e, WebcastBlocked200Error):
+                        await _safe_send({
+                            "type": "error",
+                            "message": (
+                                "TikTok заблокировал WebSocket (DEVICE_BLOCKED). "
+                                "На VPS/датацентровом IP это бывает очень часто. "
+                                "Решение: используйте residential proxy (TIKTOK_PROXY) и/или авторизованные cookies (TIKTOK_COOKIES)."
+                            ),
+                        })
+                    else:
+                        await _safe_send({
+                            "type": "error",
+                            "message": f"Ошибка подключения к TikTok Live: {e}",
+                        })
+
+            elif action == "disconnect_tiktok":
+                if tiktok_service.is_running(user.id):
+                    try:
+                        await tiktok_service.stop_client(user.id)
+                    except Exception:
+                        pass
+                await _safe_send({
+                    "type": "status",
+                    "message": "Отключено от TikTok Live",
+                    "connected": False,
+                })
     except WebSocketDisconnect:
         # Клиент сам отключился — ничего не отправляем
         pass
@@ -571,3 +656,93 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
     finally:
         if tiktok_service.is_running(user.id):
             await tiktok_service.stop_client(user.id)
+
+
+# ====== REST API ENDPOINTS ======
+
+from pydantic import BaseModel
+
+class ConnectTikTokRequest(BaseModel):
+    username: str
+
+class DisconnectTikTokRequest(BaseModel):
+    pass  # Простое отключение без параметров
+
+
+@router.post("/tiktok/connect")
+async def connect_tiktok(request: ConnectTikTokRequest, user=Depends(get_current_user), db: Session = Depends(get_db)):
+    """
+    REST API для подключения к TikTok Live
+    """
+    username = request.username.strip().lstrip('@')
+    if not username:
+        raise HTTPException(400, detail="Username is required")
+    
+    # Проверяем тарифный план
+    tariff_info = resolve_tariff(user.tariff or "free")
+    if not tariff_info.get("tiktok_enabled", True):
+        raise HTTPException(403, detail="TikTok подключение недоступно в вашем тарифном плане")
+    
+    # Если уже подключен - отключаем сначала
+    if tiktok_service.is_running(user.id):
+        await tiktok_service.stop_client(user.id)
+    
+    try:
+        logger.info(f"REST: Подключение пользователя {user.id} к TikTok Live @{username}")
+        
+        # Запускаем TikTok клиент
+        await tiktok_service.start_client(
+            user_id=user.id,
+            tiktok_username=username,
+            db=db,
+            on_connect_callback=None,  # Для REST API не используем callbacks
+            on_disconnect_callback=None,
+            auto_reconnect=True
+        )
+        
+        # Небольшая пауза для инициализации
+        await asyncio.sleep(1)
+        
+        # Проверяем статус подключения
+        if tiktok_service.is_running(user.id):
+            logger.info(f"REST: Успешно подключен к TikTok Live @{username}")
+            return {"success": True, "message": f"Подключено к @{username}"}
+        else:
+            logger.warning(f"REST: Не удалось подключиться к TikTok Live @{username}")
+            return {"success": False, "message": f"Не удалось подключиться к @{username}"}
+            
+    except UserNotFoundError:
+        logger.error(f"REST: Пользователь TikTok не найден: @{username}")
+        raise HTTPException(404, detail=f"TikTok пользователь @{username} не найден")
+    except Exception as e:
+        logger.error(f"REST: Ошибка подключения к TikTok @{username}: {e}")
+        raise HTTPException(500, detail=f"Ошибка подключения: {str(e)}")
+
+
+@router.post("/tiktok/disconnect")
+async def disconnect_tiktok(request: DisconnectTikTokRequest, user=Depends(get_current_user)):
+    """
+    REST API для отключения от TikTok Live
+    """
+    try:
+        if tiktok_service.is_running(user.id):
+            await tiktok_service.stop_client(user.id)
+            logger.info(f"REST: Пользователь {user.id} отключен от TikTok Live")
+            return {"success": True, "message": "Отключено от TikTok Live"}
+        else:
+            return {"success": False, "message": "TikTok Live не подключен"}
+    except Exception as e:
+        logger.error(f"REST: Ошибка отключения от TikTok для пользователя {user.id}: {e}")
+        raise HTTPException(500, detail=f"Ошибка отключения: {str(e)}")
+
+
+@router.get("/tiktok/status")
+async def get_tiktok_status(user=Depends(get_current_user)):
+    """
+    REST API для получения статуса подключения к TikTok Live
+    """
+    is_connected = tiktok_service.is_running(user.id)
+    return {
+        "connected": is_connected,
+        "message": "Подключено к TikTok Live" if is_connected else "Не подключено к TikTok Live"
+    }

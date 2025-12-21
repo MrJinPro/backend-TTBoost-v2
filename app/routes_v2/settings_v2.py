@@ -58,8 +58,14 @@ def update_settings(
     if req.tiktok_username is not None:
         new_tt = _normalize_tiktok_username(req.tiktok_username)
         current_tt = _normalize_tiktok_username(user.tiktok_username or "")
+        # Allow clearing username by sending empty string
         if not new_tt:
-            raise HTTPException(status_code=400, detail="invalid tiktok_username")
+            user.tiktok_username = None
+            user = db.merge(user)
+            # continue processing other settings updates
+            new_tt = ""
+        
+    if req.tiktok_username is not None and new_tt:
 
         # backfill current username into accounts table if missing
         if current_tt:

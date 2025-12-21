@@ -99,6 +99,15 @@ def list_triggers(user=Depends(get_current_user), db: Session = Depends(get_db))
     ]}
 
 
+# Алиас для мобильного приложения, которое ожидает /v2/triggers (без /list)
+@router.get("/")
+def get_triggers_root(user=Depends(get_current_user), db: Session = Depends(get_db)):
+    """
+    Алиас для list_triggers - мобильное приложение ожидает GET /v2/triggers
+    """
+    return list_triggers(user, db)
+
+
 class DeleteTriggerRequest(BaseModel):
     id: str
 
