@@ -113,6 +113,8 @@ def login(req: LoginRequest, db: Session = Depends(get_db)):
             import logging
             logging.getLogger(__name__).warning(f"AUTH_DEBUG login fail: password mismatch for '{username}'")
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid credentials")
+    if getattr(user, "is_banned", False):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="user banned")
     if auth_debug:
         import logging
         logging.getLogger(__name__).info(f"AUTH_DEBUG login success for '{username}' user_id={user.id}")
@@ -175,6 +177,9 @@ def get_current_user(authorization: str | None = Header(default=None), db: Sessi
     user = db.get(models.User, sub)
     if not user:
         raise HTTPException(status_code=401, detail="user not found")
+
+    if getattr(user, "is_banned", False):
+        raise HTTPException(status_code=403, detail="user banned")
 
     # Bootstrap SuperAdmin for selected usernames (comma-separated).
     # Example: SUPERADMIN_USERNAMES=novaboost,owner

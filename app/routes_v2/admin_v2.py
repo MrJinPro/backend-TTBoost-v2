@@ -96,6 +96,9 @@ class AdminUserItem(BaseModel):
     tariff_id: str | None = None
     tariff_name: str | None = None
     license_expires_at: str | None = None
+    is_banned: bool = False
+    banned_at: str | None = None
+    banned_reason: str | None = None
 
 
 class ListUsersResponse(BaseModel):
@@ -187,10 +190,85 @@ def list_users(
                     if (best_lic.get(u.id) and best_lic.get(u.id).expires_at)
                     else None
                 ),
+                is_banned=bool(getattr(u, "is_banned", False)),
+                banned_at=(u.banned_at.isoformat() if getattr(u, "banned_at", None) else None),
+                banned_reason=getattr(u, "banned_reason", None),
             )
             for u in rows
         ],
     )
+
+
+class SetUserBanRequest(BaseModel):
+    banned: bool
+    reason: str | None = None
+
+
+class SetUserBanResponse(BaseModel):
+    status: str = "ok"
+    user_id: str
+    username: str
+    banned: bool
+    banned_at: str | None = None
+    banned_reason: str | None = None
+
+
+@router.post("/users/{user_id}/ban", response_model=SetUserBanResponse)
+def set_user_ban(
+    user_id: str,
+    req: SetUserBanRequest,
+    actor: models.User = Depends(require_superadmin),
+    db: Session = Depends(get_db),
+):
+    target = db.get(models.User, user_id)
+    if not target:
+        raise HTTPException(status_code=404, detail="user not found")
+
+    if actor.id == target.id and req.banned:
+        raise HTTPException(status_code=409, detail="cannot ban yourself")
+
+    if req.banned:
+        target.is_banned = True
+        target.banned_at = datetime.utcnow()
+        target.banned_reason = (req.reason or "").strip()[:255] or None
+    else:
+        target.is_banned = False
+        target.banned_at = None
+        target.banned_reason = None
+
+    db.commit()
+    return SetUserBanResponse(
+        user_id=target.id,
+        username=target.username,
+        banned=bool(target.is_banned),
+        banned_at=target.banned_at.isoformat() if target.banned_at else None,
+        banned_reason=target.banned_reason,
+    )
+
+
+class DeleteUserResponse(BaseModel):
+    status: str = "ok"
+    user_id: str
+    username: str
+
+
+@router.delete("/users/{user_id}", response_model=DeleteUserResponse)
+def delete_user(
+    user_id: str,
+    actor: models.User = Depends(require_superadmin),
+    db: Session = Depends(get_db),
+):
+    target = db.get(models.User, user_id)
+    if not target:
+        raise HTTPException(status_code=404, detail="user not found")
+
+    if actor.id == target.id:
+        raise HTTPException(status_code=409, detail="cannot delete yourself")
+
+    username = target.username
+    db.delete(target)
+    db.commit()
+    return DeleteUserResponse(user_id=user_id, username=username)
 
 
 def _get_active_license_for_user(db: Session, user_id: str) -> models.LicenseKey | None:

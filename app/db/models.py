@@ -18,6 +18,9 @@ class User(Base):
     tiktok_username = Column(String(64), nullable=True)  # TikTok аккаунт для Live
     password_hash = Column(String(255), nullable=False)
     role = Column(String(32), default="user", nullable=False)
+    is_banned = Column(Boolean, default=False, nullable=False)
+    banned_at = Column(DateTime, nullable=True)
+    banned_reason = Column(String(255), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     settings = relationship("UserSettings", back_populates="user", uselist=False, cascade="all, delete-orphan")
