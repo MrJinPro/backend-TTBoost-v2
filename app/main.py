@@ -181,7 +181,15 @@ async def dynamic_origin(request: Request, call_next):
             print(f"[CORS-DEBUG] Preflight origin={origin} allowed={is_allowed_origin(origin)} headers={allow_headers}")
         return resp
 
-    response = await call_next(request)
+    try:
+        response = await call_next(request)
+    except Exception:
+        # Важно: при 500 response может не сформироваться и браузер покажет CORS,
+        # хотя реальная причина — внутренняя ошибка. Возвращаем JSON + CORS.
+        logging.getLogger(__name__).exception("Unhandled exception during request")
+        from fastapi.responses import JSONResponse
+
+        response = JSONResponse(status_code=500, content={"detail": "Internal Server Error"})
     if is_allowed_origin(origin):
         response.headers.setdefault("Access-Control-Allow-Origin", origin)
         response.headers.setdefault("Vary", "Origin")
@@ -210,97 +218,125 @@ app.include_router(ws.router, tags=["ws"])
 
 # v2 API (логин/пароль, Bearer JWT, хранение в БД)
 init_db()
-# Простая попытка авто-ALTER для добавления новых полей
+
+# Простая попытка авто-ALTER для добавления новых полей.
+# Важно: выполняем шаги независимо — ошибка в одном не должна ломать остальные.
+from sqlalchemy import inspect, text as sql_text
+from app.db.database import engine
+
+
+def _has_column(insp, table: str, column: str) -> bool:
+    try:
+        return any(c.get("name") == column for c in insp.get_columns(table))
+    except Exception:
+        return False
+
+
+def _try_exec(label: str, sql: str) -> bool:
+    try:
+        with engine.connect() as conn:
+            conn.execute(sql_text(sql))
+            conn.commit()
+        print(label)
+        return True
+    except Exception as e:  # pragma: no cover
+        print(f"[DB] {label} FAILED: {e}")
+        return False
+
+
+def _refresh_insp():
+    return inspect(engine)
+
+
+insp = _refresh_insp()
+
+# 0) Best-effort cleanup (не критично)
+if _has_column(insp, "user_settings", "gift_tts_alongside"):
+    _try_exec(
+        "[DB] Removed column user_settings.gift_tts_alongside (no longer needed)",
+        "ALTER TABLE user_settings DROP COLUMN gift_tts_alongside",
+    )
+    insp = _refresh_insp()
+
+# 1) user_settings
+if not _has_column(insp, "user_settings", "auto_connect_live"):
+    _try_exec(
+        "[DB] Added column user_settings.auto_connect_live",
+        "ALTER TABLE user_settings ADD COLUMN auto_connect_live BOOLEAN NOT NULL DEFAULT 0",
+    )
+    insp = _refresh_insp()
+
+# 2) triggers
+if not _has_column(insp, "triggers", "executed_count"):
+    _try_exec(
+        "[DB] Added column triggers.executed_count",
+        "ALTER TABLE triggers ADD COLUMN executed_count INTEGER DEFAULT 0",
+    )
+    insp = _refresh_insp()
+
+if not _has_column(insp, "triggers", "trigger_name"):
+    _try_exec(
+        "[DB] Added column triggers.trigger_name",
+        "ALTER TABLE triggers ADD COLUMN trigger_name VARCHAR(100)",
+    )
+    insp = _refresh_insp()
+
+if not _has_column(insp, "triggers", "combo_count"):
+    _try_exec(
+        "[DB] Added column triggers.combo_count",
+        "ALTER TABLE triggers ADD COLUMN combo_count INTEGER DEFAULT 0",
+    )
+    insp = _refresh_insp()
+
+# 3) users
+if not _has_column(insp, "users", "role"):
+    _try_exec(
+        "[DB] Added column users.role",
+        "ALTER TABLE users ADD COLUMN role VARCHAR(32) NOT NULL DEFAULT 'user'",
+    )
+    insp = _refresh_insp()
+
+if not _has_column(insp, "users", "email"):
+    _try_exec(
+        "[DB] Added column users.email",
+        "ALTER TABLE users ADD COLUMN email VARCHAR(256)",
+    )
+    insp = _refresh_insp()
+
+if not _has_column(insp, "users", "avatar_filename"):
+    _try_exec(
+        "[DB] Added column users.avatar_filename",
+        "ALTER TABLE users ADD COLUMN avatar_filename VARCHAR(255)",
+    )
+    insp = _refresh_insp()
+
+# 4) store_purchases table
 try:
-    from sqlalchemy import inspect, text as sql_text
-    from app.db.database import engine
-    insp = inspect(engine)
-    
-    # Удаляем gift_tts_alongside из user_settings (больше не используется)
-    cols = [c['name'] for c in insp.get_columns('user_settings')]
-    if 'gift_tts_alongside' in cols:
-        with engine.connect() as conn:
-            conn.execute(sql_text('ALTER TABLE user_settings DROP COLUMN gift_tts_alongside'))
-            conn.commit()
-        print('[DB] Removed column user_settings.gift_tts_alongside (no longer needed)')
-
-    # Автоподключение/переподключение к LIVE (клиентская опция)
-    if 'auto_connect_live' not in cols:
-        with engine.connect() as conn:
-            conn.execute(sql_text('ALTER TABLE user_settings ADD COLUMN auto_connect_live BOOLEAN NOT NULL DEFAULT 0'))
-            conn.commit()
-        print('[DB] Added column user_settings.auto_connect_live')
-    
-    # Добавляем новые поля в triggers
-    trig_cols = [c['name'] for c in insp.get_columns('triggers')]
-    if 'executed_count' not in trig_cols:
-        with engine.connect() as conn:
-            conn.execute(sql_text('ALTER TABLE triggers ADD COLUMN executed_count INTEGER DEFAULT 0'))
-            conn.commit()
-        print('[DB] Added column triggers.executed_count')
-    
-    if 'trigger_name' not in trig_cols:
-        with engine.connect() as conn:
-            conn.execute(sql_text('ALTER TABLE triggers ADD COLUMN trigger_name VARCHAR(100)'))
-            conn.commit()
-        print('[DB] Added column triggers.trigger_name')
-    
-    if 'combo_count' not in trig_cols:
-        with engine.connect() as conn:
-            conn.execute(sql_text('ALTER TABLE triggers ADD COLUMN combo_count INTEGER DEFAULT 0'))
-            conn.commit()
-        print('[DB] Added column triggers.combo_count')
-
-    # Добавляем role в users
-    user_cols = [c['name'] for c in insp.get_columns('users')]
-    if 'role' not in user_cols:
-        with engine.connect() as conn:
-            conn.execute(sql_text("ALTER TABLE users ADD COLUMN role VARCHAR(32) NOT NULL DEFAULT 'user'"))
-            conn.commit()
-        print('[DB] Added column users.role')
-
-    if 'email' not in user_cols:
-        with engine.connect() as conn:
-            conn.execute(sql_text('ALTER TABLE users ADD COLUMN email VARCHAR(256)'))
-            conn.commit()
-        print('[DB] Added column users.email')
-
-    if 'avatar_filename' not in user_cols:
-        with engine.connect() as conn:
-            conn.execute(sql_text('ALTER TABLE users ADD COLUMN avatar_filename VARCHAR(255)'))
-            conn.commit()
-        print('[DB] Added column users.avatar_filename')
-
-    # Store purchases (Google/Apple subscriptions)
     tables = set(insp.get_table_names())
-    if 'store_purchases' not in tables:
-        with engine.connect() as conn:
-            conn.execute(
-                sql_text(
-                    """
-                    CREATE TABLE store_purchases (
-                        id VARCHAR PRIMARY KEY,
-                        user_id VARCHAR NOT NULL,
-                        platform VARCHAR NOT NULL,
-                        product_id VARCHAR(128) NOT NULL,
-                        purchase_token VARCHAR(512),
-                        transaction_id VARCHAR(128),
-                        status VARCHAR NOT NULL DEFAULT 'unknown',
-                        expires_at TIMESTAMP,
-                        raw JSON,
-                        created_at TIMESTAMP NOT NULL,
-                        updated_at TIMESTAMP NOT NULL,
-                        CONSTRAINT fk_store_purchases_user_id FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
-                        CONSTRAINT uq_store_platform_token UNIQUE(platform, purchase_token)
-                    )
-                    """
-                )
-            )
-            conn.commit()
-        print('[DB] Created table store_purchases')
-        
-except Exception as e:  # pragma: no cover
-    print(f'[DB] Column check/add failed: {e}')
+except Exception:  # pragma: no cover
+    tables = set()
+
+if "store_purchases" not in tables:
+    _try_exec(
+        "[DB] Created table store_purchases",
+        """
+        CREATE TABLE store_purchases (
+            id VARCHAR PRIMARY KEY,
+            user_id VARCHAR NOT NULL,
+            platform VARCHAR NOT NULL,
+            product_id VARCHAR(128) NOT NULL,
+            purchase_token VARCHAR(512),
+            transaction_id VARCHAR(128),
+            status VARCHAR NOT NULL DEFAULT 'unknown',
+            expires_at TIMESTAMP,
+            raw JSON,
+            created_at TIMESTAMP NOT NULL,
+            updated_at TIMESTAMP NOT NULL,
+            CONSTRAINT fk_store_purchases_user_id FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
+            CONSTRAINT uq_store_platform_token UNIQUE(platform, purchase_token)
+        )
+        """.strip(),
+    )
 app.include_router(auth_v2.router, prefix="/v2/auth", tags=["v2-auth"])
 app.include_router(settings_v2.router, prefix="/v2/settings", tags=["v2-settings"])
 app.include_router(sounds_v2.router, prefix="/v2/sounds", tags=["v2-sounds"])

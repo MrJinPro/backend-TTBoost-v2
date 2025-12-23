@@ -281,7 +281,19 @@ class MeResponse(BaseModel):
 
 @router.get("/me", response_model=MeResponse)
 def me(request: Request, user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
-    settings = user.settings
+    settings = None
+    try:
+        # Не используем relationship напрямую: при несоответствии схемы (например, не добавили колонку)
+        # lazy-load может упасть и сломать весь /me.
+        settings = (
+            db.query(models.UserSettings)
+            .filter(models.UserSettings.user_id == user.id)
+            .first()
+        )
+    except Exception as e:
+        if os.getenv("AUTH_DEBUG") == "1":
+            import logging
+            logging.getLogger(__name__).exception(f"AUTH_DEBUG /me: failed to load user_settings for user_id={user.id}: {e}")
     tariff, lic = resolve_tariff(db, user.id)
 
     def _request_base_url() -> str:
