@@ -262,7 +262,7 @@ if _has_column(insp, "user_settings", "gift_tts_alongside"):
 if not _has_column(insp, "user_settings", "auto_connect_live"):
     _try_exec(
         "[DB] Added column user_settings.auto_connect_live",
-        "ALTER TABLE user_settings ADD COLUMN auto_connect_live BOOLEAN NOT NULL DEFAULT 0",
+        "ALTER TABLE user_settings ADD COLUMN auto_connect_live BOOLEAN NOT NULL DEFAULT FALSE",
     )
     insp = _refresh_insp()
 
