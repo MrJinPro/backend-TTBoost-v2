@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import uuid
+from typing import Final
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -12,6 +13,25 @@ from app.routes_v2.auth_v2 import get_current_user
 
 
 router = APIRouter()
+
+
+_MAX_SNIFF_BYTES: Final[int] = 64 * 1024
+
+
+def _detect_image_ext(header: bytes) -> str | None:
+    # JPEG
+    if len(header) >= 3 and header[0:3] == b"\xFF\xD8\xFF":
+        return ".jpg"
+    # PNG
+    if len(header) >= 8 and header[0:8] == b"\x89PNG\r\n\x1a\n":
+        return ".png"
+    # GIF
+    if len(header) >= 6 and header[0:6] in (b"GIF87a", b"GIF89a"):
+        return ".gif"
+    # WEBP (RIFF....WEBP)
+    if len(header) >= 12 and header[0:4] == b"RIFF" and header[8:12] == b"WEBP":
+        return ".webp"
+    return None
 
 
 def get_db():
@@ -49,9 +69,10 @@ def update_profile(
     user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    # `user` comes from auth_v2 DB session; merge into this request session.
+    user = db.merge(user)
     email = (req.email or "").strip() or None
     user.email = email
-    db.add(user)
     db.commit()
     return UpdateProfileResponse(email=user.email)
 
@@ -67,22 +88,62 @@ def upload_avatar(
     user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    ct = (file.content_type or "").lower()
-    allowed_ct = {"image/jpeg", "image/png", "image/webp"}
-    if ct and ct not in allowed_ct:
-        raise HTTPException(status_code=400, detail="unsupported file type")
+    # `user` comes from auth_v2 DB session; merge into this request session.
+    user = db.merge(user)
+
+    ct = (file.content_type or "").lower().strip()
+    # Some clients send "application/octet-stream" or omit content-type.
+    # We validate primarily by magic-bytes and/or filename extension.
+    if ct and ct not in {
+        "image/jpeg",
+        "image/jpg",
+        "image/png",
+        "image/webp",
+        "image/gif",
+        "application/octet-stream",
+    }:
+        # If it's explicitly a non-image, reject early.
+        if not ct.startswith("image/"):
+            raise HTTPException(status_code=400, detail="unsupported file type")
 
     original_name = (file.filename or "avatar").strip()
     _, ext = os.path.splitext(original_name)
     ext = ext.lower()
-    if ext not in {".jpg", ".jpeg", ".png", ".webp"}:
+    if ext == ".jpeg":
+        ext = ".jpg"
+
+    # sniff header to determine real type
+    header = b""
+    try:
+        header = file.file.read(_MAX_SNIFF_BYTES)
+        try:
+            file.file.seek(0)
+        except Exception:
+            pass
+    except Exception:
+        header = b""
+
+    sniffed_ext = _detect_image_ext(header) if header else None
+    allowed_ext = {".jpg", ".png", ".webp", ".gif"}
+
+    if sniffed_ext is not None:
+        ext = sniffed_ext
+    elif ext in {".jpg", ".png", ".webp", ".gif"}:
+        # use provided ext
+        pass
+    else:
         # fallback by content-type
-        if ct == "image/png":
+        if ct in ("image/png",):
             ext = ".png"
-        elif ct == "image/webp":
+        elif ct in ("image/webp",):
             ext = ".webp"
+        elif ct in ("image/gif",):
+            ext = ".gif"
         else:
             ext = ".jpg"
+
+    if ext not in allowed_ext:
+        raise HTTPException(status_code=400, detail="unsupported file type")
 
     static_dir = os.path.join(os.path.dirname(__file__), "..", "static")
     static_dir = os.path.abspath(static_dir)
@@ -104,7 +165,6 @@ def upload_avatar(
         raise HTTPException(status_code=500, detail="failed to save file")
 
     user.avatar_filename = filename
-    db.add(user)
     db.commit()
 
     avatar_url = _abs_url(f"/static/avatars/{user.id}/{filename}")

@@ -48,6 +48,7 @@ logs/
 # Media files (user uploads, TTS cache)
 static/tts/
 static/sounds/
+app/static/avatars/
 
 # OS
 .DS_Store
