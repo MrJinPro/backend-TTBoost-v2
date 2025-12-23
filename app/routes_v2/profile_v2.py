@@ -1,18 +1,24 @@
 from __future__ import annotations
 
 import os
+import re
 import uuid
 from typing import Final
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Request
 from pydantic import BaseModel
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.db.database import SessionLocal
 from app.db import models
 from app.routes_v2.auth_v2 import get_current_user
+from app.services.security import hash_password, verify_password
 
 
 router = APIRouter()
+
+
+_USERNAME_RE = re.compile(r"^[a-z0-9._-]{2,64}$")
 
 
 _MAX_SNIFF_BYTES: Final[int] = 64 * 1024
@@ -77,6 +83,20 @@ class UpdateProfileResponse(BaseModel):
     email: str | None = None
 
 
+def _normalize_username(raw: str) -> str:
+    return raw.strip().lower().replace("@", "")
+
+
+def _validate_username(username: str) -> None:
+    if not _USERNAME_RE.match(username):
+        raise HTTPException(status_code=400, detail="invalid username")
+
+
+def _validate_password(password: str) -> None:
+    if not password or len(password) < 6:
+        raise HTTPException(status_code=400, detail="invalid password")
+
+
 @router.patch("", response_model=UpdateProfileResponse)
 def update_profile(
     req: UpdateProfileRequest,
@@ -89,6 +109,51 @@ def update_profile(
     user.email = email
     db.commit()
     return UpdateProfileResponse(email=user.email)
+
+
+class UpdateCredentialsRequest(BaseModel):
+    current_password: str
+    new_username: str | None = None
+    new_password: str | None = None
+
+
+class UpdateCredentialsResponse(BaseModel):
+    status: str = "ok"
+    username: str
+
+
+@router.post("/credentials", response_model=UpdateCredentialsResponse)
+def update_credentials(
+    req: UpdateCredentialsRequest,
+    user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    # `user` comes from auth_v2 DB session; merge into this request session.
+    user = db.merge(user)
+
+    if not (req.new_username is not None or req.new_password is not None):
+        raise HTTPException(status_code=400, detail="nothing to update")
+
+    if not verify_password(req.current_password or "", user.password_hash):
+        raise HTTPException(status_code=401, detail="invalid credentials")
+
+    if req.new_username is not None:
+        new_username = _normalize_username(req.new_username)
+        _validate_username(new_username)
+        if new_username != user.username:
+            user.username = new_username
+
+    if req.new_password is not None:
+        _validate_password(req.new_password)
+        user.password_hash = hash_password(req.new_password)
+
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="username already exists")
+
+    return UpdateCredentialsResponse(username=user.username)
 
 
 class UploadAvatarResponse(BaseModel):
