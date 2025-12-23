@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Header, Request
 import os
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 
 from app.db.database import SessionLocal, init_db
 from app.db import models
@@ -100,7 +101,9 @@ class LoginRequest(BaseModel):
 @router.post("/login", response_model=AuthResponse)
 def login(req: LoginRequest, db: Session = Depends(get_db)):
     username = _normalize_username(req.username)
-    user = db.query(models.User).filter(models.User.username == username).first()
+    # Backward-compat: older deployments may have stored mixed-case usernames.
+    # We normalize input to lowercase, so search case-insensitively.
+    user = db.query(models.User).filter(func.lower(models.User.username) == username).first()
     auth_debug = os.getenv("AUTH_DEBUG") == "1"
     if not user:
         if auth_debug:
