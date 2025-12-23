@@ -189,3 +189,15 @@ class StorePurchase(Base):
     __table_args__ = (
         UniqueConstraint("platform", "purchase_token", name="uq_store_platform_token"),
     )
+
+
+class TikTokProfileCache(Base):
+    __tablename__ = "tiktok_profile_cache"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    username = Column(String(64), unique=True, index=True, nullable=False)
+    avatar_url = Column(String(1024), nullable=True)
+    display_name = Column(String(256), nullable=True)
+    fetched_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)

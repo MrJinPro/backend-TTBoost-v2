@@ -13,7 +13,7 @@ load_dotenv()  # Load ENV, SERVER_HOST, TTS_BASE_URL, SIGN_SERVER_URL
 
 from app.routes import auth, tts, ws, voices, sounds, profile, catalog, triggers
 from app.db.database import init_db
-from app.routes_v2 import auth_v2, settings_v2, sounds_v2, triggers_v2, ws_v2, license_v2, voices_v2, gifts_v2, admin_v2, profile_v2, billing_v2
+from app.routes_v2 import auth_v2, settings_v2, sounds_v2, triggers_v2, ws_v2, license_v2, voices_v2, gifts_v2, admin_v2, profile_v2, billing_v2, tiktok_v2
 
 from datetime import datetime
 from sqlalchemy import text
@@ -304,6 +304,7 @@ app.include_router(voices_v2.router, prefix="/v2", tags=["v2-voices"])
 app.include_router(gifts_v2.router, prefix="/v2/gifts", tags=["v2-gifts"])
 app.include_router(admin_v2.router, prefix="/v2/admin", tags=["v2-admin"])
 app.include_router(profile_v2.router, prefix="/v2/profile", tags=["v2-profile"])
+app.include_router(tiktok_v2.router, prefix="/v2/tiktok", tags=["v2-tiktok"])
 app.include_router(billing_v2.router, prefix="/v2/billing", tags=["v2-billing"])
 
 
