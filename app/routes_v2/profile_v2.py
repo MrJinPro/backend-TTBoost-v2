@@ -230,6 +230,8 @@ def upload_avatar(
     avatars_dir = os.path.join(static_dir, "avatars", user.id)
     os.makedirs(avatars_dir, exist_ok=True)
 
+    old_filename = getattr(user, "avatar_filename", None)
+
     filename = f"{uuid.uuid4().hex}{ext}"
     dst_path = os.path.join(avatars_dir, filename)
 
@@ -246,6 +248,16 @@ def upload_avatar(
 
     user.avatar_filename = filename
     db.commit()
+
+    # Keep only the latest avatar file.
+    if old_filename and old_filename != filename:
+        old_path = os.path.join(avatars_dir, old_filename)
+        try:
+            if os.path.exists(old_path):
+                os.remove(old_path)
+        except Exception:
+            # Not critical: the new avatar is already saved and committed.
+            pass
 
     avatar_url = _abs_url(f"/static/avatars/{user.id}/{filename}", request=request)
     return UploadAvatarResponse(avatar_url=avatar_url)
