@@ -49,6 +49,7 @@ class UserSettings(Base):
     voice_id = Column(String(100), default="ru-RU-SvetlanaNeural")
     tts_enabled = Column(Boolean, default=True)
     gift_sounds_enabled = Column(Boolean, default=True)
+    auto_connect_live = Column(Boolean, default=False)
     tts_volume = Column(Integer, default=100)
     gifts_volume = Column(Integer, default=100)
 

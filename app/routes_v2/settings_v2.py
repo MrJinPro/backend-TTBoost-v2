@@ -38,6 +38,7 @@ class UpdateSettingsRequest(BaseModel):
     voice_id: str | None = None
     tts_enabled: bool | None = None
     gift_sounds_enabled: bool | None = None
+    auto_connect_live: bool | None = None
     tts_volume: int | None = None
     gifts_volume: int | None = None
 
@@ -118,6 +119,8 @@ def update_settings(
         s.tts_enabled = req.tts_enabled
     if req.gift_sounds_enabled is not None:
         s.gift_sounds_enabled = req.gift_sounds_enabled
+    if req.auto_connect_live is not None:
+        s.auto_connect_live = req.auto_connect_live
     if req.tts_volume is not None:
         s.tts_volume = int(req.tts_volume)
     if req.gifts_volume is not None:
@@ -129,6 +132,7 @@ def update_settings(
         "voice_id": s.voice_id,
         "tts_enabled": s.tts_enabled,
         "gift_sounds_enabled": s.gift_sounds_enabled,
+        "auto_connect_live": s.auto_connect_live,
         "tts_volume": s.tts_volume,
         "gifts_volume": s.gifts_volume,
         "tiktok_username": user.tiktok_username,
@@ -139,6 +143,7 @@ class SettingsResponse(BaseModel):
     voice_id: str
     tts_enabled: bool
     gift_sounds_enabled: bool
+    auto_connect_live: bool
     tts_volume: int
     gifts_volume: int
     tiktok_username: str | None = None
@@ -156,6 +161,7 @@ def get_settings(user: models.User = Depends(get_current_user), db: Session = De
         voice_id=s.voice_id,
         tts_enabled=s.tts_enabled,
         gift_sounds_enabled=s.gift_sounds_enabled,
+        auto_connect_live=s.auto_connect_live,
         tts_volume=s.tts_volume,
         gifts_volume=s.gifts_volume,
         tiktok_username=user.tiktok_username,

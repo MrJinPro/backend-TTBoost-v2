@@ -223,6 +223,13 @@ try:
             conn.execute(sql_text('ALTER TABLE user_settings DROP COLUMN gift_tts_alongside'))
             conn.commit()
         print('[DB] Removed column user_settings.gift_tts_alongside (no longer needed)')
+
+    # Автоподключение/переподключение к LIVE (клиентская опция)
+    if 'auto_connect_live' not in cols:
+        with engine.connect() as conn:
+            conn.execute(sql_text('ALTER TABLE user_settings ADD COLUMN auto_connect_live BOOLEAN NOT NULL DEFAULT 0'))
+            conn.commit()
+        print('[DB] Added column user_settings.auto_connect_live')
     
     # Добавляем новые поля в triggers
     trig_cols = [c['name'] for c in insp.get_columns('triggers')]
