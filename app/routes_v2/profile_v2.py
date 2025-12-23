@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 import uuid
 from typing import Final
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Request
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -42,13 +42,27 @@ def get_db():
         db.close()
 
 
-def _abs_url(path: str) -> str:
-    base = (
-        os.getenv("MEDIA_BASE_URL")
-        or os.getenv("TTS_BASE_URL")
-        or os.getenv("SERVER_HOST")
-        or "http://localhost:8000"
-    ).rstrip("/")
+def _abs_url(path: str, request: Request | None = None) -> str:
+    media_base = (os.getenv("MEDIA_BASE_URL") or "").strip().rstrip("/")
+    base = media_base
+    if not base and request is not None:
+        proto = (request.headers.get("x-forwarded-proto") or request.url.scheme or "http").strip()
+        host = (
+            request.headers.get("x-forwarded-host")
+            or request.headers.get("host")
+            or request.url.netloc
+        )
+        host = (host or "").strip()
+        if host:
+            base = f"{proto}://{host}".rstrip("/")
+        else:
+            base = str(request.base_url).rstrip("/")
+    if not base:
+        base = (
+            os.getenv("SERVER_HOST")
+            or os.getenv("TTS_BASE_URL")
+            or "http://localhost:8000"
+        ).rstrip("/")
     if not path.startswith("/"):
         path = "/" + path
     return base + path
@@ -84,6 +98,7 @@ class UploadAvatarResponse(BaseModel):
 
 @router.post("/avatar", response_model=UploadAvatarResponse)
 def upload_avatar(
+    request: Request,
     file: UploadFile = File(...),
     user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -167,5 +182,5 @@ def upload_avatar(
     user.avatar_filename = filename
     db.commit()
 
-    avatar_url = _abs_url(f"/static/avatars/{user.id}/{filename}")
+    avatar_url = _abs_url(f"/static/avatars/{user.id}/{filename}", request=request)
     return UploadAvatarResponse(avatar_url=avatar_url)

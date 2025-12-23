@@ -277,17 +277,32 @@ class MeResponse(BaseModel):
 
 
 @router.get("/me", response_model=MeResponse)
-def me(user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+def me(request: Request, user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
     settings = user.settings
     tariff, lic = resolve_tariff(db, user.id)
 
+    def _request_base_url() -> str:
+        # Prefer proxy-provided headers when behind nginx/caddy.
+        proto = (request.headers.get("x-forwarded-proto") or request.url.scheme or "http").strip()
+        host = (
+            request.headers.get("x-forwarded-host")
+            or request.headers.get("host")
+            or request.url.netloc
+        )
+        host = (host or "").strip()
+        if host:
+            return f"{proto}://{host}".rstrip("/")
+        return str(request.base_url).rstrip("/")
+
     def _abs_url(path: str) -> str:
-        base = (
-            os.getenv("MEDIA_BASE_URL")
-            or os.getenv("TTS_BASE_URL")
-            or os.getenv("SERVER_HOST")
-            or "http://localhost:8000"
-        ).rstrip("/")
+        media_base = (os.getenv("MEDIA_BASE_URL") or "").strip().rstrip("/")
+        base = media_base or _request_base_url()
+        if not base:
+            base = (
+                os.getenv("SERVER_HOST")
+                or os.getenv("TTS_BASE_URL")
+                or "http://localhost:8000"
+            ).rstrip("/")
         if not path.startswith("/"):
             path = "/" + path
         return base + path
