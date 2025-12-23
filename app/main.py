@@ -13,7 +13,7 @@ load_dotenv()  # Load ENV, SERVER_HOST, TTS_BASE_URL, SIGN_SERVER_URL
 
 from app.routes import auth, tts, ws, voices, sounds, profile, catalog, triggers
 from app.db.database import init_db
-from app.routes_v2 import auth_v2, settings_v2, sounds_v2, triggers_v2, ws_v2, license_v2, voices_v2, gifts_v2, admin_v2
+from app.routes_v2 import auth_v2, settings_v2, sounds_v2, triggers_v2, ws_v2, license_v2, voices_v2, gifts_v2, admin_v2, profile_v2, billing_v2
 
 from datetime import datetime
 from sqlalchemy import text
@@ -195,6 +195,7 @@ BASE_DIR = os.path.dirname(__file__)
 STATIC_DIR = os.path.join(BASE_DIR, "static")
 os.makedirs(os.path.join(STATIC_DIR, "tts"), exist_ok=True)
 os.makedirs(os.path.join(STATIC_DIR, "sounds"), exist_ok=True)
+os.makedirs(os.path.join(STATIC_DIR, "avatars"), exist_ok=True)
 
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
@@ -250,6 +251,46 @@ try:
             conn.execute(sql_text("ALTER TABLE users ADD COLUMN role VARCHAR(32) NOT NULL DEFAULT 'user'"))
             conn.commit()
         print('[DB] Added column users.role')
+
+    if 'email' not in user_cols:
+        with engine.connect() as conn:
+            conn.execute(sql_text('ALTER TABLE users ADD COLUMN email VARCHAR(256)'))
+            conn.commit()
+        print('[DB] Added column users.email')
+
+    if 'avatar_filename' not in user_cols:
+        with engine.connect() as conn:
+            conn.execute(sql_text('ALTER TABLE users ADD COLUMN avatar_filename VARCHAR(255)'))
+            conn.commit()
+        print('[DB] Added column users.avatar_filename')
+
+    # Store purchases (Google/Apple subscriptions)
+    tables = set(insp.get_table_names())
+    if 'store_purchases' not in tables:
+        with engine.connect() as conn:
+            conn.execute(
+                sql_text(
+                    """
+                    CREATE TABLE store_purchases (
+                        id VARCHAR PRIMARY KEY,
+                        user_id VARCHAR NOT NULL,
+                        platform VARCHAR NOT NULL,
+                        product_id VARCHAR(128) NOT NULL,
+                        purchase_token VARCHAR(512),
+                        transaction_id VARCHAR(128),
+                        status VARCHAR NOT NULL DEFAULT 'unknown',
+                        expires_at TIMESTAMP,
+                        raw JSON,
+                        created_at TIMESTAMP NOT NULL,
+                        updated_at TIMESTAMP NOT NULL,
+                        CONSTRAINT fk_store_purchases_user_id FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
+                        CONSTRAINT uq_store_platform_token UNIQUE(platform, purchase_token)
+                    )
+                    """
+                )
+            )
+            conn.commit()
+        print('[DB] Created table store_purchases')
         
 except Exception as e:  # pragma: no cover
     print(f'[DB] Column check/add failed: {e}')
@@ -262,6 +303,8 @@ app.include_router(license_v2.router, prefix="/v2/license", tags=["v2-license"])
 app.include_router(voices_v2.router, prefix="/v2", tags=["v2-voices"])
 app.include_router(gifts_v2.router, prefix="/v2/gifts", tags=["v2-gifts"])
 app.include_router(admin_v2.router, prefix="/v2/admin", tags=["v2-admin"])
+app.include_router(profile_v2.router, prefix="/v2/profile", tags=["v2-profile"])
+app.include_router(billing_v2.router, prefix="/v2/billing", tags=["v2-billing"])
 
 
 @app.get("/")

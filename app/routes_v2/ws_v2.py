@@ -213,11 +213,13 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
             payload["tts_url"] = tts_url
         await websocket.send_text(json.dumps(payload, ensure_ascii=False))
 
-        if u not in first_message_seen:
-            first_message_seen.add(u)
+        # Для устойчивости (регистры, '@') используем нормализованный ключ
+        u_key = _norm_tiktok_login(u)
+        if u_key and u_key not in first_message_seen:
+            first_message_seen.add(u_key)
             # JoinEvent от TikTok может отсутствовать: используем первое сообщение как «первое появление» зрителя.
             # Важно: не дублируем, если join уже был обработан.
-            if u not in seen_viewers:
+            if u_key not in seen_viewers:
                 if WS_DEBUG:
                     logger.debug("First message from '%s' -> treat as viewer_join (first seen in session)", u)
                 await on_join(u)
@@ -234,7 +236,8 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
                 if _matches_always(t):
                     matched = True
                 elif t.condition_key == "username" and t.condition_value:
-                    matched = (t.condition_value == u)
+                    cv = _norm_tiktok_login(t.condition_value)
+                    matched = bool(cv) and (cv == u_key)
 
                 if matched:
                     fn = t.action_params.get("sound_filename") if t.action_params else None
@@ -250,6 +253,10 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
 
     async def on_gift(u: str, gift_id: str, gift_name: str, count: int, diamonds: int = 0):
         s = get_current_settings()
+        # JoinEvent от TikTok может отсутствовать. Если впервые видим зрителя по подарку — трактуем как viewer_join.
+        u_key = _norm_tiktok_login(u)
+        if u_key and u_key not in seen_viewers:
+            await on_join(u)
         if WS_DEBUG:
             logger.debug("on_gift: user=%s gift_id=%s gift_name=%s count=%s diamonds=%s", u, gift_id, gift_name, count, diamonds)
         # Ищем триггер для подарка (только звуковые файлы, НЕ TTS!)
@@ -329,6 +336,10 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
         await websocket.send_text(json.dumps(payload, ensure_ascii=False))
 
     async def on_like(u: str, count: int):
+        # JoinEvent от TikTok может отсутствовать. Если впервые видим зрителя по лайку — трактуем как viewer_join.
+        u_key = _norm_tiktok_login(u)
+        if u_key and u_key not in seen_viewers:
+            await on_join(u)
         await websocket.send_text(json.dumps({"type": "like", "user": u, "count": count}, ensure_ascii=False))
 
     def _norm_tiktok_login(s: str | None) -> str:
@@ -365,6 +376,7 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
         
         s = get_current_settings()
         sound_url = None
+        tts_url = None
         
         # Проверяем триггеры для добавления звука (опционально)
         trig = (
@@ -395,12 +407,36 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
                 matched = (cv == login_norm) or (not login_norm and cv == nick_norm) or (nick_norm and cv == nick_norm)
 
             if matched:
-                fn = ap.get("sound_filename")
-                autoplay_sound = ap.get("autoplay_sound", True)
-                if fn and s["viewer_sounds_enabled"] and _cooldown_allows(t.id, (t.action_params or {}).get("cooldown_seconds")):
-                    sound_url = _abs_url(f"/static/sounds/{user.id}/{fn}")
+                # play_sound
+                if t.action == models.TriggerAction.play_sound:
+                    fn = ap.get("sound_filename")
+                    autoplay_sound = ap.get("autoplay_sound", True)
+                    if fn and s["viewer_sounds_enabled"] and _cooldown_allows(t.id, (t.action_params or {}).get("cooldown_seconds"), username=viewer_key):
+                        sound_url = _abs_url(f"/static/sounds/{user.id}/{fn}")
+                        if WS_DEBUG:
+                            logger.debug("on_join: matched trigger=%s sound=%s", t.id, fn)
+                        try:
+                            t.executed_count += 1
+                            db.add(t)
+                            db.commit()
+                        except Exception:
+                            logger.warning("Не удалось обновить executed_count для триггера %s", t.id)
+
+                # tts
+                elif t.action == models.TriggerAction.tts:
+                    if not _cooldown_allows(t.id, (t.action_params or {}).get("cooldown_seconds"), username=viewer_key):
+                        break
+                    template = (ap.get("text_template") or "{user}").strip() or "{user}"
+                    phrase = (
+                        template
+                        .replace("{user}", _remove_emojis(display_user))
+                        .replace("{username}", _remove_emojis(login_raw or ""))
+                        .replace("{nickname}", _remove_emojis(nickname_raw or ""))
+                    )
+                    voice_id = s["voice_id"]
+                    tts_url = await generate_tts(phrase, voice_id, user_id=str(user.id))
                     if WS_DEBUG:
-                        logger.debug("on_join: matched trigger=%s sound=%s", t.id, fn)
+                        logger.debug("on_join: matched tts trigger=%s", t.id)
                     try:
                         t.executed_count += 1
                         db.add(t)
@@ -423,6 +459,8 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
             payload["sound_url"] = sound_url
             if autoplay_sound is False:
                 payload["autoplay_sound"] = False
+        if tts_url:
+            payload["tts_url"] = tts_url
         
         if WS_DEBUG:
             logger.debug("on_join: send payload=%s", payload)

@@ -16,6 +16,8 @@ class User(Base):
     id = Column(String, primary_key=True, default=_uuid)
     username = Column(String(64), unique=True, index=True, nullable=False)  # Логин для входа
     tiktok_username = Column(String(64), nullable=True)  # TikTok аккаунт для Live
+    email = Column(String(256), nullable=True)
+    avatar_filename = Column(String(255), nullable=True)
     password_hash = Column(String(255), nullable=False)
     role = Column(String(32), default="user", nullable=False)
     is_banned = Column(Boolean, default=False, nullable=False)
@@ -150,3 +152,40 @@ class WebPurchase(Base):
     currency = Column(String(8), nullable=True)
     license_key = Column(String(100), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+
+class StorePlatform(str, enum.Enum):
+    android = "android"
+    ios = "ios"
+
+
+class StorePurchaseStatus(str, enum.Enum):
+    active = "active"
+    expired = "expired"
+    canceled = "canceled"
+    unknown = "unknown"
+
+
+class StorePurchase(Base):
+    """Покупка/подписка из Google Play / App Store.
+
+    Храним сырой ответ верификации и нормализованный expires_at.
+    """
+
+    __tablename__ = "store_purchases"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    user_id = Column(String, ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False)
+    platform = Column(Enum(StorePlatform), nullable=False)
+    product_id = Column(String(128), nullable=False)
+    purchase_token = Column(String(512), nullable=True)  # Android purchaseToken / iOS receipt hash
+    transaction_id = Column(String(128), nullable=True)  # iOS transaction id (если доступен)
+    status = Column(Enum(StorePurchaseStatus), default=StorePurchaseStatus.unknown, nullable=False)
+    expires_at = Column(DateTime, nullable=True)
+    raw = Column(JSON, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint("platform", "purchase_token", name="uq_store_platform_token"),
+    )

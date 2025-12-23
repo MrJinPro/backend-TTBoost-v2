@@ -124,6 +124,7 @@ def login(req: LoginRequest, db: Session = Depends(get_db)):
 
 @router.post("/redeem-license", response_model=RedeemLicenseResponse)
 def redeem_license(req: RedeemLicenseRequest, db: Session = Depends(get_db)):
+    raise HTTPException(status_code=410, detail="license keys removed; use in-app subscriptions")
     """Обмен лицензионного ключа на JWT и (при необходимости) создание пользователя.
     Логика:
     1. Проверяем существование активной лицензии и срок.
@@ -233,6 +234,7 @@ def upgrade_license(
     user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    raise HTTPException(status_code=410, detail="license keys removed; use in-app subscriptions")
     return _upgrade_license_impl(req=req, user=user, db=db)
 
 
@@ -258,6 +260,8 @@ def upgrade_license_alias_camel(
 class MeResponse(BaseModel):
     id: str
     username: str
+    email: str | None = None
+    avatar_url: str | None = None
     role: str
     plan: str | None = None  # tariff id
     tariff_name: str | None = None
@@ -276,9 +280,27 @@ class MeResponse(BaseModel):
 def me(user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
     settings = user.settings
     tariff, lic = resolve_tariff(db, user.id)
+
+    def _abs_url(path: str) -> str:
+        base = (
+            os.getenv("MEDIA_BASE_URL")
+            or os.getenv("TTS_BASE_URL")
+            or os.getenv("SERVER_HOST")
+            or "http://localhost:8000"
+        ).rstrip("/")
+        if not path.startswith("/"):
+            path = "/" + path
+        return base + path
+
+    avatar_url = None
+    if getattr(user, "avatar_filename", None):
+        avatar_url = _abs_url(f"/static/avatars/{user.id}/{user.avatar_filename}")
+
     return MeResponse(
         id=user.id,
         username=user.username,
+        email=getattr(user, "email", None),
+        avatar_url=avatar_url,
         role=user.role or "user",
         plan=tariff.id,
         tariff_name=tariff.name,
