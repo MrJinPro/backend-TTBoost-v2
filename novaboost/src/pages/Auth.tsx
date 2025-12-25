@@ -1,29 +1,22 @@
 import { useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Header } from "@/components/Header";
+import { Footer } from "@/components/Footer";
 import { AuthForm } from "@/components/AuthForm";
 import { getToken } from "@/lib/api";
 import starLogo from "@/assets/star-logo.png";
 
 const Auth = () => {
   const navigate = useNavigate();
-  const location = useLocation();
-  const selectedPlan = location.state?.selectedPlan;
 
   useEffect(() => {
     if (getToken()) {
-      navigate(selectedPlan ? '/checkout' : '/', { 
-        state: selectedPlan ? { planId: selectedPlan } : undefined 
-      });
+      navigate('/profile');
     }
-  }, [navigate, selectedPlan]);
+  }, [navigate]);
 
   const handleSuccess = () => {
-    if (selectedPlan) {
-      navigate('/checkout', { state: { planId: selectedPlan } });
-    } else {
-      navigate('/');
-    }
+    navigate('/profile');
   };
 
   return (
@@ -43,6 +36,8 @@ const Auth = () => {
           <AuthForm onSuccess={handleSuccess} />
         </div>
       </main>
+
+      <Footer />
     </div>
   );
 };

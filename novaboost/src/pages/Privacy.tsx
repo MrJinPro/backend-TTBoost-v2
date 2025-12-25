@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { Header } from "@/components/Header";
+import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 
 type Lang = "ru" | "en";
@@ -165,6 +166,8 @@ const Privacy = () => {
           <div className="mt-8 space-y-4">{content.body}</div>
         </div>
       </main>
+
+      <Footer />
     </div>
   );
 };

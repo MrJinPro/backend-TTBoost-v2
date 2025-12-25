@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { Header } from "@/components/Header";
+import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 
 type Lang = "ru" | "en";
@@ -66,7 +67,7 @@ const AccountDelete = () => {
           <h2 className="mt-8 text-xl font-semibold">Как удалить аккаунт</h2>
           <ol className="mt-2 list-decimal pl-5 text-muted-foreground">
             <li>Откройте NovaBoost Mobile</li>
-            <li>Настройки → Аккаунт → Удалить аккаунт</li>
+            <li>Профиль → Аккаунт → Удалить аккаунт</li>
             <li>
               Подтвердите удаление (нужно ввести <span className="text-foreground">DELETE</span>)
             </li>
@@ -124,6 +125,8 @@ const AccountDelete = () => {
           <div className="mt-8 space-y-4">{content.body}</div>
         </div>
       </main>
+
+      <Footer />
     </div>
   );
 };

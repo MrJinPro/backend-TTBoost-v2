@@ -1,43 +1,10 @@
-import { useEffect, useState } from "react";
 import { Header } from "@/components/Header";
-import { PlanCard } from "@/components/PlanCard";
-import { Plan, mockPlans, plansApi, getToken } from "@/lib/api";
-import { useNavigate } from "react-router-dom";
-import { toast } from "sonner";
+import { Footer } from "@/components/Footer";
+import { Link } from "react-router-dom";
 import starLogo from "@/assets/star-logo.png";
 import { Sparkles, Zap, Shield } from "lucide-react";
 
 const Index = () => {
-  const [plans, setPlans] = useState<Plan[]>(mockPlans);
-  const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    const fetchPlans = async () => {
-      try {
-        const response = await plansApi.getPlans();
-        setPlans(response.items);
-      } catch (error) {
-        // Use mock data if API fails
-        console.log('Using mock plans data');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchPlans();
-  }, []);
-
-  const handleSelectPlan = (plan: Plan) => {
-    const token = getToken();
-    if (!token) {
-      toast.info('Войдите в аккаунт для покупки');
-      navigate('/auth', { state: { selectedPlan: plan.id } });
-      return;
-    }
-    navigate('/checkout', { state: { plan } });
-  };
-
   return (
     <div className="min-h-screen">
       <Header />
@@ -57,8 +24,7 @@ const Index = () => {
               <span className="text-foreground">Стриминг нового уровня</span>
             </h1>
             <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-12">
-              Автоматизируйте рост вашей аудитории с помощью мощных инструментов буста. 
-              Выберите тариф и начните прямо сейчас.
+              Инструменты для озвучки и алёртов во время LIVE‑эфиров: TTS, подарки, триггеры и виджеты.
             </p>
           </div>
 
@@ -82,40 +48,36 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Pricing Section */}
-      <section id="pricing" className="py-20 px-4">
-        <div className="container mx-auto">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
-              Выберите тариф
-            </h2>
-            <p className="text-muted-foreground max-w-xl mx-auto">
-              Гибкие тарифы для любых потребностей. Отмените в любой момент.
-            </p>
+      <section className="py-16 px-4">
+        <div className="container mx-auto max-w-4xl">
+          <div className="text-center mb-10">
+            <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-3">Ссылки</h2>
+            <p className="text-muted-foreground">Профиль и обязательные страницы для магазинов приложений.</p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-            {plans.map((plan, idx) => (
-              <PlanCard
-                key={plan.id}
-                plan={plan}
-                isPopular={idx === 2}
-                onSelect={handleSelectPlan}
-                disabled={loading}
-              />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[
+              { to: "/profile", title: "Профиль", desc: "Управление аккаунтом и лицензией" },
+              { to: "/privacy", title: "Конфиденциальность", desc: "Privacy Policy" },
+              { to: "/terms", title: "Условия", desc: "Terms of Use" },
+              { to: "/contact", title: "Контакты", desc: "Поддержка и разработчик" },
+              { to: "/account-delete", title: "Удаление аккаунта", desc: "Инструкция удаления" },
+              { to: "/auth", title: "Войти", desc: "Вход в аккаунт" },
+            ].map((l) => (
+              <Link
+                key={l.to}
+                to={l.to}
+                className="block rounded-2xl bg-card/50 border border-border/30 p-6 hover:border-primary/50 transition-all duration-300"
+              >
+                <div className="font-semibold text-foreground">{l.title}</div>
+                <div className="mt-2 text-sm text-muted-foreground">{l.desc}</div>
+              </Link>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="py-12 px-4 border-t border-border/30">
-        <div className="container mx-auto text-center">
-          <p className="text-sm text-muted-foreground">
-            © {new Date().getFullYear()} NovaBoost. Все права защищены.
-          </p>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 };

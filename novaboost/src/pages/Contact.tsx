@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { Header } from "@/components/Header";
+import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 
 type Lang = "ru" | "en";
@@ -69,6 +70,8 @@ const Contact = () => {
           <div className="mt-8">{content.body}</div>
         </div>
       </main>
+
+      <Footer />
     </div>
   );
 };

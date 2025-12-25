@@ -1,0 +1,24 @@
+{
+  "name": "NovaBoost",
+  "short_name": "NovaBoost",
+  "description": "NovaBoost — инструменты для озвучки и алёртов во время LIVE‑эфиров.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "lang": "ru",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/favicon.ico",
+      "sizes": "48x48",
+      "type": "image/x-icon"
+    }
+  ]
+}
