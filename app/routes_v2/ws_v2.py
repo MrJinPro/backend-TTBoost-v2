@@ -15,6 +15,7 @@ from app.services.tts_service import generate_tts, AVAILABLE_VOICES
 from app.services.tiktok_service import tiktok_service
 from app.services.gift_sounds import get_global_gift_sound_path
 from app.services.plans import resolve_tariff, normalize_platform
+from app.services.gift_stats_service import record_gift_and_update_stats
 
 try:
     # В новых версиях TikTokLive есть отдельное исключение, дающее понятный текст
@@ -331,6 +332,21 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
         payload = {"type": "gift", "user": u, "gift_id": gift_id, "gift_name": gift_name, "count": count, "diamonds": diamonds}
         if sound_url:
             payload["sound_url"] = sound_url
+
+        # Сохраняем подарок и инкрементируем агрегаты (UTC)
+        try:
+            record_gift_and_update_stats(
+                db,
+                streamer_id=str(user.id),
+                donor_username=u,
+                gift_id=gift_id,
+                gift_name=gift_name,
+                gift_count=int(count or 0),
+                gift_coins=int(diamonds or 0),
+            )
+        except Exception:
+            # record_gift_and_update_stats сам логирует/rollback'ает, но держим WS стабильным
+            pass
         if WS_DEBUG:
             logger.debug("on_gift: send payload=%s", payload)
         await websocket.send_text(json.dumps(payload, ensure_ascii=False))

@@ -1,7 +1,7 @@
 import enum
 import uuid
 from datetime import datetime
-from sqlalchemy import Column, String, DateTime, Boolean, Integer, Enum, ForeignKey, UniqueConstraint, JSON
+from sqlalchemy import Column, String, DateTime, Boolean, Integer, Enum, ForeignKey, UniqueConstraint, JSON, Date
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from .database import Base
@@ -258,3 +258,72 @@ class NotificationRead(Base):
     __table_args__ = (
         UniqueConstraint("notification_id", "user_id", name="uq_notification_read"),
     )
+
+
+class GiftEvent(Base):
+    __tablename__ = "gift_events"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    streamer_id = Column(String, ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False)
+    donor_username = Column(String(64), index=True, nullable=False)
+
+    gift_id = Column(String(64), nullable=True)
+    gift_name = Column(String(256), nullable=True)
+    gift_count = Column(Integer, default=1, nullable=False)
+    gift_coins = Column(Integer, default=0, nullable=False)
+
+    day = Column(Date, index=True, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+
+class DonorStats(Base):
+    __tablename__ = "donor_stats"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    streamer_id = Column(String, ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False)
+    donor_username = Column(String(64), nullable=False)
+
+    total_coins = Column(Integer, default=0, nullable=False)
+    total_gifts = Column(Integer, default=0, nullable=False)
+
+    today_date = Column(Date, nullable=True)
+    today_coins = Column(Integer, default=0, nullable=False)
+
+    yesterday_date = Column(Date, nullable=True)
+    yesterday_coins = Column(Integer, default=0, nullable=False)
+
+    last_7d_anchor = Column(Date, nullable=True)
+    last_7d_coins = Column(Integer, default=0, nullable=False)
+
+    last_30d_anchor = Column(Date, nullable=True)
+    last_30d_coins = Column(Integer, default=0, nullable=False)
+
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint("streamer_id", "donor_username", name="uq_donor_stats_streamer_donor"),
+    )
+
+
+class StreamerStats(Base):
+    __tablename__ = "streamer_stats"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    streamer_id = Column(String, ForeignKey("users.id", ondelete="CASCADE"), unique=True, index=True, nullable=False)
+
+    total_coins = Column(Integer, default=0, nullable=False)
+    total_gifts = Column(Integer, default=0, nullable=False)
+
+    today_date = Column(Date, nullable=True)
+    today_coins = Column(Integer, default=0, nullable=False)
+
+    yesterday_date = Column(Date, nullable=True)
+    yesterday_coins = Column(Integer, default=0, nullable=False)
+
+    last_7d_anchor = Column(Date, nullable=True)
+    last_7d_coins = Column(Integer, default=0, nullable=False)
+
+    last_30d_anchor = Column(Date, nullable=True)
+    last_30d_coins = Column(Integer, default=0, nullable=False)
+
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
