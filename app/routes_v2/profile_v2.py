@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import re
 import uuid
+import shutil
 from typing import Final
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Request
 from pydantic import BaseModel
@@ -161,6 +162,15 @@ class UploadAvatarResponse(BaseModel):
     avatar_url: str
 
 
+class DeleteAccountRequest(BaseModel):
+    confirm: str
+    password: str | None = None
+
+
+class DeleteAccountResponse(BaseModel):
+    status: str = "ok"
+
+
 @router.post("/avatar", response_model=UploadAvatarResponse)
 def upload_avatar(
     request: Request,
@@ -261,3 +271,84 @@ def upload_avatar(
 
     avatar_url = _abs_url(f"/static/avatars/{user.id}/{filename}", request=request)
     return UploadAvatarResponse(avatar_url=avatar_url)
+
+
+def _app_static_root() -> str:
+    # If MEDIA_ROOT is configured as root for /static, use it.
+    media_root = (os.getenv("MEDIA_ROOT") or "").strip()
+    if media_root:
+        return os.path.abspath(media_root)
+    # fallback to backend/app/static
+    return os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "static"))
+
+
+@router.post("/delete", response_model=DeleteAccountResponse)
+def delete_account(
+    req: DeleteAccountRequest,
+    user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    user = db.merge(user)
+
+    confirm = (req.confirm or "").strip().upper()
+    if confirm != "DELETE":
+        raise HTTPException(status_code=400, detail="confirmation required")
+
+    # Optional re-auth: if password provided, verify it.
+    if req.password is not None and req.password.strip() != "":
+        if not verify_password(req.password, user.password_hash):
+            raise HTTPException(status_code=401, detail="invalid credentials")
+
+    user_id = user.id
+
+    # Best-effort delete related records (DB-level cascade may not be enabled everywhere).
+    try:
+        db.query(models.Trigger).filter(models.Trigger.user_id == user_id).delete(synchronize_session=False)
+    except Exception:
+        pass
+    try:
+        db.query(models.Event).filter(models.Event.user_id == user_id).delete(synchronize_session=False)
+    except Exception:
+        pass
+    try:
+        db.query(models.StreamSession).filter(models.StreamSession.user_id == user_id).delete(synchronize_session=False)
+    except Exception:
+        pass
+    try:
+        db.query(models.SoundFile).filter(models.SoundFile.user_id == user_id).delete(synchronize_session=False)
+    except Exception:
+        pass
+    try:
+        db.query(models.StorePurchase).filter(models.StorePurchase.user_id == user_id).delete(synchronize_session=False)
+    except Exception:
+        pass
+    try:
+        db.query(models.UserTikTokAccount).filter(models.UserTikTokAccount.user_id == user_id).delete(synchronize_session=False)
+    except Exception:
+        pass
+    try:
+        db.query(models.UserSettings).filter(models.UserSettings.user_id == user_id).delete(synchronize_session=False)
+    except Exception:
+        pass
+
+    # Finally delete the user.
+    try:
+        db.delete(user)
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+
+    # Best-effort cleanup user media.
+    static_root = _app_static_root()
+    for rel in (
+        os.path.join("avatars", user_id),
+        os.path.join("sounds", user_id),
+        os.path.join("tts", user_id),
+    ):
+        try:
+            shutil.rmtree(os.path.join(static_root, rel), ignore_errors=True)
+        except Exception:
+            pass
+
+    return DeleteAccountResponse()

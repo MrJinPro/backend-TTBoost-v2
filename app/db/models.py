@@ -202,3 +202,59 @@ class TikTokProfileCache(Base):
     fetched_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+
+class NotificationAudience(str, enum.Enum):
+    all = "all"
+    users = "users"              # explicit user targets in notification_targets
+    plan = "plan"                # audience_value: tariff id (or comma-separated ids)
+    missing_email = "missing_email"  # users without email
+
+
+class NotificationLevel(str, enum.Enum):
+    info = "info"
+    warning = "warning"
+    promo = "promo"
+
+
+class Notification(Base):
+    __tablename__ = "notifications"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    title = Column(String(120), nullable=False)
+    body = Column(String(2000), nullable=False)
+    link = Column(String(512), nullable=True)
+    level = Column(Enum(NotificationLevel), default=NotificationLevel.info, nullable=False)
+
+    audience = Column(Enum(NotificationAudience), default=NotificationAudience.all, nullable=False)
+    audience_value = Column(String(256), nullable=True)
+
+    starts_at = Column(DateTime, nullable=True)
+    ends_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+
+class NotificationTarget(Base):
+    __tablename__ = "notification_targets"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    notification_id = Column(String, ForeignKey("notifications.id", ondelete="CASCADE"), index=True, nullable=False)
+    user_id = Column(String, ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint("notification_id", "user_id", name="uq_notification_target"),
+    )
+
+
+class NotificationRead(Base):
+    __tablename__ = "notification_reads"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    notification_id = Column(String, ForeignKey("notifications.id", ondelete="CASCADE"), index=True, nullable=False)
+    user_id = Column(String, ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False)
+    read_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint("notification_id", "user_id", name="uq_notification_read"),
+    )

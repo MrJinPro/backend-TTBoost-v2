@@ -271,6 +271,90 @@ def delete_user(
     return DeleteUserResponse(user_id=user_id, username=username)
 
 
+class CreateNotificationRequest(BaseModel):
+    title: str
+    body: str
+    link: str | None = None
+    level: str | None = None  # info|warning|promo
+    audience: str = "all"  # all|users|plan|missing_email
+    audience_value: str | None = None
+    starts_at: str | None = None  # ISO
+    ends_at: str | None = None  # ISO
+    target_usernames: list[str] | None = None  # only for audience=users
+
+
+class CreateNotificationResponse(BaseModel):
+    status: str = "ok"
+    id: str
+
+
+@router.post("/notifications", response_model=CreateNotificationResponse)
+def create_notification(
+    req: CreateNotificationRequest,
+    _user: models.User = Depends(require_staff_user),
+    db: Session = Depends(get_db),
+):
+    title = (req.title or "").strip()[:120]
+    body = (req.body or "").strip()[:2000]
+    if not title or not body:
+        raise HTTPException(status_code=400, detail="title/body required")
+
+    audience = (req.audience or "all").strip().lower()
+    if audience not in {"all", "users", "plan", "missing_email"}:
+        raise HTTPException(status_code=400, detail="invalid audience")
+
+    level = (req.level or "info").strip().lower()
+    if level not in {"info", "warning", "promo"}:
+        level = "info"
+
+    def _parse_dt(s: str | None):
+        if not s:
+            return None
+        ss = s.strip()
+        if not ss:
+            return None
+        try:
+            return datetime.fromisoformat(ss.replace("Z", "+00:00")).replace(tzinfo=None)
+        except Exception:
+            raise HTTPException(status_code=400, detail="invalid datetime")
+
+    n = models.Notification(
+        title=title,
+        body=body,
+        link=(req.link or "").strip()[:512] or None,
+        level=models.NotificationLevel(level),
+        audience=models.NotificationAudience(audience),
+        audience_value=(req.audience_value or "").strip()[:256] or None,
+        starts_at=_parse_dt(req.starts_at),
+        ends_at=_parse_dt(req.ends_at),
+        created_at=datetime.utcnow(),
+    )
+    db.add(n)
+    db.flush()
+
+    if audience == "users":
+        names = [
+            u.strip().lower().replace("@", "")
+            for u in (req.target_usernames or [])
+            if u and u.strip()
+        ]
+        if not names:
+            raise HTTPException(status_code=400, detail="target_usernames required for audience=users")
+        rows = db.query(models.User).filter(models.User.username.in_(names)).all()
+        by_name = {u.username.lower(): u for u in rows}
+        targets = []
+        for nm in names:
+            u = by_name.get(nm)
+            if not u:
+                continue
+            targets.append(models.NotificationTarget(notification_id=n.id, user_id=u.id))
+        if targets:
+            db.add_all(targets)
+
+    db.commit()
+    return CreateNotificationResponse(id=n.id)
+
+
 def _get_active_license_for_user(db: Session, user_id: str) -> models.LicenseKey | None:
     now = datetime.utcnow()
     return (

@@ -15,6 +15,38 @@ except Exception:
 logger = logging.getLogger(__name__)
 
 
+def _resolve_media_root() -> str:
+    """Папка, где храним медиа-файлы (tts/sounds/avatars).
+
+    В проде nginx обычно раздаёт статику с фиксированного пути (например,
+    /opt/ttboost/app/static). Если MEDIA_ROOT не задан, пытаемся подобрать
+    существующий путь из нескольких типовых вариантов.
+    """
+    env = (os.getenv("MEDIA_ROOT") or "").strip()
+    if env:
+        return env.rstrip("/\\")
+
+    # Типовые варианты прод-деплоя
+    candidates = [
+        "/opt/ttboost/app/static",
+        "/opt/ttboost/static",
+    ]
+
+    # Локальный/внутренний путь (в случае, если используем FastAPI /static mount)
+    try:
+        app_dir = os.path.dirname(os.path.dirname(__file__))  # backend/app
+        candidates.append(os.path.join(app_dir, "static"))
+    except Exception:
+        pass
+
+    for path in candidates:
+        if path and os.path.isdir(path):
+            return path.rstrip("/\\")
+
+    # Fallback: историческое значение
+    return "/opt/ttboost/static"
+
+
 class TTSEngine(str, Enum):
     """Доступные TTS движки"""
     GTTS = "gtts"
@@ -138,7 +170,7 @@ async def generate_tts(text: str, voice_id: str = "gtts-ru", user_id: str = None
 async def _generate_gtts(text: str, voice_info: dict, user_id: str = None) -> str:
     """Генерация через Google TTS"""
 
-    media_root = os.getenv("MEDIA_ROOT", "/opt/ttboost/static")
+    media_root = _resolve_media_root()
     
 
     if user_id:
@@ -180,7 +212,7 @@ async def _generate_edge(text: str, voice_info: dict, user_id: str = None) -> st
     print(f"🎙️ Attempting Edge TTS with voice: {voice_info['id']}")
     
 
-    media_root = os.getenv("MEDIA_ROOT", "/opt/ttboost/static")
+    media_root = _resolve_media_root()
     
 
     if user_id:
@@ -228,7 +260,7 @@ async def _generate_openai(text: str, voice_info: dict, user_id: str = None) -> 
     voice = voice_info.get("voice", "alloy")
 
     # Директория
-    media_root = os.getenv("MEDIA_ROOT", "/opt/ttboost/static")
+    media_root = _resolve_media_root()
     if user_id:
         tts_dir = os.path.join(media_root, "tts", user_id)
         url_path = f"static/tts/{user_id}"
@@ -287,7 +319,7 @@ async def _generate_elevenlabs(text: str, voice_info: dict, user_id: str = None)
     base_api = os.getenv("ELEVENLABS_API_BASE", "https://api.elevenlabs.io")
     url = f"{base_api.rstrip('/')}/v1/text-to-speech/{voice_id}"
 
-    media_root = os.getenv("MEDIA_ROOT", "/opt/ttboost/static")
+    media_root = _resolve_media_root()
     if user_id:
         tts_dir = os.path.join(media_root, "tts", user_id)
         url_path = f"static/tts/{user_id}"
