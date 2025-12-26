@@ -25,7 +25,7 @@ TARIFF_FREE = Tariff(
     allowed_platforms={"mobile", "desktop"},
     max_tiktok_accounts=1,
     lock_tiktok_username_after_set=True,
-    allowed_tts_engines={"gtts"},
+    allowed_tts_engines={"gtts", "edge"},
 )
 
 TARIFF_ONE_MOBILE = Tariff(

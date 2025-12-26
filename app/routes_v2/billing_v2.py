@@ -46,6 +46,13 @@ def _product_to_plan(platform: str, product_id: str) -> str:
     p = (platform or "").strip().lower()
 
     if p == "android":
+        # New naming: monthly/yearly subscriptions (both map to mobile premium plan).
+        if pid and pid == (os.getenv("BILLING_ANDROID_MONTHLY_PRODUCT_ID") or "").strip():
+            return "nova_streamer_one_mobile"
+        if pid and pid == (os.getenv("BILLING_ANDROID_YEARLY_PRODUCT_ID") or "").strip():
+            return "nova_streamer_one_mobile"
+
+        # Backward compatible naming: ONE/DUO.
         if pid and pid == (os.getenv("BILLING_ANDROID_ONE_PRODUCT_ID") or "").strip():
             return "nova_streamer_one_mobile"
         if pid and pid == (os.getenv("BILLING_ANDROID_DUO_PRODUCT_ID") or "").strip():
@@ -163,14 +170,12 @@ async def _verify_android_subscription(package_name: str, product_id: str, purch
         except Exception:
             expires_at = None
 
-    cancel_reason = data.get("cancelReason")
+    acknowledgement_state = data.get("acknowledgementState")
     payment_state = data.get("paymentState")
 
-    active = bool(expires_at and expires_at >= _now_utc())
-    # если явно отменено (cancelReason != null), считаем не active
-    if cancel_reason is not None:
-        active = False
-    # если paymentState == 0 (pending), тоже не active
+    acknowledged = acknowledgement_state == 1
+    active = bool(acknowledged and expires_at and expires_at >= _now_utc())
+    # если paymentState == 0 (pending), не активируем
     if payment_state == 0:
         active = False
 
