@@ -50,6 +50,12 @@ def _migrate_notifications_sqlite():
         if "created_by_user_id" not in cols:
             conn.exec_driver_sql("ALTER TABLE notifications ADD COLUMN created_by_user_id VARCHAR")
 
+        # Time window fields
+        if "starts_at" not in cols:
+            conn.exec_driver_sql("ALTER TABLE notifications ADD COLUMN starts_at TIMESTAMP")
+        if "ends_at" not in cols:
+            conn.exec_driver_sql("ALTER TABLE notifications ADD COLUMN ends_at TIMESTAMP")
+
         # Unique index for dedupe_key (SQLite allows multiple NULLs).
         try:
             conn.exec_driver_sql("CREATE UNIQUE INDEX IF NOT EXISTS ux_notifications_dedupe_key ON notifications(dedupe_key)")
@@ -139,8 +145,81 @@ def _migrate_push_tokens_sqlite():
         except Exception:
             pass
 
+
+def _migrate_notifications_postgres():
+    if not engine.dialect.name.startswith("postgres"):
+        return
+
+    with engine.begin() as conn:
+        # Ensure enum types exist (created automatically on new DB, but missing on old schemas).
+        for type_name, values in [
+            ("notificationtype", ["system", "product", "marketing"]),
+            ("notificationlevel", ["info", "warning", "promo"]),
+            ("notificationaudience", ["all", "users", "plan", "missing_email"]),
+        ]:
+            vals_sql = ", ".join([f"'{v}'" for v in values])
+            conn.exec_driver_sql(
+                f"""
+DO $$
+BEGIN
+    CREATE TYPE {type_name} AS ENUM ({vals_sql});
+EXCEPTION
+    WHEN duplicate_object THEN NULL;
+END $$;
+""".strip()
+            )
+
+        # Add missing columns.
+        conn.exec_driver_sql("ALTER TABLE notifications ADD COLUMN IF NOT EXISTS dedupe_key VARCHAR(256)")
+        conn.exec_driver_sql("ALTER TABLE notifications ADD COLUMN IF NOT EXISTS type notificationtype")
+        conn.exec_driver_sql("ALTER TABLE notifications ADD COLUMN IF NOT EXISTS targeting JSONB")
+        conn.exec_driver_sql("ALTER TABLE notifications ADD COLUMN IF NOT EXISTS in_app_enabled BOOLEAN")
+        conn.exec_driver_sql("ALTER TABLE notifications ADD COLUMN IF NOT EXISTS push_enabled BOOLEAN")
+        conn.exec_driver_sql("ALTER TABLE notifications ADD COLUMN IF NOT EXISTS created_by_user_id VARCHAR")
+        conn.exec_driver_sql("ALTER TABLE notifications ADD COLUMN IF NOT EXISTS starts_at TIMESTAMP")
+        conn.exec_driver_sql("ALTER TABLE notifications ADD COLUMN IF NOT EXISTS ends_at TIMESTAMP")
+
+        # Defaults for newly-added nullable columns.
+        conn.exec_driver_sql("UPDATE notifications SET in_app_enabled = TRUE WHERE in_app_enabled IS NULL")
+        conn.exec_driver_sql("UPDATE notifications SET push_enabled = FALSE WHERE push_enabled IS NULL")
+        conn.exec_driver_sql("UPDATE notifications SET type = 'product' WHERE type IS NULL")
+
+        # Unique index for dedupe_key (allows multiple NULLs).
+        conn.exec_driver_sql(
+            "CREATE UNIQUE INDEX IF NOT EXISTS ux_notifications_dedupe_key ON notifications(dedupe_key)"
+        )
+
+
+def _migrate_push_tokens_postgres():
+    if not engine.dialect.name.startswith("postgres"):
+        return
+
+    with engine.begin() as conn:
+        conn.exec_driver_sql(
+            """
+            CREATE TABLE IF NOT EXISTS push_device_tokens (
+              id VARCHAR PRIMARY KEY,
+              user_id VARCHAR NOT NULL,
+              platform VARCHAR(32) NOT NULL,
+              token VARCHAR(512) NOT NULL,
+              enabled BOOLEAN NOT NULL DEFAULT TRUE,
+              last_seen_at TIMESTAMP,
+              created_at TIMESTAMP NOT NULL,
+              updated_at TIMESTAMP NOT NULL,
+              CONSTRAINT uq_push_platform_token UNIQUE (platform, token)
+            )
+            """.strip()
+        )
+        conn.exec_driver_sql(
+            "CREATE INDEX IF NOT EXISTS ix_push_device_tokens_user_id ON push_device_tokens(user_id)"
+        )
+
+
+# Extend init_db with best-effort Postgres migrations
 def init_db():
     from . import models  # noqa: F401 ensure models are imported
     Base.metadata.create_all(bind=engine)
     _migrate_notifications_sqlite()
     _migrate_push_tokens_sqlite()
+    _migrate_notifications_postgres()
+    _migrate_push_tokens_postgres()

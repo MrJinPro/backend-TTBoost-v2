@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
+import logging
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
@@ -16,6 +17,7 @@ from app.services.plans import (
 
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 ROLES_ORDER = [
@@ -396,7 +398,13 @@ def create_notification(
             plans = [p.strip().lower() for p in raw.replace(";", ",").split(",") if p and p.strip()]
             n.targeting = {"all_users": True, "plans": plans}
 
-    db.commit()
+    try:
+        db.commit()
+    except Exception:
+        # Most common cause in production is schema mismatch (missing columns) after deploy.
+        logger.exception("Failed to create notification")
+        raise HTTPException(status_code=500, detail="failed to create notification")
+
     return CreateNotificationResponse(id=n.id)
 
 
