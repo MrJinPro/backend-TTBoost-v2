@@ -13,7 +13,7 @@ load_dotenv()  # Load ENV, SERVER_HOST, TTS_BASE_URL, SIGN_SERVER_URL
 
 from app.routes import auth, tts, ws, voices, sounds, profile, catalog, triggers
 from app.db.database import init_db
-from app.routes_v2 import auth_v2, settings_v2, sounds_v2, triggers_v2, ws_v2, license_v2, voices_v2, gifts_v2, admin_v2, profile_v2, billing_v2, tiktok_v2, notifications_v2, stats_v2
+from app.routes_v2 import auth_v2, settings_v2, sounds_v2, triggers_v2, ws_v2, license_v2, voices_v2, gifts_v2, admin_v2, profile_v2, billing_v2, tiktok_v2, notifications_v2, stats_v2, push_v2
 
 from datetime import datetime
 from sqlalchemy import text
@@ -378,6 +378,38 @@ try:
 except Exception:  # pragma: no cover
     tables = set()
 
+if "gift_events_tt" not in tables:
+    _try_exec(
+        "[DB] Created table gift_events_tt",
+        """
+        CREATE TABLE gift_events_tt (
+            id VARCHAR PRIMARY KEY,
+            streamer_tiktok_username VARCHAR(64) NOT NULL,
+            donor_username VARCHAR(64) NOT NULL,
+            gift_id VARCHAR(64),
+            gift_name VARCHAR(256),
+            gift_count INTEGER NOT NULL DEFAULT 1,
+            gift_coins INTEGER NOT NULL DEFAULT 0,
+            day DATE NOT NULL,
+            created_at TIMESTAMP NOT NULL
+        )
+        """.strip(),
+    )
+    _try_exec(
+        "[DB] Created index idx_gift_events_tt_streamer_day",
+        "CREATE INDEX IF NOT EXISTS idx_gift_events_tt_streamer_day ON gift_events_tt(streamer_tiktok_username, day)",
+    )
+    _try_exec(
+        "[DB] Created index idx_gift_events_tt_streamer_donor_day",
+        "CREATE INDEX IF NOT EXISTS idx_gift_events_tt_streamer_donor_day ON gift_events_tt(streamer_tiktok_username, donor_username, day)",
+    )
+
+insp = _refresh_insp()
+try:
+    tables = set(insp.get_table_names())
+except Exception:  # pragma: no cover
+    tables = set()
+
 if "donor_stats" not in tables:
     _try_exec(
         "[DB] Created table donor_stats",
@@ -413,6 +445,40 @@ try:
 except Exception:  # pragma: no cover
     tables = set()
 
+if "donor_stats_tt" not in tables:
+    _try_exec(
+        "[DB] Created table donor_stats_tt",
+        """
+        CREATE TABLE donor_stats_tt (
+            id VARCHAR PRIMARY KEY,
+            streamer_tiktok_username VARCHAR(64) NOT NULL,
+            donor_username VARCHAR(64) NOT NULL,
+            total_coins INTEGER NOT NULL DEFAULT 0,
+            total_gifts INTEGER NOT NULL DEFAULT 0,
+            today_date DATE,
+            today_coins INTEGER NOT NULL DEFAULT 0,
+            yesterday_date DATE,
+            yesterday_coins INTEGER NOT NULL DEFAULT 0,
+            last_7d_anchor DATE,
+            last_7d_coins INTEGER NOT NULL DEFAULT 0,
+            last_30d_anchor DATE,
+            last_30d_coins INTEGER NOT NULL DEFAULT 0,
+            updated_at TIMESTAMP NOT NULL,
+            CONSTRAINT uq_donor_stats_tt_streamer_donor UNIQUE(streamer_tiktok_username, donor_username)
+        )
+        """.strip(),
+    )
+    _try_exec(
+        "[DB] Created index idx_donor_stats_tt_streamer_total",
+        "CREATE INDEX IF NOT EXISTS idx_donor_stats_tt_streamer_total ON donor_stats_tt(streamer_tiktok_username, total_coins)",
+    )
+
+insp = _refresh_insp()
+try:
+    tables = set(insp.get_table_names())
+except Exception:  # pragma: no cover
+    tables = set()
+
 if "streamer_stats" not in tables:
     _try_exec(
         "[DB] Created table streamer_stats",
@@ -440,6 +506,39 @@ if "streamer_stats" not in tables:
         "[DB] Created index idx_streamer_stats_total",
         "CREATE INDEX IF NOT EXISTS idx_streamer_stats_total ON streamer_stats(total_coins)",
     )
+
+insp = _refresh_insp()
+try:
+    tables = set(insp.get_table_names())
+except Exception:  # pragma: no cover
+    tables = set()
+
+if "streamer_stats_tt" not in tables:
+    _try_exec(
+        "[DB] Created table streamer_stats_tt",
+        """
+        CREATE TABLE streamer_stats_tt (
+            id VARCHAR PRIMARY KEY,
+            streamer_tiktok_username VARCHAR(64) NOT NULL,
+            total_coins INTEGER NOT NULL DEFAULT 0,
+            total_gifts INTEGER NOT NULL DEFAULT 0,
+            today_date DATE,
+            today_coins INTEGER NOT NULL DEFAULT 0,
+            yesterday_date DATE,
+            yesterday_coins INTEGER NOT NULL DEFAULT 0,
+            last_7d_anchor DATE,
+            last_7d_coins INTEGER NOT NULL DEFAULT 0,
+            last_30d_anchor DATE,
+            last_30d_coins INTEGER NOT NULL DEFAULT 0,
+            updated_at TIMESTAMP NOT NULL,
+            CONSTRAINT uq_streamer_stats_tt_streamer UNIQUE(streamer_tiktok_username)
+        )
+        """.strip(),
+    )
+    _try_exec(
+        "[DB] Created index idx_streamer_stats_tt_total",
+        "CREATE INDEX IF NOT EXISTS idx_streamer_stats_tt_total ON streamer_stats_tt(total_coins)",
+    )
 app.include_router(auth_v2.router, prefix="/v2/auth", tags=["v2-auth"])
 app.include_router(settings_v2.router, prefix="/v2/settings", tags=["v2-settings"])
 app.include_router(sounds_v2.router, prefix="/v2/sounds", tags=["v2-sounds"])
@@ -450,6 +549,7 @@ app.include_router(voices_v2.router, prefix="/v2", tags=["v2-voices"])
 app.include_router(gifts_v2.router, prefix="/v2/gifts", tags=["v2-gifts"])
 app.include_router(stats_v2.router, prefix="/v2", tags=["v2-stats"])
 app.include_router(notifications_v2.router, prefix="/v2", tags=["v2-notifications"])
+app.include_router(push_v2.router, prefix="/v2", tags=["v2-push"])
 app.include_router(admin_v2.router, prefix="/v2/admin", tags=["v2-admin"])
 app.include_router(profile_v2.router, prefix="/v2/profile", tags=["v2-profile"])
 app.include_router(tiktok_v2.router, prefix="/v2/tiktok", tags=["v2-tiktok"])

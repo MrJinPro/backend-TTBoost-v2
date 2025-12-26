@@ -217,14 +217,28 @@ class NotificationLevel(str, enum.Enum):
     promo = "promo"
 
 
+class NotificationType(str, enum.Enum):
+    system = "system"
+    product = "product"
+    marketing = "marketing"
+
+
 class Notification(Base):
     __tablename__ = "notifications"
 
     id = Column(String, primary_key=True, default=_uuid)
+    dedupe_key = Column(String(256), nullable=True, unique=True)
     title = Column(String(120), nullable=False)
     body = Column(String(2000), nullable=False)
     link = Column(String(512), nullable=True)
     level = Column(Enum(NotificationLevel), default=NotificationLevel.info, nullable=False)
+
+    # New unified notifications fields (kept alongside legacy audience fields for backward compatibility)
+    type = Column(Enum(NotificationType), default=NotificationType.product, nullable=False)
+    targeting = Column(JSON, nullable=True)  # JSON filter object (intersection semantics)
+    in_app_enabled = Column(Boolean, default=True, nullable=False)
+    push_enabled = Column(Boolean, default=False, nullable=False)
+    created_by_user_id = Column(String, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
 
     audience = Column(Enum(NotificationAudience), default=NotificationAudience.all, nullable=False)
     audience_value = Column(String(256), nullable=True)
@@ -257,6 +271,29 @@ class NotificationRead(Base):
 
     __table_args__ = (
         UniqueConstraint("notification_id", "user_id", name="uq_notification_read"),
+    )
+
+
+class PushPlatform(str, enum.Enum):
+    android = "android"
+    ios = "ios"
+    web = "web"
+
+
+class PushDeviceToken(Base):
+    __tablename__ = "push_device_tokens"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    user_id = Column(String, ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False)
+    platform = Column(Enum(PushPlatform), nullable=False)
+    token = Column(String(512), nullable=False)
+    enabled = Column(Boolean, default=True, nullable=False)
+    last_seen_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint("platform", "token", name="uq_push_platform_token"),
     )
 
 
@@ -310,6 +347,75 @@ class StreamerStats(Base):
 
     id = Column(String, primary_key=True, default=_uuid)
     streamer_id = Column(String, ForeignKey("users.id", ondelete="CASCADE"), unique=True, index=True, nullable=False)
+
+    total_coins = Column(Integer, default=0, nullable=False)
+    total_gifts = Column(Integer, default=0, nullable=False)
+
+    today_date = Column(Date, nullable=True)
+    today_coins = Column(Integer, default=0, nullable=False)
+
+    yesterday_date = Column(Date, nullable=True)
+    yesterday_coins = Column(Integer, default=0, nullable=False)
+
+    last_7d_anchor = Column(Date, nullable=True)
+    last_7d_coins = Column(Integer, default=0, nullable=False)
+
+    last_30d_anchor = Column(Date, nullable=True)
+    last_30d_coins = Column(Integer, default=0, nullable=False)
+
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+
+class GiftEventTikTok(Base):
+    __tablename__ = "gift_events_tt"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    streamer_tiktok_username = Column(String(64), index=True, nullable=False)
+    donor_username = Column(String(64), index=True, nullable=False)
+
+    gift_id = Column(String(64), nullable=True)
+    gift_name = Column(String(256), nullable=True)
+    gift_count = Column(Integer, default=1, nullable=False)
+    gift_coins = Column(Integer, default=0, nullable=False)
+
+    day = Column(Date, index=True, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+
+class DonorStatsTikTok(Base):
+    __tablename__ = "donor_stats_tt"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    streamer_tiktok_username = Column(String(64), index=True, nullable=False)
+    donor_username = Column(String(64), nullable=False)
+
+    total_coins = Column(Integer, default=0, nullable=False)
+    total_gifts = Column(Integer, default=0, nullable=False)
+
+    today_date = Column(Date, nullable=True)
+    today_coins = Column(Integer, default=0, nullable=False)
+
+    yesterday_date = Column(Date, nullable=True)
+    yesterday_coins = Column(Integer, default=0, nullable=False)
+
+    last_7d_anchor = Column(Date, nullable=True)
+    last_7d_coins = Column(Integer, default=0, nullable=False)
+
+    last_30d_anchor = Column(Date, nullable=True)
+    last_30d_coins = Column(Integer, default=0, nullable=False)
+
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint("streamer_tiktok_username", "donor_username", name="uq_donor_stats_tt_streamer_donor"),
+    )
+
+
+class StreamerStatsTikTok(Base):
+    __tablename__ = "streamer_stats_tt"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    streamer_tiktok_username = Column(String(64), unique=True, index=True, nullable=False)
 
     total_coins = Column(Integer, default=0, nullable=False)
     total_gifts = Column(Integer, default=0, nullable=False)

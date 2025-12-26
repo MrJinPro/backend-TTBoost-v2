@@ -36,12 +36,46 @@ def _period_to_column(period: str) -> tuple[str, date | None]:
     raise HTTPException(status_code=400, detail="invalid period")
 
 
+def _active_streamer_tiktok_username(db: Session, user_id: str) -> str | None:
+    """Resolve current stats scope: TikTok username (most recently used)."""
+    try:
+        row = (
+            db.query(models.UserTikTokAccount)
+            .filter(models.UserTikTokAccount.user_id == user_id)
+            .order_by(models.UserTikTokAccount.last_used_at.desc())
+            .first()
+        )
+    except Exception:
+        row = None
+
+    if not row:
+        return None
+    key = (row.username or "").strip().lstrip("@").lower()
+    return key or None
+
+
 @router.get("/stats/overview")
 def stats_overview(
     user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    row = db.query(models.StreamerStats).filter(models.StreamerStats.streamer_id == user.id).first()
+    streamer_key = _active_streamer_tiktok_username(db, str(user.id))
+    if not streamer_key:
+        return {
+            "total_coins": 0,
+            "total_gifts": 0,
+            "today_utc": 0,
+            "yesterday_utc": 0,
+            "last_7d": 0,
+            "last_30d": 0,
+            "updated_at": None,
+        }
+
+    row = (
+        db.query(models.StreamerStatsTikTok)
+        .filter(models.StreamerStatsTikTok.streamer_tiktok_username == streamer_key)
+        .first()
+    )
     if not row:
         return {
             "total_coins": 0,
@@ -78,19 +112,27 @@ def stats_top_donors(
 
     col_name, anchor = _period_to_column(period)
 
-    q = db.query(models.DonorStats).filter(models.DonorStats.streamer_id == user.id)
+    streamer_key = _active_streamer_tiktok_username(db, str(user.id))
+    if not streamer_key:
+        return {
+            "period": period,
+            "limit": limit,
+            "donors": [],
+        }
+
+    q = db.query(models.DonorStatsTikTok).filter(models.DonorStatsTikTok.streamer_tiktok_username == streamer_key)
 
     # Для today/yesterday используем date-колонки, чтобы не показывать устаревшие значения.
     if col_name == "today_coins":
-        q = q.filter(models.DonorStats.today_date == datetime.utcnow().date())
+        q = q.filter(models.DonorStatsTikTok.today_date == datetime.utcnow().date())
     elif col_name == "yesterday_coins":
-        q = q.filter(models.DonorStats.yesterday_date == (datetime.utcnow().date() - timedelta(days=1)))
+        q = q.filter(models.DonorStatsTikTok.yesterday_date == (datetime.utcnow().date() - timedelta(days=1)))
     elif col_name == "last_7d_coins":
-        q = q.filter(models.DonorStats.last_7d_anchor == (anchor or datetime.utcnow().date()))
+        q = q.filter(models.DonorStatsTikTok.last_7d_anchor == (anchor or datetime.utcnow().date()))
     elif col_name == "last_30d_coins":
-        q = q.filter(models.DonorStats.last_30d_anchor == (anchor or datetime.utcnow().date()))
+        q = q.filter(models.DonorStatsTikTok.last_30d_anchor == (anchor or datetime.utcnow().date()))
 
-    col = getattr(models.DonorStats, col_name)
+    col = getattr(models.DonorStatsTikTok, col_name)
     rows = q.order_by(col.desc()).limit(limit).all()
 
     donors = []
@@ -121,10 +163,14 @@ def stats_donor(
     if not key:
         raise HTTPException(status_code=400, detail="donor_username required")
 
+    streamer_key = _active_streamer_tiktok_username(db, str(user.id))
+    if not streamer_key:
+        raise HTTPException(status_code=404, detail="donor not found")
+
     r = (
-        db.query(models.DonorStats)
-        .filter(models.DonorStats.streamer_id == user.id)
-        .filter(models.DonorStats.donor_username == key)
+        db.query(models.DonorStatsTikTok)
+        .filter(models.DonorStatsTikTok.streamer_tiktok_username == streamer_key)
+        .filter(models.DonorStatsTikTok.donor_username == key)
         .first()
     )
 

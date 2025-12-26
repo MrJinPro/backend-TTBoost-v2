@@ -4,6 +4,7 @@ import os
 import re
 import time
 import asyncio
+from datetime import datetime
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, status, Depends, HTTPException
 from sqlalchemy.orm import Session
 
@@ -126,6 +127,7 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
     first_message_seen = set()  # Отслеживание зрителей, которые уже писали в чат в этой сессии
     seen_viewers = set()  # Отслеживание зрителей, которых уже «видели» в этой сессии (join или first_message)
     _cooldown = {}  # (scope, trigger_id, username_or_star) -> last_time_monotonic
+    active_tiktok_username: str | None = None
 
     def _cooldown_allows(trigger_id: int, seconds: float | int | None, username: str | None = None) -> bool:
         if not seconds:
@@ -338,6 +340,7 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
             record_gift_and_update_stats(
                 db,
                 streamer_id=str(user.id),
+                streamer_tiktok_username=active_tiktok_username,
                 donor_username=u,
                 gift_id=gift_id,
                 gift_name=gift_name,
@@ -569,6 +572,8 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
                 return
 
         async def _on_tiktok_connect(username: str):
+            nonlocal active_tiktok_username
+            active_tiktok_username = username
             await _safe_send({
                 "type": "status",
                 "message": f"Подключено к TikTok Live @{username}",
@@ -577,6 +582,9 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
             })
 
         async def _on_tiktok_disconnect(username: str):
+            nonlocal active_tiktok_username
+            if active_tiktok_username == username:
+                active_tiktok_username = None
             auto_reconnect = str(os.getenv("TT_AUTO_RECONNECT", "1")).strip().lower() in ("1", "true", "yes", "on")
             await _safe_send({
                 "type": "status",
@@ -598,6 +606,7 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
         if ws_autostart and (user.tiktok_username or user.username):
             target_username = (user.tiktok_username or user.username).strip().lstrip("@").lower()
             if target_username:
+                active_tiktok_username = target_username
                 await _safe_send({
                     "type": "status",
                     "message": f"Подключаемся к TikTok Live @{target_username}…",
@@ -636,6 +645,26 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
                 if not username:
                     await _safe_send({"type": "error", "message": "Username is required"})
                     continue
+
+                # remember for stats resolution (most recent TikTok account)
+                try:
+                    row = (
+                        db.query(models.UserTikTokAccount)
+                        .filter(models.UserTikTokAccount.user_id == user.id)
+                        .filter(models.UserTikTokAccount.username == username)
+                        .first()
+                    )
+                    if not row:
+                        row = models.UserTikTokAccount(user_id=user.id, username=username, last_used_at=datetime.utcnow())
+                        db.add(row)
+                    else:
+                        row.last_used_at = datetime.utcnow()
+                        db.add(row)
+                    db.commit()
+                except Exception:
+                    db.rollback()
+
+                active_tiktok_username = username
 
                 # Stop previous session if any
                 if tiktok_service.is_running(user.id):
@@ -696,6 +725,7 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
                         await tiktok_service.stop_client(user.id)
                     except Exception:
                         pass
+                active_tiktok_username = None
                 await _safe_send({
                     "type": "status",
                     "message": "Отключено от TikTok Live",

@@ -275,12 +275,22 @@ class CreateNotificationRequest(BaseModel):
     title: str
     body: str
     link: str | None = None
+    # Legacy fields (still supported)
     level: str | None = None  # info|warning|promo
     audience: str = "all"  # all|users|plan|missing_email
     audience_value: str | None = None
+
+    # New unified fields
+    type: str | None = None  # system|product|marketing
+    severity: str | None = None  # alias for level
+    in_app_enabled: bool | None = None
+    push_enabled: bool | None = None
+    # JSON-ish targeting (intersection semantics). If provided, preferred over legacy audience.
+    # Supported keys: all_users, users, user_ids, usernames, plans, missing_email, purchase_platforms, purchase_statuses
+    targeting: dict | None = None
     starts_at: str | None = None  # ISO
     ends_at: str | None = None  # ISO
-    target_usernames: list[str] | None = None  # only for audience=users
+    target_usernames: list[str] | None = None  # legacy: only for audience=users
 
 
 class CreateNotificationResponse(BaseModel):
@@ -301,11 +311,25 @@ def create_notification(
 
     audience = (req.audience or "all").strip().lower()
     if audience not in {"all", "users", "plan", "missing_email"}:
-        raise HTTPException(status_code=400, detail="invalid audience")
+        audience = "all"
 
-    level = (req.level or "info").strip().lower()
+    level = (req.severity or req.level or "info").strip().lower()
     if level not in {"info", "warning", "promo"}:
         level = "info"
+
+    ntype = (req.type or "").strip().lower() or None
+    if ntype not in {"system", "product", "marketing", None}:
+        raise HTTPException(status_code=400, detail="invalid type")
+
+    if ntype == "system":
+        raise HTTPException(status_code=400, detail="system notifications are auto-generated")
+
+    in_app_enabled = True if req.in_app_enabled is None else bool(req.in_app_enabled)
+    push_enabled = False if req.push_enabled is None else bool(req.push_enabled)
+
+    targeting: dict | None = None
+    if isinstance(req.targeting, dict) and req.targeting:
+        targeting = req.targeting
 
     def _parse_dt(s: str | None):
         if not s:
@@ -325,6 +349,11 @@ def create_notification(
         level=models.NotificationLevel(level),
         audience=models.NotificationAudience(audience),
         audience_value=(req.audience_value or "").strip()[:256] or None,
+        type=models.NotificationType(ntype or ("marketing" if level == "promo" else "product")),
+        targeting=targeting,
+        in_app_enabled=in_app_enabled,
+        push_enabled=push_enabled,
+        created_by_user_id=_user.id,
         starts_at=_parse_dt(req.starts_at),
         ends_at=_parse_dt(req.ends_at),
         created_at=datetime.utcnow(),
@@ -332,6 +361,7 @@ def create_notification(
     db.add(n)
     db.flush()
 
+    # Legacy explicit targeting
     if audience == "users":
         names = [
             u.strip().lower().replace("@", "")
@@ -350,6 +380,21 @@ def create_notification(
             targets.append(models.NotificationTarget(notification_id=n.id, user_id=u.id))
         if targets:
             db.add_all(targets)
+
+        # Ensure new targeting works for legacy rows too.
+        if not n.targeting:
+            n.targeting = {"users": True}
+
+    # If no explicit targeting provided and not legacy users, derive from legacy audience for consistency.
+    if not n.targeting and audience != "users":
+        if audience == "all":
+            n.targeting = {"all_users": True}
+        elif audience == "missing_email":
+            n.targeting = {"all_users": True, "missing_email": True}
+        elif audience == "plan":
+            raw = (req.audience_value or "").strip()
+            plans = [p.strip().lower() for p in raw.replace(";", ",").split(",") if p and p.strip()]
+            n.targeting = {"all_users": True, "plans": plans}
 
     db.commit()
     return CreateNotificationResponse(id=n.id)
