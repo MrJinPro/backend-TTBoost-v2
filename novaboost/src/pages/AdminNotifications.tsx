@@ -21,6 +21,7 @@ const AdminNotifications = () => {
   const [body, setBody] = useState("");
   const [link, setLink] = useState("");
   const [level, setLevel] = useState<"info" | "warning" | "promo">("promo");
+  const [type, setType] = useState<"product" | "marketing">("marketing");
   const [audience, setAudience] = useState<"all" | "missing_email" | "plan" | "users">("missing_email");
   const [audienceValue, setAudienceValue] = useState("");
   const [targetUsernames, setTargetUsernames] = useState("");
@@ -65,6 +66,12 @@ const AdminNotifications = () => {
       const req: any = {
         title: title.trim(),
         body: body.trim(),
+        // New unified fields
+        type,
+        severity: level,
+        in_app_enabled: true,
+        push_enabled: false,
+        // Legacy (server still accepts)
         audience,
         level,
       };
@@ -79,6 +86,14 @@ const AdminNotifications = () => {
           return;
         }
         req.audience_value = audienceValue.trim();
+
+        req.targeting = {
+          all_users: true,
+          plans: audienceValue
+            .split(/[,\n]/g)
+            .map((s) => s.trim())
+            .filter(Boolean),
+        };
       }
 
       if (audience === "users") {
@@ -91,6 +106,17 @@ const AdminNotifications = () => {
           return;
         }
         req.target_usernames = names;
+
+        // Legacy audience=users uses notification_targets mapping.
+        req.targeting = { users: true };
+      }
+
+      if (audience === "missing_email") {
+        req.targeting = { all_users: true, missing_email: true };
+      }
+
+      if (audience === "all") {
+        req.targeting = { all_users: true };
       }
 
       const resp = await adminApi.createNotification(req);
@@ -177,7 +203,7 @@ const AdminNotifications = () => {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>Тип</Label>
+                    <Label>Severity</Label>
                     <Select value={level} onValueChange={(v) => setLevel(v as any)}>
                       <SelectTrigger>
                         <SelectValue placeholder="promo" />
@@ -186,6 +212,19 @@ const AdminNotifications = () => {
                         <SelectItem value="promo">promo</SelectItem>
                         <SelectItem value="info">info</SelectItem>
                         <SelectItem value="warning">warning</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Type</Label>
+                    <Select value={type} onValueChange={(v) => setType(v as any)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="marketing" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="marketing">marketing</SelectItem>
+                        <SelectItem value="product">product</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -254,7 +293,7 @@ const AdminNotifications = () => {
                 </Button>
 
                 <p className="text-xs text-muted-foreground">
-                  Совет: для кейса “добавьте email — получите скидку” выберите audience = <span className="font-mono">missing_email</span>.
+                  Сейчас push отключён; отправляем только in-app. Для кейса “добавьте email — получите скидку” выберите audience = <span className="font-mono">missing_email</span>.
                 </p>
               </form>
             </CardContent>

@@ -2,6 +2,8 @@ import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { getToken, removeToken } from "@/lib/api";
 import starLogo from "@/assets/star-logo.png";
+import { useEffect, useState } from "react";
+import { authApi } from "@/lib/api";
 
 interface HeaderProps {
   isLoggedIn?: boolean;
@@ -12,6 +14,29 @@ export const Header = ({ isLoggedIn, onLogout }: HeaderProps) => {
   const location = useLocation();
   const token = getToken();
   const loggedIn = isLoggedIn ?? !!token;
+  const [isStaff, setIsStaff] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!loggedIn) {
+      setIsStaff(false);
+      return;
+    }
+
+    (async () => {
+      try {
+        const me = await authApi.getMe();
+        const role = (me?.role || "user").toLowerCase();
+        if (!cancelled) setIsStaff(role !== "user");
+      } catch {
+        if (!cancelled) setIsStaff(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [loggedIn]);
 
   const handleLogout = () => {
     removeToken();
@@ -34,6 +59,13 @@ export const Header = ({ isLoggedIn, onLogout }: HeaderProps) => {
         <nav className="flex items-center gap-4">
           {loggedIn ? (
             <>
+              {isStaff && (
+                <Link to="/admin/notifications">
+                  <Button variant="ghost" size="sm">
+                    Уведомления
+                  </Button>
+                </Link>
+              )}
               <Link to="/profile">
                 <Button variant="ghost" size="sm">
                   Профиль

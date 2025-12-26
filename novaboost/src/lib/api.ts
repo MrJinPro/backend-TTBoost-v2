@@ -149,9 +149,17 @@ export interface CreateNotificationRequest {
   title: string;
   body: string;
   link?: string | null;
+  // Legacy
   level?: 'info' | 'warning' | 'promo' | string;
-  audience: 'all' | 'users' | 'plan' | 'missing_email' | string;
+  audience?: 'all' | 'users' | 'plan' | 'missing_email' | string;
   audience_value?: string | null;
+
+  // New unified
+  type?: 'system' | 'product' | 'marketing' | string;
+  severity?: 'info' | 'warning' | 'promo' | string;
+  in_app_enabled?: boolean;
+  push_enabled?: boolean;
+  targeting?: Record<string, any> | null;
   starts_at?: string | null;
   ends_at?: string | null;
   target_usernames?: string[] | null;
