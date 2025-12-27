@@ -5,9 +5,12 @@ from sqlalchemy.orm import Session
 from app.db.database import SessionLocal
 from app.db import models
 from .auth_v2 import get_current_user
+from app.services.plans import TARIFF_FREE, resolve_tariff
 
 
 router = APIRouter()
+
+FREE_MAX_TRIGGERS = 10
 
 
 def get_db():
@@ -37,6 +40,15 @@ class SetTriggerRequest(BaseModel):
 @router.post("/set")
 def set_trigger(req: SetTriggerRequest, user=Depends(get_current_user), db: Session = Depends(get_db)):
     print(f"🔵 set_trigger received: event={req.event_type}, key={req.condition_key}, value={req.condition_value}, action={req.action}, sound={req.sound_filename}, combo={req.combo_count}")
+
+    tariff, _lic = resolve_tariff(db, user.id)
+    if tariff.id == TARIFF_FREE.id:
+        existing_count = db.query(models.Trigger).filter(models.Trigger.user_id == user.id).count()
+        if existing_count >= FREE_MAX_TRIGGERS:
+            raise HTTPException(
+                status_code=403,
+                detail=f"В бесплатном тарифе максимум {FREE_MAX_TRIGGERS} триггеров.",
+            )
     
     if req.action not in (models.TriggerAction.play_sound.value, models.TriggerAction.tts.value):
         raise HTTPException(400, detail="invalid action")
