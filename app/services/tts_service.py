@@ -462,3 +462,60 @@ def _cleanup_old_files(tts_dir: str, ttl: int):
     except FileNotFoundError:
         return
 
+
+def cleanup_tts_tree(*, media_root: str | None = None) -> None:
+    """Удаляет TTS файлы старше TTL во всём дереве tts/.
+
+    Нужен как бэкап-механизм на случай рестартов процесса до срабатывания per-file TTL.
+    """
+
+    ttl = _get_retention_seconds()
+    root = (media_root or _resolve_media_root()).rstrip("/\\")
+    tts_root = os.path.join(root, "tts")
+    now = datetime.now()
+
+    def _cleanup_dir(d: str) -> None:
+        try:
+            for name in os.listdir(d):
+                if not name.startswith("tts_"):
+                    continue
+                full = os.path.join(d, name)
+                try:
+                    stat = os.stat(full)
+                    mtime = datetime.fromtimestamp(stat.st_mtime)
+                    if (now - mtime) > timedelta(seconds=ttl):
+                        os.remove(full)
+                except FileNotFoundError:
+                    continue
+                except Exception:
+                    continue
+        except FileNotFoundError:
+            return
+        except Exception:
+            return
+
+    # root tts/
+    _cleanup_dir(tts_root)
+
+    # per-user tts/<user_id>/
+    try:
+        for entry in os.listdir(tts_root):
+            sub = os.path.join(tts_root, entry)
+            if os.path.isdir(sub):
+                _cleanup_dir(sub)
+    except FileNotFoundError:
+        return
+    except Exception:
+        return
+
+
+async def tts_cleanup_loop() -> None:
+    """Фоновая цикличная очистка TTS (раз в TTL секунд)."""
+
+    while True:
+        try:
+            cleanup_tts_tree()
+        except Exception:
+            pass
+        await asyncio.sleep(max(30, _get_retention_seconds()))
+

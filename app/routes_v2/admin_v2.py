@@ -1,5 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 import logging
+import os
+import shutil
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
@@ -270,6 +272,18 @@ def delete_user(
     username = target.username
     db.delete(target)
     db.commit()
+
+    # Best-effort cleanup user media (avatars/sounds/tts) to avoid disk bloat.
+    static_root = os.path.abspath((os.getenv("MEDIA_ROOT") or "").strip() or os.path.join(os.path.dirname(__file__), "..", "static"))
+    for rel in (
+        os.path.join("avatars", user_id),
+        os.path.join("sounds", user_id),
+        os.path.join("tts", user_id),
+    ):
+        try:
+            shutil.rmtree(os.path.join(static_root, rel), ignore_errors=True)
+        except Exception:
+            pass
     return DeleteUserResponse(user_id=user_id, username=username)
 
 

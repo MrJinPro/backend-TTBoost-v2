@@ -2,6 +2,7 @@ from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 import os
+import asyncio
 import logging
 from logging.handlers import RotatingFileHandler
 from dotenv import load_dotenv
@@ -14,6 +15,7 @@ load_dotenv()  # Load ENV, SERVER_HOST, TTS_BASE_URL, SIGN_SERVER_URL
 from app.routes import auth, tts, ws, voices, sounds, profile, catalog, triggers
 from app.db.database import init_db
 from app.routes_v2 import auth_v2, settings_v2, sounds_v2, triggers_v2, ws_v2, license_v2, voices_v2, gifts_v2, admin_v2, profile_v2, billing_v2, tiktok_v2, notifications_v2, stats_v2, push_v2
+from app.services import tts_service
 
 from datetime import datetime
 from sqlalchemy import text
@@ -206,6 +208,15 @@ os.makedirs(os.path.join(STATIC_DIR, "sounds"), exist_ok=True)
 os.makedirs(os.path.join(STATIC_DIR, "avatars"), exist_ok=True)
 
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+
+
+@app.on_event("startup")
+async def _startup_tts_cleanup_loop():
+    # Keep media storage bounded: delete generated TTS files older than TTL.
+    try:
+        asyncio.create_task(tts_service.tts_cleanup_loop())
+    except Exception:
+        pass
 
 app.include_router(auth.router, prefix="/auth", tags=["auth"])
 app.include_router(tts.router, prefix="/tts", tags=["tts"])
