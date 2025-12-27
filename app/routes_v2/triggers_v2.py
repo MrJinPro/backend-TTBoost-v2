@@ -6,11 +6,21 @@ from app.db.database import SessionLocal
 from app.db import models
 from .auth_v2 import get_current_user
 from app.services.plans import TARIFF_FREE, resolve_tariff
+from app.services.limits import FREE_MAX_TRIGGERS
 
 
 router = APIRouter()
 
-FREE_MAX_TRIGGERS = 10
+
+def _free_allowed_trigger_ids(db: Session, user_id: str) -> set[int]:
+    rows = (
+        db.query(models.Trigger.id)
+        .filter(models.Trigger.user_id == user_id)
+        .order_by(models.Trigger.priority.desc(), models.Trigger.created_at.asc())
+        .limit(FREE_MAX_TRIGGERS)
+        .all()
+    )
+    return {int(r[0]) for r in rows}
 
 
 def get_db():
@@ -47,7 +57,7 @@ def set_trigger(req: SetTriggerRequest, user=Depends(get_current_user), db: Sess
         if existing_count >= FREE_MAX_TRIGGERS:
             raise HTTPException(
                 status_code=403,
-                detail=f"В бесплатном тарифе максимум {FREE_MAX_TRIGGERS} триггеров.",
+                detail=f"В бесплатном тарифе максимум {FREE_MAX_TRIGGERS} триггеров. Перейдите на тариф выше, чтобы использовать больше.",
             )
     
     if req.action not in (models.TriggerAction.play_sound.value, models.TriggerAction.tts.value):
@@ -95,6 +105,11 @@ def set_trigger(req: SetTriggerRequest, user=Depends(get_current_user), db: Sess
 
 @router.get("/list")
 def list_triggers(user=Depends(get_current_user), db: Session = Depends(get_db)):
+    tariff, _lic = resolve_tariff(db, user.id)
+    allowed_ids: set[int] | None = None
+    if tariff.id == TARIFF_FREE.id:
+        allowed_ids = _free_allowed_trigger_ids(db, user.id)
+
     items = (
         db.query(models.Trigger)
         .filter(models.Trigger.user_id == user.id)
@@ -107,7 +122,7 @@ def list_triggers(user=Depends(get_current_user), db: Session = Depends(get_db))
             "event_type": t.event_type,
             "condition_key": t.condition_key,
             "condition_value": t.condition_value,
-            "enabled": t.enabled,
+            "enabled": (bool(t.enabled) and (allowed_ids is None or int(t.id) in allowed_ids)),
             "priority": t.priority,
             "action": t.action.value,
             "action_params": t.action_params,
@@ -150,6 +165,15 @@ def update_trigger_enabled(req: UpdateTriggerEnabledRequest, user=Depends(get_cu
     t = db.get(models.Trigger, req.id)
     if not t or t.user_id != user.id:
         raise HTTPException(404, detail='not found')
+
+    tariff, _lic = resolve_tariff(db, user.id)
+    if req.enabled and tariff.id == TARIFF_FREE.id:
+        allowed = _free_allowed_trigger_ids(db, user.id)
+        if int(t.id) not in allowed:
+            raise HTTPException(
+                status_code=403,
+                detail=f"В бесплатном тарифе можно включить только {FREE_MAX_TRIGGERS} триггеров. Перейдите на тариф выше, чтобы использовать больше.",
+            )
     t.enabled = req.enabled
     db.add(t)
     db.commit()
@@ -176,6 +200,15 @@ def update_trigger(req: UpdateTriggerRequest, user=Depends(get_current_user), db
     t = db.get(models.Trigger, req.id)
     if not t or t.user_id != user.id:
         raise HTTPException(404, detail='not found')
+
+    tariff, _lic = resolve_tariff(db, user.id)
+    if req.enabled is True and tariff.id == TARIFF_FREE.id:
+        allowed = _free_allowed_trigger_ids(db, user.id)
+        if int(t.id) not in allowed:
+            raise HTTPException(
+                status_code=403,
+                detail=f"В бесплатном тарифе можно включить только {FREE_MAX_TRIGGERS} триггеров. Перейдите на тариф выше, чтобы использовать больше.",
+            )
 
     if req.trigger_name is not None:
         tn = req.trigger_name.strip()

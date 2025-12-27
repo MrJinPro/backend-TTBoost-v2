@@ -15,7 +15,8 @@ from app.services.security import decode_token
 from app.services.tts_service import generate_tts, AVAILABLE_VOICES
 from app.services.tiktok_service import tiktok_service
 from app.services.gift_sounds import get_global_gift_sound_path
-from app.services.plans import resolve_tariff, normalize_platform
+from app.services.plans import TARIFF_FREE, resolve_tariff, normalize_platform
+from app.services.limits import FREE_MAX_TRIGGERS
 from app.services.gift_stats_service import record_gift_and_update_stats
 
 try:
@@ -128,6 +129,8 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
     seen_viewers = set()  # Отслеживание зрителей, которых уже «видели» в этой сессии (join или first_message)
     _cooldown = {}  # (scope, trigger_id, username_or_star) -> last_time_monotonic
     active_tiktok_username: str | None = None
+    _allowed_trigger_ids_cache: set[int] | None = None
+    _allowed_trigger_ids_cache_at: float = 0.0
 
     def _cooldown_allows(trigger_id: int, seconds: float | int | None, username: str | None = None) -> bool:
         if not seconds:
@@ -153,6 +156,24 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
             v = str(t.condition_value).strip().lower()
             return v in ("true", "1", "yes", "*")
         return False
+
+    def _get_allowed_trigger_ids() -> set[int] | None:
+        nonlocal _allowed_trigger_ids_cache, _allowed_trigger_ids_cache_at
+        if tariff.id != TARIFF_FREE.id:
+            return None
+        now = time.monotonic()
+        if _allowed_trigger_ids_cache is not None and (now - _allowed_trigger_ids_cache_at) < 5.0:
+            return _allowed_trigger_ids_cache
+        rows = (
+            db.query(models.Trigger.id)
+            .filter(models.Trigger.user_id == user.id)
+            .order_by(models.Trigger.priority.desc(), models.Trigger.created_at.asc())
+            .limit(FREE_MAX_TRIGGERS)
+            .all()
+        )
+        _allowed_trigger_ids_cache = {int(r[0]) for r in rows}
+        _allowed_trigger_ids_cache_at = now
+        return _allowed_trigger_ids_cache
 
     def get_current_settings():
         """Получить актуальные настройки пользователя (голос + флаги)."""
@@ -184,14 +205,19 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
         voice_id = s["voice_id"]
         sanitized_text = _remove_emojis(text)
         # find trigger
-        trig = (
+        allowed_ids = _get_allowed_trigger_ids()
+        q = (
             db.query(models.Trigger)
-            .filter(models.Trigger.user_id == user.id,
-                    models.Trigger.event_type == "chat",
-                    models.Trigger.enabled == True)
-            .order_by(models.Trigger.priority.desc())
-            .all()
+            .filter(
+                models.Trigger.user_id == user.id,
+                models.Trigger.event_type == "chat",
+                models.Trigger.enabled == True,
+            )
+            .order_by(models.Trigger.priority.desc(), models.Trigger.created_at.asc())
         )
+        if allowed_ids is not None:
+            q = q.filter(models.Trigger.id.in_(allowed_ids))
+        trig = q.all()
         tts_url = None
         for t in trig:
             if t.condition_key == "message_contains" and t.condition_value and t.condition_value.lower() in text.lower():
@@ -228,12 +254,19 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
                 await on_join(u)
             
             # Также проверяем viewer_first_message триггеры
-            trig_v = (
+            allowed_ids = _get_allowed_trigger_ids()
+            qv = (
                 db.query(models.Trigger)
-                .filter(models.Trigger.user_id == user.id, models.Trigger.event_type == "viewer_first_message", models.Trigger.enabled == True)
-                .order_by(models.Trigger.priority.desc())
-                .all()
+                .filter(
+                    models.Trigger.user_id == user.id,
+                    models.Trigger.event_type == "viewer_first_message",
+                    models.Trigger.enabled == True,
+                )
+                .order_by(models.Trigger.priority.desc(), models.Trigger.created_at.asc())
             )
+            if allowed_ids is not None:
+                qv = qv.filter(models.Trigger.id.in_(allowed_ids))
+            trig_v = qv.all()
             for t in trig_v:
                 matched = False
                 if _matches_always(t):
@@ -263,12 +296,19 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
         if WS_DEBUG:
             logger.debug("on_gift: user=%s gift_id=%s gift_name=%s count=%s diamonds=%s", u, gift_id, gift_name, count, diamonds)
         # Ищем триггер для подарка (только звуковые файлы, НЕ TTS!)
-        trig = (
+        allowed_ids = _get_allowed_trigger_ids()
+        q = (
             db.query(models.Trigger)
-            .filter(models.Trigger.user_id == user.id, models.Trigger.event_type == "gift", models.Trigger.enabled == True)
-            .order_by(models.Trigger.priority.desc())
-            .all()
+            .filter(
+                models.Trigger.user_id == user.id,
+                models.Trigger.event_type == "gift",
+                models.Trigger.enabled == True,
+            )
+            .order_by(models.Trigger.priority.desc(), models.Trigger.created_at.asc())
         )
+        if allowed_ids is not None:
+            q = q.filter(models.Trigger.id.in_(allowed_ids))
+        trig = q.all()
         if WS_DEBUG:
             logger.debug("on_gift: triggers=%d", len(trig))
         sound_url = None
@@ -398,12 +438,19 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
         tts_url = None
         
         # Проверяем триггеры для добавления звука (опционально)
-        trig = (
+        allowed_ids = _get_allowed_trigger_ids()
+        q = (
             db.query(models.Trigger)
-            .filter(models.Trigger.user_id == user.id, models.Trigger.event_type == "viewer_join", models.Trigger.enabled == True)
-            .order_by(models.Trigger.priority.desc())
-            .all()
+            .filter(
+                models.Trigger.user_id == user.id,
+                models.Trigger.event_type == "viewer_join",
+                models.Trigger.enabled == True,
+            )
+            .order_by(models.Trigger.priority.desc(), models.Trigger.created_at.asc())
         )
+        if allowed_ids is not None:
+            q = q.filter(models.Trigger.id.in_(allowed_ids))
+        trig = q.all()
         if WS_DEBUG:
             logger.debug("on_join: triggers=%d", len(trig))
         
@@ -489,12 +536,19 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
         s = get_current_settings()
         sound_url = None
 
-        trig = (
+        allowed_ids = _get_allowed_trigger_ids()
+        q = (
             db.query(models.Trigger)
-            .filter(models.Trigger.user_id == user.id, models.Trigger.event_type == "follow", models.Trigger.enabled == True)
-            .order_by(models.Trigger.priority.desc())
-            .all()
+            .filter(
+                models.Trigger.user_id == user.id,
+                models.Trigger.event_type == "follow",
+                models.Trigger.enabled == True,
+            )
+            .order_by(models.Trigger.priority.desc(), models.Trigger.created_at.asc())
         )
+        if allowed_ids is not None:
+            q = q.filter(models.Trigger.id.in_(allowed_ids))
+        trig = q.all()
         for t in trig:
             matched = False
             if not t.condition_key or t.condition_key == "always":
@@ -524,12 +578,19 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
         s = get_current_settings()
         sound_url = None
 
-        trig = (
+        allowed_ids = _get_allowed_trigger_ids()
+        q = (
             db.query(models.Trigger)
-            .filter(models.Trigger.user_id == user.id, models.Trigger.event_type == "subscribe", models.Trigger.enabled == True)
-            .order_by(models.Trigger.priority.desc())
-            .all()
+            .filter(
+                models.Trigger.user_id == user.id,
+                models.Trigger.event_type == "subscribe",
+                models.Trigger.enabled == True,
+            )
+            .order_by(models.Trigger.priority.desc(), models.Trigger.created_at.asc())
         )
+        if allowed_ids is not None:
+            q = q.filter(models.Trigger.id.in_(allowed_ids))
+        trig = q.all()
         for t in trig:
             matched = False
             if not t.condition_key or t.condition_key == "always":
