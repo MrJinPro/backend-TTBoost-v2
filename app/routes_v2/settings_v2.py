@@ -41,6 +41,11 @@ class UpdateSettingsRequest(BaseModel):
     auto_connect_live: bool | None = None
     tts_volume: int | None = None
     gifts_volume: int | None = None
+    silence_enabled: bool | None = None
+    silence_minutes: int | None = None
+    chat_tts_mode: str | None = None
+    chat_tts_prefixes: str | None = None
+    chat_tts_min_diamonds: int | None = None
 
 
 @router.post("/update")
@@ -125,6 +130,49 @@ def update_settings(
         s.tts_volume = int(req.tts_volume)
     if req.gifts_volume is not None:
         s.gifts_volume = int(req.gifts_volume)
+
+    # Chat TTS filter settings
+    if req.chat_tts_mode is not None:
+        v = str(req.chat_tts_mode).strip().lower()
+        if v not in ("all", "prefix", "donor"):
+            raise HTTPException(status_code=400, detail="invalid chat_tts_mode")
+        s.chat_tts_mode = v
+
+    if req.chat_tts_prefixes is not None:
+        raw = str(req.chat_tts_prefixes)
+        # keep only first 8 non-space characters
+        cleaned = "".join([c for c in raw if not c.isspace()])[:8]
+        s.chat_tts_prefixes = cleaned or "."
+
+    if req.chat_tts_min_diamonds is not None:
+        try:
+            md = int(req.chat_tts_min_diamonds)
+        except Exception:
+            md = 0
+        if md < 0:
+            md = 0
+        if md > 100000:
+            md = 100000
+        s.chat_tts_min_diamonds = md
+
+    # Premium feature: silence mode (requires premium engines; we gate by eleven availability in tariff)
+    if req.silence_enabled is not None:
+        if req.silence_enabled and ("eleven" not in tariff.allowed_tts_engines):
+            raise HTTPException(status_code=403, detail="premium required")
+        s.silence_enabled = bool(req.silence_enabled)
+
+    if req.silence_minutes is not None:
+        if "eleven" not in tariff.allowed_tts_engines:
+            raise HTTPException(status_code=403, detail="premium required")
+        try:
+            minutes = int(req.silence_minutes)
+        except Exception:
+            minutes = 5
+        if minutes < 1:
+            minutes = 1
+        if minutes > 60:
+            minutes = 60
+        s.silence_minutes = minutes
     
     db.commit()
     db.refresh(s)
@@ -135,6 +183,11 @@ def update_settings(
         "auto_connect_live": s.auto_connect_live,
         "tts_volume": s.tts_volume,
         "gifts_volume": s.gifts_volume,
+        "silence_enabled": bool(getattr(s, "silence_enabled", False)),
+        "silence_minutes": int(getattr(s, "silence_minutes", 5) or 5),
+        "chat_tts_mode": str(getattr(s, "chat_tts_mode", "all") or "all"),
+        "chat_tts_prefixes": str(getattr(s, "chat_tts_prefixes", ".") or "."),
+        "chat_tts_min_diamonds": int(getattr(s, "chat_tts_min_diamonds", 0) or 0),
         "tiktok_username": user.tiktok_username,
     }}
 
@@ -146,17 +199,29 @@ class SettingsResponse(BaseModel):
     auto_connect_live: bool
     tts_volume: int
     gifts_volume: int
+    silence_enabled: bool = False
+    silence_minutes: int = 5
+    chat_tts_mode: str = "all"
+    chat_tts_prefixes: str = "."
+    chat_tts_min_diamonds: int = 0
     tiktok_username: str | None = None
 
 
 @router.get("/get", response_model=SettingsResponse)
 def get_settings(user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    tariff, _lic = resolve_tariff(db, user.id)
     s = db.query(models.UserSettings).filter(models.UserSettings.user_id == user.id).first()
     if not s:
         s = models.UserSettings(user_id=user.id)
         db.add(s)
         db.commit()
         db.refresh(s)
+
+    # do not expose enabled=true for free tariffs
+    silence_enabled = bool(getattr(s, "silence_enabled", False))
+    if "eleven" not in tariff.allowed_tts_engines:
+        silence_enabled = False
+
     return SettingsResponse(
         voice_id=s.voice_id,
         tts_enabled=s.tts_enabled,
@@ -164,5 +229,10 @@ def get_settings(user: models.User = Depends(get_current_user), db: Session = De
         auto_connect_live=s.auto_connect_live,
         tts_volume=s.tts_volume,
         gifts_volume=s.gifts_volume,
+        silence_enabled=silence_enabled,
+        silence_minutes=int(getattr(s, "silence_minutes", 5) or 5),
+        chat_tts_mode=str(getattr(s, "chat_tts_mode", "all") or "all"),
+        chat_tts_prefixes=str(getattr(s, "chat_tts_prefixes", ".") or "."),
+        chat_tts_min_diamonds=int(getattr(s, "chat_tts_min_diamonds", 0) or 0),
         tiktok_username=user.tiktok_username,
     )

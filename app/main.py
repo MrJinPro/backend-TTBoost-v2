@@ -277,6 +277,41 @@ if not _has_column(insp, "user_settings", "auto_connect_live"):
     )
     insp = _refresh_insp()
 
+if not _has_column(insp, "user_settings", "silence_enabled"):
+    _try_exec(
+        "[DB] Added column user_settings.silence_enabled",
+        "ALTER TABLE user_settings ADD COLUMN silence_enabled BOOLEAN NOT NULL DEFAULT FALSE",
+    )
+    insp = _refresh_insp()
+
+if not _has_column(insp, "user_settings", "silence_minutes"):
+    _try_exec(
+        "[DB] Added column user_settings.silence_minutes",
+        "ALTER TABLE user_settings ADD COLUMN silence_minutes INTEGER NOT NULL DEFAULT 5",
+    )
+    insp = _refresh_insp()
+
+if not _has_column(insp, "user_settings", "chat_tts_mode"):
+    _try_exec(
+        "[DB] Added column user_settings.chat_tts_mode",
+        "ALTER TABLE user_settings ADD COLUMN chat_tts_mode VARCHAR(16) NOT NULL DEFAULT 'all'",
+    )
+    insp = _refresh_insp()
+
+if not _has_column(insp, "user_settings", "chat_tts_prefixes"):
+    _try_exec(
+        "[DB] Added column user_settings.chat_tts_prefixes",
+        "ALTER TABLE user_settings ADD COLUMN chat_tts_prefixes VARCHAR(32) NOT NULL DEFAULT '.'",
+    )
+    insp = _refresh_insp()
+
+if not _has_column(insp, "user_settings", "chat_tts_min_diamonds"):
+    _try_exec(
+        "[DB] Added column user_settings.chat_tts_min_diamonds",
+        "ALTER TABLE user_settings ADD COLUMN chat_tts_min_diamonds INTEGER NOT NULL DEFAULT 0",
+    )
+    insp = _refresh_insp()
+
 # 2) triggers
 if not _has_column(insp, "triggers", "executed_count"):
     _try_exec(

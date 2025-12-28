@@ -129,6 +129,11 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
     seen_viewers = set()  # Отслеживание зрителей, которых уже «видели» в этой сессии (join или first_message)
     _cooldown = {}  # (scope, trigger_id, username_or_star) -> last_time_monotonic
     active_tiktok_username: str | None = None
+    last_chat_at = time.monotonic()
+    last_silence_emit_at = 0.0
+    greeted_in_silence: set[str] = set()
+    recent_silence_phrases: list[str] = []
+    donor_diamonds_total: dict[str, int] = {}
     _allowed_trigger_ids_cache: set[int] | None = None
     _allowed_trigger_ids_cache_at: float = 0.0
 
@@ -193,14 +198,154 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
             voice_id = "gtts-ru"
 
         # дефолты если нет записей
+        silence_enabled = bool(getattr(settings, "silence_enabled", False)) if settings else False
+        silence_minutes = int(getattr(settings, "silence_minutes", 5) or 5) if settings else 5
+        if silence_minutes < 1:
+            silence_minutes = 1
+        if silence_minutes > 60:
+            silence_minutes = 60
+
+        # premium gate: silence requires eleven
+        if "eleven" not in tariff.allowed_tts_engines:
+            silence_enabled = False
+
+        chat_tts_mode = str(getattr(settings, "chat_tts_mode", "all") or "all") if settings else "all"
+        chat_tts_mode = chat_tts_mode.strip().lower()
+        if chat_tts_mode not in ("all", "prefix", "donor"):
+            chat_tts_mode = "all"
+
+        chat_tts_prefixes = str(getattr(settings, "chat_tts_prefixes", ".") or ".") if settings else "."
+        chat_tts_prefixes = "".join([c for c in chat_tts_prefixes if not c.isspace()])[:8] or "."
+
+        try:
+            chat_tts_min_diamonds = int(getattr(settings, "chat_tts_min_diamonds", 0) or 0) if settings else 0
+        except Exception:
+            chat_tts_min_diamonds = 0
+        if chat_tts_min_diamonds < 0:
+            chat_tts_min_diamonds = 0
+
         return {
             "voice_id": voice_id,
             "tts_enabled": (settings.tts_enabled if settings else True),
             "gift_sounds_enabled": (settings.gift_sounds_enabled if settings else True),
             "viewer_sounds_enabled": (settings.viewer_sounds_enabled if settings and hasattr(settings, 'viewer_sounds_enabled') else True),
+            "silence_enabled": silence_enabled,
+            "silence_minutes": silence_minutes,
+            "chat_tts_mode": chat_tts_mode,
+            "chat_tts_prefixes": chat_tts_prefixes,
+            "chat_tts_min_diamonds": chat_tts_min_diamonds,
         }
 
+    def _chat_tts_should_speak(user_login: str, message: str) -> tuple[bool, str]:
+        """Returns (should_speak, sanitized_text_for_tts)."""
+        s = get_current_settings()
+        if not s.get("tts_enabled"):
+            return (False, "")
+
+        mode = str(s.get("chat_tts_mode") or "all")
+        if mode == "all":
+            return (True, message)
+
+        u_key = _norm_tiktok_login(user_login)
+
+        if mode == "donor":
+            min_d = int(s.get("chat_tts_min_diamonds") or 0)
+            if min_d <= 0:
+                min_d = 1
+            have = int(donor_diamonds_total.get(u_key, 0) or 0)
+            if have >= min_d:
+                return (True, message)
+            return (False, "")
+
+        if mode == "prefix":
+            prefixes = str(s.get("chat_tts_prefixes") or ".")
+            prefixes_set = set(prefixes)
+            trimmed = (message or "").lstrip()
+            if not trimmed:
+                return (False, "")
+            if trimmed[0] not in prefixes_set:
+                return (False, "")
+            without = trimmed[1:].lstrip()
+            if not without:
+                return (False, "")
+            return (True, without)
+
+        return (True, message)
+
+    def _silence_is_active() -> tuple[bool, int]:
+        s = get_current_settings()
+        if not s.get("silence_enabled"):
+            return (False, int(s.get("silence_minutes") or 5))
+        minutes = int(s.get("silence_minutes") or 5)
+        now = time.monotonic()
+        return ((now - float(last_chat_at)) >= float(minutes) * 60.0, minutes)
+
+    def _choose_silence_phrase() -> str:
+        pool = [
+            "Ребята, не стесняйтесь — пишите в чат, я тут!",
+            "Как настроение? Напишите в чат пару слов 🙂",
+            "Если вы новенький — привет! Как вас зовут?",
+            "Что сейчас делаем: апаемся или фармим?",
+            "Оцените от 1 до 10, как идёт стрим.",
+            "Какая музыка вам больше заходит на стриме?",
+            "Кто откуда смотрит? Город в чат!",
+            "Пока тихо — давайте вопрос-ответ: задавайте вопросы.",
+            "Кто впервые на канале — ставьте плюсик в чат.",
+            "Какой контент хотите дальше: лайв, гайды или разборы?",
+            "Напишите, что сегодня у вас было самым классным событием.",
+            "Проверка связи: чат живой?",
+            "Какой ваш любимый момент на стримах?",
+            "Давайте актив — любой смайлик в чат.",
+            "Кто уже подписан — спасибо! Кто нет — загляните, если нравится.",
+            "Какой у вас сегодня уровень энергии — высокий или на минималках?",
+            "С каким настроем вы зашли на стрим?",
+            "Если есть идея для следующей темы — напишите.",
+            "Окей, чат на паузе. Я подожду… но вы пишите!",
+            "Кто тут главный по активности? Давайте оживим чат.",
+        ]
+        # avoid repeating last few
+        recent = set(recent_silence_phrases[-5:])
+        candidates = [p for p in pool if p not in recent]
+        if not candidates:
+            candidates = pool
+        return candidates[int(time.monotonic() * 1000) % len(candidates)]
+
+    async def _emit_silence_message(extra_text: str | None = None):
+        nonlocal last_chat_at, last_silence_emit_at
+        # rate limit: at most once per 60s
+        now = time.monotonic()
+        if last_silence_emit_at and (now - float(last_silence_emit_at)) < 60.0:
+            return
+
+        s = get_current_settings()
+        if not s.get("silence_enabled"):
+            return
+        if not active_tiktok_username or not tiktok_service.is_running(user.id):
+            return
+
+        voice_id = "eleven-premium-main"
+        phrase = (extra_text or _choose_silence_phrase()).strip()
+        if not phrase:
+            return
+
+        tts_url = ""
+        try:
+            tts_url = await generate_tts(phrase, voice_id, user_id=str(user.id))
+        except Exception as e:
+            logger.warning("Silence TTS failed: %s", e)
+            return
+
+        payload = {"type": "chat", "user": "Nova", "message": phrase}
+        if tts_url:
+            payload["tts_url"] = tts_url
+        await _safe_send(payload)
+        last_silence_emit_at = now
+        last_chat_at = now
+        recent_silence_phrases.append(phrase)
+
     async def on_comment(u: str, text: str):
+        nonlocal last_chat_at
+        last_chat_at = time.monotonic()
         s = get_current_settings()
         voice_id = s["voice_id"]
         sanitized_text = _remove_emojis(text)
@@ -234,8 +379,10 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
                     except Exception:
                         logger.warning("Не удалось обновить executed_count для триггера %s", t.id)
                     break
-        if not tts_url and s["tts_enabled"]:
-            tts_url = await generate_tts(sanitized_text, voice_id, user_id=str(user.id))
+        if not tts_url:
+            should_speak, tts_text = _chat_tts_should_speak(u, sanitized_text)
+            if should_speak:
+                tts_url = await generate_tts(tts_text, voice_id, user_id=str(user.id))
         # если tts выключен — отправим без tts_url
         payload = {"type": "chat", "user": u, "message": text}
         if tts_url:
@@ -293,6 +440,19 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
         u_key = _norm_tiktok_login(u)
         if u_key and u_key not in seen_viewers:
             await on_join(u)
+
+        # Track donors for chat TTS filtering (session-only)
+        try:
+            if u_key:
+                d = int(diamonds or 0)
+                c = int(count or 0)
+                if c <= 0:
+                    c = 1
+                delta = d * c
+                if delta > 0:
+                    donor_diamonds_total[u_key] = int(donor_diamonds_total.get(u_key, 0) or 0) + int(delta)
+        except Exception:
+            pass
         if WS_DEBUG:
             logger.debug("on_gift: user=%s gift_id=%s gift_name=%s count=%s diamonds=%s", u, gift_id, gift_name, count, diamonds)
         # Ищем триггер для подарка (только звуковые файлы, НЕ TTS!)
@@ -532,6 +692,22 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
             logger.debug("on_join: send payload=%s", payload)
         await websocket.send_text(json.dumps(payload, ensure_ascii=False))
 
+        # Silence mode: greet new viewers if chat is already silent
+        try:
+            silent, _m = _silence_is_active()
+        except Exception:
+            silent = False
+        if silent and viewer_key not in greeted_in_silence:
+            greeted_in_silence.add(viewer_key)
+            greet_name = (login_raw or nickname_raw or "")
+            greet_name = str(greet_name).strip()
+            if greet_name.startswith("@"):  # avoid double @ in speech
+                greet_name = greet_name[1:]
+            if greet_name:
+                await _emit_silence_message(f"Привет, {greet_name}! Рад видеть тебя на стриме. Напиши в чат, как дела?")
+            else:
+                await _emit_silence_message("Привет! Рад видеть тебя на стриме. Напиши в чат, как дела?")
+
     async def on_follow(u: str):
         s = get_current_settings()
         sound_url = None
@@ -632,6 +808,14 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
             except Exception:
                 return
 
+        async def _silence_monitor():
+            while True:
+                await asyncio.sleep(5)
+                silent, _minutes = _silence_is_active()
+                if not silent:
+                    continue
+                await _emit_silence_message()
+
         async def _on_tiktok_connect(username: str):
             nonlocal active_tiktok_username
             active_tiktok_username = username
@@ -661,6 +845,13 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
             "message": "WS подключен. Подключение к LIVE выполняется по команде.",
             "tiktok_username": (user.tiktok_username or None),
         })
+
+        silence_task: asyncio.Task | None = asyncio.create_task(_silence_monitor())
+        try:
+            if 'silence_task' in locals() and silence_task is not None:
+                silence_task.cancel()
+        except Exception:
+            pass
 
         # Backwards compatibility: optional autostart on WS connect (disabled by default)
         ws_autostart = str(os.getenv("TT_WS_AUTOSTART", "0")).strip().lower() in ("1", "true", "yes", "on")

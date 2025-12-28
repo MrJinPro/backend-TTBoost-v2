@@ -393,24 +393,31 @@ class TikTokService:
             @client.on(CommentEvent)
             async def on_comment(event: CommentEvent):
                 """Обработка комментариев - только новые события после подключения"""
-                # ВАЖНО: Используем unique_id (логин) вместо nickname для стабильности
-                print(f"🔍 DEBUG: event.user.unique_id = '{event.user.unique_id}', event.user.nickname = '{event.user.nickname}'")
-                username = event.user.unique_id or event.user.nickname
-                text = event.comment
-                print(f"📨 CommentEvent получен от {username}: {text}, on_comment_callback={'ЕСТЬ' if on_comment_callback else 'НЕТ'}")
+                # В разных версиях TikTokLive структура user может отличаться.
+                login, nickname = _extract_user_identifiers(getattr(event, "user", None))
+                username = login or nickname or "anonymous"
+                text = getattr(event, "comment", None) or getattr(event, "text", None) or ""
+                try:
+                    text = str(text)
+                except Exception:
+                    text = ""
+
+                logger.debug(
+                    "📨 CommentEvent: login=%s nickname=%s text_len=%s callback=%s",
+                    login,
+                    nickname,
+                    len(text),
+                    bool(on_comment_callback),
+                )
                 if on_comment_callback:
                     # Фильтрация: пропускаем события, которые были до подключения
                     # TikTokLive может отправить несколько старых событий при подключении
-                    print(f"💬 TikTok комментарий от {username}: {text}")
+                    logger.info(f"💬 TikTok комментарий от {username}: {text}")
                     self._last_activity[user_id] = datetime.now()
                     try:
-                        print(f"🔥 Вызываем on_comment_callback...")
                         await on_comment_callback(username, text)
-                        print(f"✅ on_comment_callback выполнен успешно!")
                     except Exception as e:
-                        print(f"❌ Ошибка в comment callback: {e}")
-                        import traceback
-                        traceback.print_exc()
+                        logger.error(f"❌ Ошибка в comment callback: {e}")
             
             @client.on(GiftEvent)
             async def on_gift(event: GiftEvent):
@@ -422,8 +429,8 @@ class TikTokService:
                 # В live_tester мы НЕ задерживаем стриковые подарки, сразу отдаём каждое обновление.
                 # Повторяем ту же логику здесь: убираем фильтр streaking.
                 gift_obj = event.gift
-                # ВАЖНО: Используем unique_id (логин) вместо nickname для стабильности
-                username = event.user.unique_id or event.user.nickname
+                login, nickname = _extract_user_identifiers(getattr(event, "user", None))
+                username = login or nickname or "anonymous"
                 # Надёжное извлечение ID и имени
                 gift_id = getattr(gift_obj, 'id', None) or getattr(gift_obj, 'name', 'unknown_gift')
                 gift_name = getattr(gift_obj, 'name', str(gift_id))
@@ -476,8 +483,9 @@ class TikTokService:
             async def on_like(event: LikeEvent):
                 """Обработка лайков"""
                 if on_like_callback:
-                    username = event.user.unique_id or event.user.nickname
-                    count = event.count
+                    login, nickname = _extract_user_identifiers(getattr(event, "user", None))
+                    username = login or nickname or "anonymous"
+                    count = getattr(event, "count", None) or 0
                     logger.info(f"TikTok лайки от {username}: {count}")
                     self._last_activity[user_id] = datetime.now()
                     try:

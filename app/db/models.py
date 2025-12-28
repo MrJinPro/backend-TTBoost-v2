@@ -53,6 +53,16 @@ class UserSettings(Base):
     tts_volume = Column(Integer, default=100)
     gifts_volume = Column(Integer, default=100)
 
+    # Chat TTS filtering
+    # mode: all | prefix | donor
+    chat_tts_mode = Column(String(16), default="all")
+    chat_tts_prefixes = Column(String(32), default=".")
+    chat_tts_min_diamonds = Column(Integer, default=0)
+
+    # Premium feature: auto-engagement when chat is silent
+    silence_enabled = Column(Boolean, default=False)
+    silence_minutes = Column(Integer, default=5)
+
     user = relationship("User", back_populates="settings")
 
 
