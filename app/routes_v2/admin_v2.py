@@ -4,6 +4,7 @@ import os
 import shutil
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
+from sqlalchemy import func, or_
 from datetime import datetime, timedelta
 
 from app.db.database import SessionLocal
@@ -16,6 +17,9 @@ from app.services.plans import (
     TARIFF_DUO,
     canonicalize_license_plan,
 )
+
+from app.services.admin_state import STATE as ADMIN_STATE
+from app.routes_v2 import ws_v2
 
 
 router = APIRouter()
@@ -78,6 +82,52 @@ def require_superadmin(user: models.User = Depends(get_current_user)) -> models.
     return user
 
 
+def _log_admin_action(
+    db: Session,
+    actor_user_id: str | None,
+    action: str,
+    target_user_id: str | None = None,
+    before: dict | None = None,
+    after: dict | None = None,
+) -> None:
+    try:
+        db.add(
+            models.AdminAction(
+                actor_user_id=actor_user_id,
+                action=(action or "").strip()[:80] or "unknown",
+                target_user_id=target_user_id,
+                before=before,
+                after=after,
+                created_at=datetime.utcnow(),
+            )
+        )
+        db.flush()
+    except Exception:
+        # Never break business flow due to audit logging.
+        pass
+
+
+def _guess_platform_from_ua(ua: str | None) -> str | None:
+    s = (ua or "").strip().lower()
+    if not s:
+        return None
+    if "android" in s:
+        return "android"
+    if "iphone" in s or "ipad" in s or "ios" in s:
+        return "ios"
+    # Desktop/web fallback.
+    return "desktop"
+
+
+def _is_online(last_ws_at: datetime | None, ttl_seconds: int = 90) -> bool:
+    if not last_ws_at:
+        return False
+    try:
+        return (datetime.utcnow() - last_ws_at).total_seconds() <= float(ttl_seconds)
+    except Exception:
+        return False
+
+
 class RoleItem(BaseModel):
     id: str
 
@@ -94,12 +144,21 @@ def list_roles(_user: models.User = Depends(require_staff_user)):
 class AdminUserItem(BaseModel):
     id: str
     username: str
+    email: str | None = None
     role: str
     created_at: str
     tiktok_username: str | None = None
     tariff_id: str | None = None
     tariff_name: str | None = None
     license_expires_at: str | None = None
+    status: str | None = None  # active|blocked|expired
+    platform: str | None = None  # android|ios|desktop|unknown
+    region: str | None = None
+    last_login_at: str | None = None
+    last_live_at: str | None = None
+    last_live_tiktok_username: str | None = None
+    online_now: bool = False
+    tiktok_accounts_count: int = 0
     is_banned: bool = False
     banned_at: str | None = None
     banned_reason: str | None = None
@@ -152,6 +211,11 @@ def _get_active_licenses_for_users(db: Session, user_ids: list[str]) -> dict[str
 @router.get("/users", response_model=ListUsersResponse)
 def list_users(
     q: str | None = None,
+    tariff_id: str | None = None,
+    activity: str | None = None,  # online|inactive
+    inactive_days: int | None = None,
+    platform: str | None = None,  # android|ios|desktop
+    region: str | None = None,
     limit: int = 50,
     offset: int = 0,
     _user: models.User = Depends(require_staff_user),
@@ -162,10 +226,83 @@ def list_users(
     if offset < 0:
         raise HTTPException(status_code=400, detail="invalid offset")
 
+    now = datetime.utcnow()
+
     query = db.query(models.User)
     if q:
         qq = q.strip().lower()
-        query = query.filter(models.User.username.ilike(f"%{qq}%"))
+        query = query.filter(
+            or_(
+                models.User.username.ilike(f"%{qq}%"),
+                models.User.email.ilike(f"%{qq}%"),
+            )
+        )
+
+    # Region filter
+    if region is not None and region.strip():
+        rr = region.strip().lower()
+        query = query.filter(func.lower(models.User.region) == rr)
+
+    # Activity filters
+    if activity is not None and activity.strip():
+        a = activity.strip().lower()
+        # Keep semantics simple for MVP: online = last_ws_at within 90s; inactive = last_login_at older than X days (or NULL).
+        if a == "online":
+            cutoff = now - timedelta(seconds=90)
+            query = query.filter(models.User.last_ws_at.is_not(None)).filter(models.User.last_ws_at >= cutoff)
+        elif a in ("inactive", "stale"):
+            days = int(inactive_days or 30)
+            if days < 1:
+                days = 1
+            if days > 3650:
+                days = 3650
+            cutoff = now - timedelta(days=days)
+            query = query.filter(or_(models.User.last_login_at.is_(None), models.User.last_login_at < cutoff))
+
+    # Explicit inactive_days (when activity filter isn't used)
+    if (activity is None or not activity.strip()) and inactive_days is not None:
+        days = int(inactive_days)
+        if days < 1:
+            days = 1
+        if days > 3650:
+            days = 3650
+        cutoff = now - timedelta(days=days)
+        query = query.filter(or_(models.User.last_login_at.is_(None), models.User.last_login_at < cutoff))
+
+    # Platform filter (best-effort based on last_user_agent)
+    if platform is not None and platform.strip():
+        p = platform.strip().lower()
+        ua_lower = func.lower(models.User.last_user_agent)
+        is_android = ua_lower.like("%android%")
+        is_ios = or_(ua_lower.like("%iphone%"), ua_lower.like("%ipad%"), ua_lower.like("%ios%"))
+        if p == "android":
+            query = query.filter(models.User.last_user_agent.is_not(None)).filter(is_android)
+        elif p == "ios":
+            query = query.filter(models.User.last_user_agent.is_not(None)).filter(is_ios)
+        elif p == "desktop":
+            query = query.filter(or_(models.User.last_user_agent.is_(None), (~is_android & ~is_ios)))
+
+    # Tariff filter (based on active entitlement licenses)
+    if tariff_id is not None and tariff_id.strip():
+        tid = tariff_id.strip().lower()
+        paid_plans = [TARIFF_ONE_MOBILE.id, TARIFF_ONE_DESKTOP.id, TARIFF_DUO.id]
+        paid_license_plans = ["nova_streamer_one_mobile", "nova_streamer_one_desktop", "nova_streamer_duo"]
+
+        active_lic = (
+            db.query(models.LicenseKey.user_id)
+            .filter(models.LicenseKey.status == models.LicenseStatus.active)
+            .filter((models.LicenseKey.expires_at.is_(None)) | (models.LicenseKey.expires_at >= now))
+        )
+
+        if tid == TARIFF_ONE_MOBILE.id:
+            query = query.filter(models.User.id.in_(active_lic.filter(models.LicenseKey.plan == "nova_streamer_one_mobile")))
+        elif tid == TARIFF_ONE_DESKTOP.id:
+            query = query.filter(models.User.id.in_(active_lic.filter(models.LicenseKey.plan == "nova_streamer_one_desktop")))
+        elif tid == TARIFF_DUO.id:
+            query = query.filter(models.User.id.in_(active_lic.filter(models.LicenseKey.plan == "nova_streamer_duo")))
+        elif tid == TARIFF_FREE.id:
+            # Free = no active paid entitlement.
+            query = query.filter(models.User.id.notin_(active_lic.filter(models.LicenseKey.plan.in_(paid_license_plans))))
 
     total = query.count()
     rows = (
@@ -178,12 +315,55 @@ def list_users(
     user_ids = [u.id for u in rows]
     best_lic = _get_active_licenses_for_users(db, user_ids)
 
+    # Ever had paid plan? (for expired status)
+    paid_license_plans = ["nova_streamer_one_mobile", "nova_streamer_one_desktop", "nova_streamer_duo"]
+    paid_user_ids = {
+        r[0]
+        for r in (
+            db.query(models.LicenseKey.user_id)
+            .filter(models.LicenseKey.user_id.in_(user_ids))
+            .filter(models.LicenseKey.plan.in_(paid_license_plans))
+            .distinct()
+            .all()
+        )
+        if r and r[0]
+    }
+
+    # TikTok accounts count
+    tiktok_counts = {
+        uid: int(cnt or 0)
+        for (uid, cnt) in (
+            db.query(models.UserTikTokAccount.user_id, func.count(models.UserTikTokAccount.id))
+            .filter(models.UserTikTokAccount.user_id.in_(user_ids))
+            .group_by(models.UserTikTokAccount.user_id)
+            .all()
+        )
+    }
+
+    # Last LIVE session per user
+    last_live: dict[str, tuple[datetime | None, str | None]] = {}
+    try:
+        ss_rows = (
+            db.query(models.StreamSession)
+            .filter(models.StreamSession.user_id.in_(user_ids))
+            .order_by(models.StreamSession.started_at.desc())
+            .all()
+        )
+        for ss in ss_rows:
+            uid = getattr(ss, "user_id", None)
+            if not uid or uid in last_live:
+                continue
+            last_live[str(uid)] = (getattr(ss, "started_at", None), getattr(ss, "tiktok_username", None))
+    except Exception:
+        last_live = {}
+
     return ListUsersResponse(
         total=total,
         items=[
             AdminUserItem(
                 id=u.id,
                 username=u.username,
+                email=getattr(u, "email", None),
                 role=(u.role or "user"),
                 created_at=u.created_at.isoformat() if u.created_at else "",
                 tiktok_username=u.tiktok_username,
@@ -194,6 +374,25 @@ def list_users(
                     if (best_lic.get(u.id) and best_lic.get(u.id).expires_at)
                     else None
                 ),
+                status=(
+                    "blocked"
+                    if bool(getattr(u, "is_banned", False))
+                    else (
+                        "expired"
+                        if (
+                            _tariff_from_license_plan(best_lic.get(u.id).plan if best_lic.get(u.id) else None).id == TARIFF_FREE.id
+                            and (u.id in paid_user_ids)
+                        )
+                        else "active"
+                    )
+                ),
+                platform=_guess_platform_from_ua(getattr(u, "last_user_agent", None)) or "unknown",
+                region=getattr(u, "region", None),
+                last_login_at=(getattr(u, "last_login_at", None).isoformat() if getattr(u, "last_login_at", None) else None),
+                last_live_at=(last_live.get(u.id)[0].isoformat() if (last_live.get(u.id) and last_live.get(u.id)[0]) else None),
+                last_live_tiktok_username=(last_live.get(u.id)[1] if last_live.get(u.id) else None),
+                online_now=_is_online(getattr(u, "last_ws_at", None), ttl_seconds=90),
+                tiktok_accounts_count=int(tiktok_counts.get(u.id, 0)),
                 is_banned=bool(getattr(u, "is_banned", False)),
                 banned_at=(u.banned_at.isoformat() if getattr(u, "banned_at", None) else None),
                 banned_reason=getattr(u, "banned_reason", None),

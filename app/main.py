@@ -356,6 +356,41 @@ if not _has_column(insp, "users", "avatar_filename"):
     )
     insp = _refresh_insp()
 
+if not _has_column(insp, "users", "region"):
+    _try_exec(
+        "[DB] Added column users.region",
+        "ALTER TABLE users ADD COLUMN region VARCHAR(64)",
+    )
+    insp = _refresh_insp()
+
+if not _has_column(insp, "users", "last_login_at"):
+    _try_exec(
+        "[DB] Added column users.last_login_at",
+        "ALTER TABLE users ADD COLUMN last_login_at TIMESTAMP",
+    )
+    insp = _refresh_insp()
+
+if not _has_column(insp, "users", "last_login_ip"):
+    _try_exec(
+        "[DB] Added column users.last_login_ip",
+        "ALTER TABLE users ADD COLUMN last_login_ip VARCHAR(64)",
+    )
+    insp = _refresh_insp()
+
+if not _has_column(insp, "users", "last_user_agent"):
+    _try_exec(
+        "[DB] Added column users.last_user_agent",
+        "ALTER TABLE users ADD COLUMN last_user_agent VARCHAR(255)",
+    )
+    insp = _refresh_insp()
+
+if not _has_column(insp, "users", "last_ws_at"):
+    _try_exec(
+        "[DB] Added column users.last_ws_at",
+        "ALTER TABLE users ADD COLUMN last_ws_at TIMESTAMP",
+    )
+    insp = _refresh_insp()
+
 # 4) store_purchases table
 try:
     tables = set(insp.get_table_names())

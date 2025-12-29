@@ -23,6 +23,11 @@ class User(Base):
     is_banned = Column(Boolean, default=False, nullable=False)
     banned_at = Column(DateTime, nullable=True)
     banned_reason = Column(String(255), nullable=True)
+    region = Column(String(64), nullable=True)
+    last_login_at = Column(DateTime, nullable=True)
+    last_login_ip = Column(String(64), nullable=True)
+    last_user_agent = Column(String(255), nullable=True)
+    last_ws_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     settings = relationship("UserSettings", back_populates="user", uselist=False, cascade="all, delete-orphan")
@@ -305,6 +310,32 @@ class PushDeviceToken(Base):
     __table_args__ = (
         UniqueConstraint("platform", "token", name="uq_push_platform_token"),
     )
+
+
+class UserSession(Base):
+    __tablename__ = "user_sessions"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    user_id = Column(String, ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False)
+
+    platform = Column(String(32), nullable=True)
+    ip = Column(String(64), nullable=True)
+    user_agent = Column(String(255), nullable=True)
+    region = Column(String(64), nullable=True)
+
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+
+class AdminAction(Base):
+    __tablename__ = "admin_actions"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    actor_user_id = Column(String, ForeignKey("users.id", ondelete="SET NULL"), index=True, nullable=True)
+    action = Column(String(80), index=True, nullable=False)
+    target_user_id = Column(String, ForeignKey("users.id", ondelete="SET NULL"), index=True, nullable=True)
+    before = Column(JSON, nullable=True)
+    after = Column(JSON, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
 
 class GiftEvent(Base):

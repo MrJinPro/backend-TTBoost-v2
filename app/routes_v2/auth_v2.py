@@ -99,7 +99,7 @@ class LoginRequest(BaseModel):
 
 
 @router.post("/login", response_model=AuthResponse)
-def login(req: LoginRequest, db: Session = Depends(get_db)):
+def login(req: LoginRequest, request: Request, db: Session = Depends(get_db)):
     username = _normalize_username(req.username)
     # Backward-compat: older deployments may have stored mixed-case usernames.
     # We normalize input to lowercase, so search case-insensitively.
@@ -121,6 +121,59 @@ def login(req: LoginRequest, db: Session = Depends(get_db)):
     if auth_debug:
         import logging
         logging.getLogger(__name__).info(f"AUTH_DEBUG login success for '{username}' user_id={user.id}")
+    # Record login metadata (best-effort).
+    try:
+        now = datetime.utcnow()
+
+        # Resolve IP behind proxy.
+        ip = None
+        xff = request.headers.get("x-forwarded-for")
+        if xff:
+            # Can be a comma-separated list.
+            ip = xff.split(",")[0].strip() or None
+        if not ip:
+            ip = request.client.host if request.client else None
+
+        ua = (request.headers.get("user-agent") or "").strip()[:255] or None
+
+        # Best-effort region/country headers (Cloudflare/Vercel/etc.)
+        region = (
+            request.headers.get("cf-ipcountry")
+            or request.headers.get("x-vercel-ip-country")
+            or request.headers.get("x-country")
+            or request.headers.get("x-geo-country")
+            or request.headers.get("x-client-region")
+        )
+        region = (region or "").strip()[:64] or None
+
+        # Optional client hint.
+        platform = (request.headers.get("x-client-platform") or "").strip()[:32] or None
+
+        # Update denormalized last_* fields.
+        try:
+            user.last_login_at = now
+            user.last_login_ip = ip
+            user.last_user_agent = ua
+            if region:
+                user.region = region
+        except Exception:
+            pass
+
+        db.add(models.UserSession(
+            user_id=user.id,
+            platform=platform,
+            ip=ip,
+            user_agent=ua,
+            region=region,
+            created_at=now,
+        ))
+        db.commit()
+    except Exception:
+        try:
+            db.rollback()
+        except Exception:
+            pass
+
     token = create_access_token(user.id)
     return AuthResponse(access_token=token)
 

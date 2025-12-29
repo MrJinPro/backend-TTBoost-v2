@@ -18,6 +18,10 @@ from app.services.gift_sounds import get_global_gift_sound_path
 from app.services.plans import TARIFF_FREE, resolve_tariff, normalize_platform
 from app.services.limits import FREE_MAX_TRIGGERS
 from app.services.gift_stats_service import record_gift_and_update_stats
+from app.services.admin_state import STATE as ADMIN_STATE
+
+
+ACTIVE_WS_CONNECTIONS = 0
 
 try:
     # В новых версиях TikTokLive есть отдельное исключение, дающее понятный текст
@@ -109,7 +113,28 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
     platform = normalize_platform(platform_raw)
     tariff, _lic = resolve_tariff(db, user.id)
 
+    if ADMIN_STATE.maintenance_mode or ADMIN_STATE.disable_new_connections:
+        try:
+            await websocket.accept()
+            await websocket.send_text(
+                json.dumps(
+                    {
+                        "type": "status",
+                        "connected": False,
+                        "message": "Сервис на обслуживании. Подключения временно отключены.",
+                    },
+                    ensure_ascii=False,
+                )
+            )
+        except Exception:
+            pass
+        finally:
+            await websocket.close(code=status.WS_1013_TRY_AGAIN_LATER)
+        return
+
     await websocket.accept()
+    global ACTIVE_WS_CONNECTIONS
+    ACTIVE_WS_CONNECTIONS += 1
     if platform not in tariff.allowed_platforms:
         try:
             await websocket.send_text(
@@ -129,6 +154,8 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
     seen_viewers = set()  # Отслеживание зрителей, которых уже «видели» в этой сессии (join или first_message)
     _cooldown = {}  # (scope, trigger_id, username_or_star) -> last_time_monotonic
     active_tiktok_username: str | None = None
+    active_stream_session_id: str | None = None
+    _last_ws_touch_at = 0.0
     last_chat_at = time.monotonic()
     last_silence_emit_at = 0.0
     greeted_in_silence: set[str] = set()
@@ -819,6 +846,25 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
         async def _on_tiktok_connect(username: str):
             nonlocal active_tiktok_username
             active_tiktok_username = username
+
+            # Persist LIVE session (best-effort).
+            try:
+                nonlocal active_stream_session_id
+                ss = models.StreamSession(
+                    user_id=user.id,
+                    tiktok_username=username,
+                    started_at=datetime.utcnow(),
+                    status="running",
+                )
+                db.add(ss)
+                db.flush()
+                active_stream_session_id = getattr(ss, "id", None)
+                db.commit()
+            except Exception:
+                try:
+                    db.rollback()
+                except Exception:
+                    pass
             await _safe_send({
                 "type": "status",
                 "message": f"Подключено к TikTok Live @{username}",
@@ -830,6 +876,23 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
             nonlocal active_tiktok_username
             if active_tiktok_username == username:
                 active_tiktok_username = None
+
+            # Close LIVE session (best-effort).
+            try:
+                nonlocal active_stream_session_id
+                if active_stream_session_id:
+                    ss = db.get(models.StreamSession, active_stream_session_id)
+                    if ss and getattr(ss, "ended_at", None) is None:
+                        ss.ended_at = datetime.utcnow()
+                        ss.status = "ended"
+                        db.add(ss)
+                        db.commit()
+                active_stream_session_id = None
+            except Exception:
+                try:
+                    db.rollback()
+                except Exception:
+                    pass
             auto_reconnect = str(os.getenv("TT_AUTO_RECONNECT", "1")).strip().lower() in ("1", "true", "yes", "on")
             await _safe_send({
                 "type": "status",
@@ -845,6 +908,17 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
             "message": "WS подключен. Подключение к LIVE выполняется по команде.",
             "tiktok_username": (user.tiktok_username or None),
         })
+
+        # Touch last_ws_at once on WS connect.
+        try:
+            user.last_ws_at = datetime.utcnow()
+            db.add(user)
+            db.commit()
+        except Exception:
+            try:
+                db.rollback()
+            except Exception:
+                pass
 
         silence_task: asyncio.Task | None = asyncio.create_task(_silence_monitor())
         try:
@@ -882,6 +956,20 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
 
         while True:
             raw = await websocket.receive_text()
+
+            # Throttled heartbeat write (best-effort).
+            try:
+                now_m = time.monotonic()
+                if (now_m - _last_ws_touch_at) >= 15.0:
+                    _last_ws_touch_at = now_m
+                    user.last_ws_at = datetime.utcnow()
+                    db.add(user)
+                    db.commit()
+            except Exception:
+                try:
+                    db.rollback()
+                except Exception:
+                    pass
             try:
                 data = json.loads(raw) if raw else {}
             except Exception:
@@ -978,6 +1066,22 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
                     except Exception:
                         pass
                 active_tiktok_username = None
+
+                # Close session if disconnect callback did not fire.
+                try:
+                    if active_stream_session_id:
+                        ss = db.get(models.StreamSession, active_stream_session_id)
+                        if ss and getattr(ss, "ended_at", None) is None:
+                            ss.ended_at = datetime.utcnow()
+                            ss.status = "ended"
+                            db.add(ss)
+                            db.commit()
+                    active_stream_session_id = None
+                except Exception:
+                    try:
+                        db.rollback()
+                    except Exception:
+                        pass
                 await _safe_send({
                     "type": "status",
                     "message": "Отключено от TikTok Live",
@@ -1025,6 +1129,12 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
     finally:
         if tiktok_service.is_running(user.id):
             await tiktok_service.stop_client(user.id)
+
+        try:
+            global ACTIVE_WS_CONNECTIONS
+            ACTIVE_WS_CONNECTIONS = max(0, int(ACTIVE_WS_CONNECTIONS) - 1)
+        except Exception:
+            pass
 
 
 # ====== REST API ENDPOINTS ======
