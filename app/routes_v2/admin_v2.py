@@ -343,6 +343,9 @@ def list_users(
     inactive_days: int | None = None,
     platform: str | None = None,  # android|ios|desktop
     region: str | None = None,
+    has_donations: bool | None = None,
+    sort_by: str | None = None,  # created_at|last_login_at|total_coins|today_coins|last_7d_coins|last_30d_coins
+    sort_dir: str | None = None,  # asc|desc
     limit: int = 50,
     offset: int = 0,
     _user: models.User = Depends(require_staff_user),
@@ -433,13 +436,37 @@ def list_users(
             # Free = no active paid entitlement.
             query = query.filter(models.User.id.notin_(active_lic.filter(models.LicenseKey.plan.in_(paid_license_plans))))
 
+    # Analytics filter/sorting can rely on streamer_stats, so join once (1:1 table).
+    query = query.outerjoin(models.StreamerStats, models.StreamerStats.streamer_id == models.User.id)
+
+    if has_donations is True:
+        query = query.filter(models.StreamerStats.total_coins.is_not(None)).filter(models.StreamerStats.total_coins > 0)
+
+    # Sorting
+    sb = (sort_by or "created_at").strip().lower()
+    sd = (sort_dir or "desc").strip().lower()
+    if sd not in ("asc", "desc"):
+        sd = "desc"
+
+    sort_map = {
+        "created_at": models.User.created_at,
+        "last_login_at": models.User.last_login_at,
+        "total_coins": models.StreamerStats.total_coins,
+        "today_coins": models.StreamerStats.today_coins,
+        "last_7d_coins": models.StreamerStats.last_7d_coins,
+        "last_30d_coins": models.StreamerStats.last_30d_coins,
+    }
+    col = sort_map.get(sb, models.User.created_at)
+    if sd == "asc":
+        order_expr = col.asc()
+    else:
+        order_expr = col.desc()
+
+    # Stable secondary sort.
+    query = query.order_by(order_expr, models.User.created_at.desc())
+
     total = query.count()
-    rows = (
-        query.order_by(models.User.created_at.desc())
-        .offset(offset)
-        .limit(limit)
-        .all()
-    )
+    rows = query.offset(offset).limit(limit).all()
 
     user_ids = [u.id for u in rows]
     best_lic = _get_active_licenses_for_users(db, user_ids)
