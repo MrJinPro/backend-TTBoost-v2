@@ -24,6 +24,11 @@ const Admin = () => {
   const queryClient = useQueryClient();
 
   const [q, setQ] = useState("");
+  const [activity, setActivity] = useState<"" | "online" | "inactive">("");
+  const [inactiveDays, setInactiveDays] = useState<number>(30);
+  const [platform, setPlatform] = useState<"" | "android" | "ios" | "desktop">("");
+  const [region, setRegion] = useState<string>("");
+  const [tariffId, setTariffId] = useState<string>("");
   const [offset, setOffset] = useState(0);
   const [selectedPlanByUserId, setSelectedPlanByUserId] = useState<Record<string, string | null>>({});
 
@@ -52,11 +57,24 @@ const Admin = () => {
     retry: false,
   });
 
-  const usersQueryKey = useMemo(() => ["admin", "users", { q, offset }], [q, offset]);
+  const usersQueryKey = useMemo(
+    () => ["admin", "users", { q, activity, inactiveDays, platform, region, tariffId, offset }],
+    [q, activity, inactiveDays, platform, region, tariffId, offset]
+  );
 
   const usersQuery = useQuery({
     queryKey: usersQueryKey,
-    queryFn: () => adminApi.listUsers({ q, limit: PAGE_SIZE, offset }),
+    queryFn: () =>
+      adminApi.listUsers({
+        q,
+        activity: activity || null,
+        inactive_days: activity === "inactive" ? inactiveDays : null,
+        platform: platform || null,
+        region: region || null,
+        tariff_id: isSuperadmin ? (tariffId || null) : null,
+        limit: PAGE_SIZE,
+        offset,
+      }),
     enabled: canView,
     retry: false,
   });
@@ -203,6 +221,23 @@ const Admin = () => {
 
   const paidPlans = plansQuery.data?.items || [];
 
+  const tariffFilterOptions = useMemo(() => {
+    const base = [
+      { id: "__all__", label: "Все тарифы" },
+      { id: "nova_free_streamer", label: "free" },
+    ];
+    const rest = paidPlans.map((p) => ({ id: p.id, label: p.id }));
+    const seen = new Set<string>();
+    const items = [...base, ...rest].filter((x) => {
+      if (seen.has(x.id)) return false;
+      seen.add(x.id);
+      return true;
+    });
+    return items;
+  }, [paidPlans]);
+
+  const columnsCount = isSuperadmin ? 16 : 13;
+
   const hasPrev = offset > 0;
   const hasNext = offset + PAGE_SIZE < total;
 
@@ -227,7 +262,7 @@ const Admin = () => {
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex gap-2">
                   <Input
-                    placeholder="Поиск по логину"
+                    placeholder="Поиск по логину / email"
                     value={q}
                     onChange={(e) => {
                       setQ(e.target.value);
@@ -259,24 +294,121 @@ const Admin = () => {
               ) : usersQuery.isError ? (
                 <div className="text-sm text-destructive">Не удалось загрузить пользователей</div>
               ) : (
-                <div className="rounded-xl border border-border/50 overflow-hidden">
+                <div className="space-y-3">
+                  <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                      <Select
+                        value={activity || "__all__"}
+                        onValueChange={(v) => {
+                          setActivity(v === "__all__" ? "" : (v as any));
+                          setOffset(0);
+                        }}
+                      >
+                        <SelectTrigger className="w-full sm:w-56">
+                          <SelectValue placeholder="Активность" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__all__">Активность: все</SelectItem>
+                          <SelectItem value="online">Только online</SelectItem>
+                          <SelectItem value="inactive">Только неактивные</SelectItem>
+                        </SelectContent>
+                      </Select>
+
+                      {activity === "inactive" && (
+                        <Input
+                          type="number"
+                          min={1}
+                          value={String(inactiveDays)}
+                          onChange={(e) => {
+                            const n = Number(e.target.value);
+                            setInactiveDays(Number.isFinite(n) && n > 0 ? n : 30);
+                            setOffset(0);
+                          }}
+                          className="w-full sm:w-40"
+                          placeholder="Дней"
+                        />
+                      )}
+
+                      <Select
+                        value={platform || "__all__"}
+                        onValueChange={(v) => {
+                          setPlatform(v === "__all__" ? "" : (v as any));
+                          setOffset(0);
+                        }}
+                      >
+                        <SelectTrigger className="w-full sm:w-56">
+                          <SelectValue placeholder="Платформа" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__all__">Платформа: все</SelectItem>
+                          <SelectItem value="android">Android</SelectItem>
+                          <SelectItem value="ios">iOS</SelectItem>
+                          <SelectItem value="desktop">Desktop</SelectItem>
+                        </SelectContent>
+                      </Select>
+
+                      <Input
+                        placeholder="Регион (например RU)"
+                        value={region}
+                        onChange={(e) => {
+                          setRegion(e.target.value);
+                          setOffset(0);
+                        }}
+                        className="w-full sm:w-56"
+                      />
+                    </div>
+
+                    {isSuperadmin && (
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                        <Select
+                          value={tariffId || "__all__"}
+                          onValueChange={(v) => {
+                            setTariffId(v === "__all__" ? "" : v);
+                            setOffset(0);
+                          }}
+                          disabled={plansQuery.isLoading || plansQuery.isError}
+                        >
+                          <SelectTrigger className="w-full sm:w-64">
+                            <SelectValue placeholder="Тариф" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {tariffFilterOptions.map((t) => (
+                              <SelectItem key={t.id} value={t.id}>
+                                {t.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="rounded-xl border border-border/50 overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
                         <TableHead>Логин</TableHead>
+                        <TableHead>Email</TableHead>
+                        <TableHead>Online</TableHead>
+                        <TableHead>Платформа</TableHead>
+                        <TableHead>Регион</TableHead>
+                        <TableHead>Последний логин</TableHead>
                         <TableHead>TikTok</TableHead>
+                        <TableHead>TT accs</TableHead>
+                        <TableHead>Последний LIVE</TableHead>
+                        <TableHead>LIVE TikTok</TableHead>
                         <TableHead>Создан</TableHead>
                         <TableHead>Роль</TableHead>
+                        <TableHead>Статус</TableHead>
                         {isSuperadmin && <TableHead>Тариф</TableHead>}
                         {isSuperadmin && <TableHead>Лицензия до</TableHead>}
-                        {isSuperadmin && <TableHead>Статус</TableHead>}
                         {isSuperadmin && <TableHead>Действия</TableHead>}
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {users.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={isSuperadmin ? 8 : 4} className="text-center text-muted-foreground py-10">
+                          <TableCell colSpan={columnsCount} className="text-center text-muted-foreground py-10">
                             Ничего не найдено
                           </TableCell>
                         </TableRow>
@@ -292,10 +424,48 @@ const Admin = () => {
                               })
                             : "";
 
+                          const lastLogin = u.last_login_at
+                            ? new Date(u.last_login_at).toLocaleString("ru-RU", {
+                                year: "numeric",
+                                month: "2-digit",
+                                day: "2-digit",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })
+                            : "";
+
+                          const lastLive = u.last_live_at
+                            ? new Date(u.last_live_at).toLocaleString("ru-RU", {
+                                year: "numeric",
+                                month: "2-digit",
+                                day: "2-digit",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })
+                            : "";
+
+                          const status = u.is_banned
+                            ? "blocked"
+                            : (u.status || "active");
+
                           return (
                             <TableRow key={u.id}>
                               <TableCell className="font-medium">{u.username}</TableCell>
+                              <TableCell className="text-muted-foreground">{u.email || "—"}</TableCell>
+                              <TableCell>
+                                {u.online_now ? (
+                                  <span className="text-sm">online</span>
+                                ) : (
+                                  <span className="text-sm text-muted-foreground">offline</span>
+                                )}
+                              </TableCell>
+                              <TableCell className="text-muted-foreground">{u.platform || "—"}</TableCell>
+                              <TableCell className="text-muted-foreground">{u.region || "—"}</TableCell>
+                              <TableCell className="text-muted-foreground">{lastLogin || "—"}</TableCell>
                               <TableCell className="text-muted-foreground">{u.tiktok_username || "—"}</TableCell>
+                              <TableCell className="text-muted-foreground">{u.tiktok_accounts_count ?? 0}</TableCell>
+                              <TableCell className="text-muted-foreground">{lastLive || "—"}</TableCell>
+                              <TableCell className="text-muted-foreground">{u.last_live_tiktok_username || "—"}</TableCell>
                               <TableCell className="text-muted-foreground">{created || "—"}</TableCell>
                               <TableCell>
                                 {isSuperadmin ? (
@@ -317,6 +487,16 @@ const Admin = () => {
                                   </Select>
                                 ) : (
                                   <span className="text-sm">{u.role}</span>
+                                )}
+                              </TableCell>
+
+                              <TableCell>
+                                {status === "blocked" ? (
+                                  <span className="text-sm text-destructive">blocked</span>
+                                ) : status === "expired" ? (
+                                  <span className="text-sm text-muted-foreground">expired</span>
+                                ) : (
+                                  <span className="text-sm text-muted-foreground">active</span>
                                 )}
                               </TableCell>
 
@@ -370,16 +550,6 @@ const Admin = () => {
                                         minute: "2-digit",
                                       })
                                     : "—"}
-                                </TableCell>
-                              )}
-
-                              {isSuperadmin && (
-                                <TableCell>
-                                  {u.is_banned ? (
-                                    <span className="text-sm text-destructive">banned</span>
-                                  ) : (
-                                    <span className="text-sm text-muted-foreground">active</span>
-                                  )}
                                 </TableCell>
                               )}
 
@@ -472,6 +642,7 @@ const Admin = () => {
                       )}
                     </TableBody>
                   </Table>
+                </div>
                 </div>
               )}
 

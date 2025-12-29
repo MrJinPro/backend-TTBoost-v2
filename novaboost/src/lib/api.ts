@@ -316,12 +316,21 @@ export interface RolesResponse {
 export interface AdminUserItem {
   id: string;
   username: string;
+  email?: string | null;
   role: string;
   created_at: string;
   tiktok_username?: string | null;
   tariff_id?: string | null;
   tariff_name?: string | null;
   license_expires_at?: string | null;
+  status?: string | null;
+  platform?: string | null;
+  region?: string | null;
+  last_login_at?: string | null;
+  last_live_at?: string | null;
+  last_live_tiktok_username?: string | null;
+  online_now?: boolean;
+  tiktok_accounts_count?: number;
   is_banned?: boolean;
   banned_at?: string | null;
   banned_reason?: string | null;
@@ -389,8 +398,28 @@ export const adminApi = {
       method: 'POST',
       body: JSON.stringify(req),
     }),
-  listUsers: (params: { q?: string; limit?: number; offset?: number } = {}) => {
-    const qs = buildQuery({ q: params.q?.trim() || undefined, limit: params.limit ?? 50, offset: params.offset ?? 0 });
+  listUsers: (
+    params: {
+      q?: string;
+      tariff_id?: string | null;
+      activity?: 'online' | 'inactive' | null;
+      inactive_days?: number | null;
+      platform?: 'android' | 'ios' | 'desktop' | null;
+      region?: string | null;
+      limit?: number;
+      offset?: number;
+    } = {}
+  ) => {
+    const qs = buildQuery({
+      q: params.q?.trim() || undefined,
+      tariff_id: params.tariff_id ?? undefined,
+      activity: params.activity ?? undefined,
+      inactive_days: params.inactive_days ?? undefined,
+      platform: params.platform ?? undefined,
+      region: params.region?.trim() || undefined,
+      limit: params.limit ?? 50,
+      offset: params.offset ?? 0,
+    });
     return apiRequest<ListUsersResponse>(`/v2/admin/users${qs}`);
   },
   setUserRole: (userId: string, role: string) =>
