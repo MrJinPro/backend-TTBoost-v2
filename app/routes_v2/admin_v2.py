@@ -5,7 +5,7 @@ import shutil
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from sqlalchemy import func, or_
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 
 from app.db.database import SessionLocal
 from app.db import models
@@ -167,9 +167,128 @@ class AdminUserItem(BaseModel):
     last_7d_coins: int = 0
     last_30d_coins: int = 0
     top_donors: list[dict] = []
+    top_donors_all: list[dict] = []
+    top_donors_today: list[dict] = []
+    top_donors_7d: list[dict] = []
+    top_donors_30d: list[dict] = []
+
+    top_gifts_all: list[dict] = []
+    top_gifts_today: list[dict] = []
+    top_gifts_7d: list[dict] = []
+    top_gifts_30d: list[dict] = []
     is_banned: bool = False
     banned_at: str | None = None
     banned_reason: str | None = None
+
+
+def _top_donors_by_metric(db: Session, user_ids: list[str], metric_attr: str) -> dict[str, list[dict]]:
+    if not user_ids:
+        return {}
+    metric_col = getattr(models.DonorStats, metric_attr, None)
+    if metric_col is None:
+        return {str(uid): [] for uid in user_ids}
+
+    rn = func.row_number().over(
+        partition_by=models.DonorStats.streamer_id,
+        order_by=metric_col.desc(),
+    ).label("rn")
+
+    sub = (
+        db.query(
+            models.DonorStats.streamer_id.label("streamer_id"),
+            models.DonorStats.donor_username.label("donor_username"),
+            models.DonorStats.total_coins.label("total_coins"),
+            models.DonorStats.total_gifts.label("total_gifts"),
+            metric_col.label("coins"),
+            rn,
+        )
+        .filter(models.DonorStats.streamer_id.in_(user_ids))
+        .filter(metric_col.is_not(None))
+        .filter(metric_col > 0)
+        .subquery()
+    )
+
+    rows = (
+        db.query(sub)
+        .filter(sub.c.rn <= 3)
+        .order_by(sub.c.streamer_id.asc(), sub.c.coins.desc())
+        .all()
+    )
+
+    out: dict[str, list[dict]] = {str(uid): [] for uid in user_ids}
+    for r in rows:
+        sid = str(getattr(r, "streamer_id", "") or "")
+        if not sid:
+            continue
+        out.setdefault(sid, []).append(
+            {
+                "username": getattr(r, "donor_username", None),
+                "coins": int(getattr(r, "coins", 0) or 0),
+                "total_coins": int(getattr(r, "total_coins", 0) or 0),
+                "total_gifts": int(getattr(r, "total_gifts", 0) or 0),
+            }
+        )
+    return out
+
+
+def _top_gifts(db: Session, user_ids: list[str], *, since_day: date | None) -> dict[str, list[dict]]:
+    if not user_ids:
+        return {}
+
+    coins_expr = func.sum(models.GiftEvent.gift_coins * models.GiftEvent.gift_count).label("coins")
+    count_expr = func.sum(models.GiftEvent.gift_count).label("count")
+
+    q = (
+        db.query(
+            models.GiftEvent.streamer_id.label("streamer_id"),
+            models.GiftEvent.gift_name.label("gift_name"),
+            count_expr,
+            coins_expr,
+        )
+        .filter(models.GiftEvent.streamer_id.in_(user_ids))
+        .filter(models.GiftEvent.gift_name.is_not(None))
+    )
+    if since_day is not None:
+        q = q.filter(models.GiftEvent.day >= since_day)
+
+    agg = q.group_by(models.GiftEvent.streamer_id, models.GiftEvent.gift_name).subquery()
+
+    rn = func.row_number().over(
+        partition_by=agg.c.streamer_id,
+        order_by=agg.c.coins.desc(),
+    ).label("rn")
+
+    ranked = (
+        db.query(
+            agg.c.streamer_id.label("streamer_id"),
+            agg.c.gift_name.label("gift_name"),
+            agg.c.count.label("count"),
+            agg.c.coins.label("coins"),
+            rn,
+        )
+        .subquery()
+    )
+
+    rows = (
+        db.query(ranked)
+        .filter(ranked.c.rn <= 3)
+        .order_by(ranked.c.streamer_id.asc(), ranked.c.coins.desc())
+        .all()
+    )
+
+    out: dict[str, list[dict]] = {str(uid): [] for uid in user_ids}
+    for r in rows:
+        sid = str(getattr(r, "streamer_id", "") or "")
+        if not sid:
+            continue
+        out.setdefault(sid, []).append(
+            {
+                "name": getattr(r, "gift_name", None),
+                "coins": int(getattr(r, "coins", 0) or 0),
+                "count": int(getattr(r, "count", 0) or 0),
+            }
+        )
+    return out
 
 
 class ListUsersResponse(BaseModel):
@@ -379,28 +498,30 @@ def list_users(
     except Exception:
         streamer_stats = {}
 
-    # Top donors (best-effort, 3 per user)
-    top_donors_by_user: dict[str, list[dict]] = {}
-    for uid in user_ids:
-        try:
-            ds = (
-                db.query(models.DonorStats)
-                .filter(models.DonorStats.streamer_id == uid)
-                .order_by(models.DonorStats.total_coins.desc())
-                .limit(3)
-                .all()
-            )
-            top_donors_by_user[str(uid)] = [
-                {
-                    "username": getattr(d, "donor_username", None),
-                    "total_coins": int(getattr(d, "total_coins", 0) or 0),
-                    "total_gifts": int(getattr(d, "total_gifts", 0) or 0),
-                }
-                for d in ds
-                if getattr(d, "donor_username", None)
-            ]
-        except Exception:
-            top_donors_by_user[str(uid)] = []
+    # Donor analytics (top-3) using window functions
+    try:
+        top_donors_all_by_user = _top_donors_by_metric(db, user_ids, "total_coins")
+        top_donors_today_by_user = _top_donors_by_metric(db, user_ids, "today_coins")
+        top_donors_7d_by_user = _top_donors_by_metric(db, user_ids, "last_7d_coins")
+        top_donors_30d_by_user = _top_donors_by_metric(db, user_ids, "last_30d_coins")
+    except Exception:
+        top_donors_all_by_user = {str(uid): [] for uid in user_ids}
+        top_donors_today_by_user = {str(uid): [] for uid in user_ids}
+        top_donors_7d_by_user = {str(uid): [] for uid in user_ids}
+        top_donors_30d_by_user = {str(uid): [] for uid in user_ids}
+
+    # Gift analytics (top-3) by coins, based on raw gift_events
+    today = date.today()
+    try:
+        top_gifts_all_by_user = _top_gifts(db, user_ids, since_day=None)
+        top_gifts_today_by_user = _top_gifts(db, user_ids, since_day=today)
+        top_gifts_7d_by_user = _top_gifts(db, user_ids, since_day=(today - timedelta(days=6)))
+        top_gifts_30d_by_user = _top_gifts(db, user_ids, since_day=(today - timedelta(days=29)))
+    except Exception:
+        top_gifts_all_by_user = {str(uid): [] for uid in user_ids}
+        top_gifts_today_by_user = {str(uid): [] for uid in user_ids}
+        top_gifts_7d_by_user = {str(uid): [] for uid in user_ids}
+        top_gifts_30d_by_user = {str(uid): [] for uid in user_ids}
 
     def _platform_for_user(u: models.User) -> str:
         os_hint = (getattr(u, "last_client_os", None) or "").strip().lower()
@@ -452,7 +573,16 @@ def list_users(
                 today_coins=int(getattr(streamer_stats.get(u.id), "today_coins", 0) or 0),
                 last_7d_coins=int(getattr(streamer_stats.get(u.id), "last_7d_coins", 0) or 0),
                 last_30d_coins=int(getattr(streamer_stats.get(u.id), "last_30d_coins", 0) or 0),
-                top_donors=top_donors_by_user.get(u.id, []),
+                top_donors=top_donors_all_by_user.get(u.id, []),
+                top_donors_all=top_donors_all_by_user.get(u.id, []),
+                top_donors_today=top_donors_today_by_user.get(u.id, []),
+                top_donors_7d=top_donors_7d_by_user.get(u.id, []),
+                top_donors_30d=top_donors_30d_by_user.get(u.id, []),
+
+                top_gifts_all=top_gifts_all_by_user.get(u.id, []),
+                top_gifts_today=top_gifts_today_by_user.get(u.id, []),
+                top_gifts_7d=top_gifts_7d_by_user.get(u.id, []),
+                top_gifts_30d=top_gifts_30d_by_user.get(u.id, []),
                 is_banned=bool(getattr(u, "is_banned", False)),
                 banned_at=(u.banned_at.isoformat() if getattr(u, "banned_at", None) else None),
                 banned_reason=getattr(u, "banned_reason", None),
