@@ -76,6 +76,7 @@ def _abs_url(path_or_url: str) -> str:
 
 @router.websocket("/ws")
 async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), authorization: str | None = None):
+    global ACTIVE_WS_CONNECTIONS
     # Попытка извлечь токен из заголовка Authorization, если нет — из query ?token=...
     token = None
     auth_header = websocket.headers.get("Authorization")
@@ -132,9 +133,6 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
             await websocket.close(code=status.WS_1013_TRY_AGAIN_LATER)
         return
 
-    await websocket.accept()
-    global ACTIVE_WS_CONNECTIONS
-    ACTIVE_WS_CONNECTIONS += 1
     if platform not in tariff.allowed_platforms:
         try:
             await websocket.send_text(
@@ -148,8 +146,17 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
                 )
             )
         finally:
-            await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+            try:
+                await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+            except Exception:
+                pass
         return
+
+    await websocket.accept()
+    try:
+        ACTIVE_WS_CONNECTIONS += 1
+    except Exception:
+        pass
     first_message_seen = set()  # Отслеживание зрителей, которые уже писали в чат в этой сессии
     seen_viewers = set()  # Отслеживание зрителей, которых уже «видели» в этой сессии (join или first_message)
     _cooldown = {}  # (scope, trigger_id, username_or_star) -> last_time_monotonic
@@ -1131,7 +1138,6 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
             await tiktok_service.stop_client(user.id)
 
         try:
-            global ACTIVE_WS_CONNECTIONS
             ACTIVE_WS_CONNECTIONS = max(0, int(ACTIVE_WS_CONNECTIONS) - 1)
         except Exception:
             pass
