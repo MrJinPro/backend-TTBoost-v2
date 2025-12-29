@@ -391,6 +391,27 @@ if not _has_column(insp, "users", "last_ws_at"):
     )
     insp = _refresh_insp()
 
+if not _has_column(insp, "users", "last_client_platform"):
+    _try_exec(
+        "[DB] Added column users.last_client_platform",
+        "ALTER TABLE users ADD COLUMN last_client_platform VARCHAR(32)",
+    )
+    insp = _refresh_insp()
+
+if not _has_column(insp, "users", "last_client_os"):
+    _try_exec(
+        "[DB] Added column users.last_client_os",
+        "ALTER TABLE users ADD COLUMN last_client_os VARCHAR(32)",
+    )
+    insp = _refresh_insp()
+
+if not _has_column(insp, "users", "last_device"):
+    _try_exec(
+        "[DB] Added column users.last_device",
+        "ALTER TABLE users ADD COLUMN last_device VARCHAR(255)",
+    )
+    insp = _refresh_insp()
+
 # 4) store_purchases table
 try:
     tables = set(insp.get_table_names())

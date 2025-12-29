@@ -102,8 +102,10 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
     if not user:
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
         return
-    # platform can come from query (?platform=mobile) or header
+    # Client hints can come from query (?platform=mobile&os=android&device=...) or headers.
     platform_raw = websocket.headers.get("X-Client-Platform")
+    client_os_raw = websocket.headers.get("X-Client-OS")
+    client_device_raw = websocket.headers.get("X-Client-Device")
     raw_q = websocket.scope.get("query_string", b"").decode()
     if raw_q:
         for part in raw_q.split("&"):
@@ -111,6 +113,12 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
             if k == "platform" and v:
                 platform_raw = v
                 break
+        for part in raw_q.split("&"):
+            k, _, v = part.partition("=")
+            if k == "os" and v and not client_os_raw:
+                client_os_raw = v
+            if k == "device" and v and not client_device_raw:
+                client_device_raw = v
     platform = normalize_platform(platform_raw)
     tariff, _lic = resolve_tariff(db, user.id)
 
@@ -916,9 +924,25 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
             "tiktok_username": (user.tiktok_username or None),
         })
 
-        # Touch last_ws_at once on WS connect.
+        # Touch last_ws_at once on WS connect (+ best-effort client hints).
         try:
             user.last_ws_at = datetime.utcnow()
+            try:
+                user.last_client_platform = platform
+            except Exception:
+                pass
+            try:
+                os_hint = (client_os_raw or "").strip()[:32] or None
+                if os_hint:
+                    user.last_client_os = os_hint
+            except Exception:
+                pass
+            try:
+                dev = (client_device_raw or "").strip()
+                if dev:
+                    user.last_device = dev[:255]
+            except Exception:
+                pass
             db.add(user)
             db.commit()
         except Exception:

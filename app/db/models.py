@@ -27,6 +27,9 @@ class User(Base):
     last_login_at = Column(DateTime, nullable=True)
     last_login_ip = Column(String(64), nullable=True)
     last_user_agent = Column(String(255), nullable=True)
+    last_client_platform = Column(String(32), nullable=True)  # mobile|desktop
+    last_client_os = Column(String(32), nullable=True)  # android|ios|windows|macos|linux|unknown
+    last_device = Column(String(255), nullable=True)  # free-form device/model string
     last_ws_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 

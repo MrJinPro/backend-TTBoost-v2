@@ -153,12 +153,20 @@ class AdminUserItem(BaseModel):
     license_expires_at: str | None = None
     status: str | None = None  # active|blocked|expired
     platform: str | None = None  # android|ios|desktop|unknown
+    device: str | None = None
+    client_os: str | None = None
     region: str | None = None
     last_login_at: str | None = None
     last_live_at: str | None = None
     last_live_tiktok_username: str | None = None
     online_now: bool = False
     tiktok_accounts_count: int = 0
+    total_gifts: int = 0
+    total_coins: int = 0
+    today_coins: int = 0
+    last_7d_coins: int = 0
+    last_30d_coins: int = 0
+    top_donors: list[dict] = []
     is_banned: bool = False
     banned_at: str | None = None
     banned_reason: str | None = None
@@ -269,18 +277,20 @@ def list_users(
         cutoff = now - timedelta(days=days)
         query = query.filter(or_(models.User.last_login_at.is_(None), models.User.last_login_at < cutoff))
 
-    # Platform filter (best-effort based on last_user_agent)
+    # Platform filter (best-effort): prefer explicit client_os/client_platform, fallback to UA.
     if platform is not None and platform.strip():
         p = platform.strip().lower()
         ua_lower = func.lower(models.User.last_user_agent)
+        os_lower = func.lower(models.User.last_client_os)
+        plat_lower = func.lower(models.User.last_client_platform)
         is_android = ua_lower.like("%android%")
         is_ios = or_(ua_lower.like("%iphone%"), ua_lower.like("%ipad%"), ua_lower.like("%ios%"))
         if p == "android":
-            query = query.filter(models.User.last_user_agent.is_not(None)).filter(is_android)
+            query = query.filter(or_(os_lower == "android", is_android))
         elif p == "ios":
-            query = query.filter(models.User.last_user_agent.is_not(None)).filter(is_ios)
+            query = query.filter(or_(os_lower == "ios", is_ios))
         elif p == "desktop":
-            query = query.filter(or_(models.User.last_user_agent.is_(None), (~is_android & ~is_ios)))
+            query = query.filter(or_(plat_lower == "desktop", models.User.last_user_agent.is_(None), (~is_android & ~is_ios)))
 
     # Tariff filter (based on active entitlement licenses)
     if tariff_id is not None and tariff_id.strip():
@@ -357,6 +367,48 @@ def list_users(
     except Exception:
         last_live = {}
 
+    # Streamer gift stats
+    streamer_stats: dict[str, models.StreamerStats] = {}
+    try:
+        ss = (
+            db.query(models.StreamerStats)
+            .filter(models.StreamerStats.streamer_id.in_(user_ids))
+            .all()
+        )
+        streamer_stats = {str(s.streamer_id): s for s in ss if getattr(s, "streamer_id", None)}
+    except Exception:
+        streamer_stats = {}
+
+    # Top donors (best-effort, 3 per user)
+    top_donors_by_user: dict[str, list[dict]] = {}
+    for uid in user_ids:
+        try:
+            ds = (
+                db.query(models.DonorStats)
+                .filter(models.DonorStats.streamer_id == uid)
+                .order_by(models.DonorStats.total_coins.desc())
+                .limit(3)
+                .all()
+            )
+            top_donors_by_user[str(uid)] = [
+                {
+                    "username": getattr(d, "donor_username", None),
+                    "total_coins": int(getattr(d, "total_coins", 0) or 0),
+                    "total_gifts": int(getattr(d, "total_gifts", 0) or 0),
+                }
+                for d in ds
+                if getattr(d, "donor_username", None)
+            ]
+        except Exception:
+            top_donors_by_user[str(uid)] = []
+
+    def _platform_for_user(u: models.User) -> str:
+        os_hint = (getattr(u, "last_client_os", None) or "").strip().lower()
+        if os_hint in ("android", "ios"):
+            return os_hint
+        ua_guess = _guess_platform_from_ua(getattr(u, "last_user_agent", None))
+        return ua_guess or "unknown"
+
     return ListUsersResponse(
         total=total,
         items=[
@@ -386,13 +438,21 @@ def list_users(
                         else "active"
                     )
                 ),
-                platform=_guess_platform_from_ua(getattr(u, "last_user_agent", None)) or "unknown",
+                platform=_platform_for_user(u),
+                device=getattr(u, "last_device", None),
+                client_os=getattr(u, "last_client_os", None),
                 region=getattr(u, "region", None),
                 last_login_at=(getattr(u, "last_login_at", None).isoformat() if getattr(u, "last_login_at", None) else None),
                 last_live_at=(last_live.get(u.id)[0].isoformat() if (last_live.get(u.id) and last_live.get(u.id)[0]) else None),
                 last_live_tiktok_username=(last_live.get(u.id)[1] if last_live.get(u.id) else None),
                 online_now=_is_online(getattr(u, "last_ws_at", None), ttl_seconds=90),
                 tiktok_accounts_count=int(tiktok_counts.get(u.id, 0)),
+                total_gifts=int(getattr(streamer_stats.get(u.id), "total_gifts", 0) or 0),
+                total_coins=int(getattr(streamer_stats.get(u.id), "total_coins", 0) or 0),
+                today_coins=int(getattr(streamer_stats.get(u.id), "today_coins", 0) or 0),
+                last_7d_coins=int(getattr(streamer_stats.get(u.id), "last_7d_coins", 0) or 0),
+                last_30d_coins=int(getattr(streamer_stats.get(u.id), "last_30d_coins", 0) or 0),
+                top_donors=top_donors_by_user.get(u.id, []),
                 is_banned=bool(getattr(u, "is_banned", False)),
                 banned_at=(u.banned_at.isoformat() if getattr(u, "banned_at", None) else None),
                 banned_reason=getattr(u, "banned_reason", None),

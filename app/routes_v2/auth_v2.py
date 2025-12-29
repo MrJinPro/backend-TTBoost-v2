@@ -146,14 +146,22 @@ def login(req: LoginRequest, request: Request, db: Session = Depends(get_db)):
         )
         region = (region or "").strip()[:64] or None
 
-        # Optional client hint.
+        # Optional client hints.
         platform = (request.headers.get("x-client-platform") or "").strip()[:32] or None
+        client_os = (request.headers.get("x-client-os") or "").strip()[:32] or None
+        device = (request.headers.get("x-client-device") or "").strip()[:255] or None
 
         # Update denormalized last_* fields.
         try:
             user.last_login_at = now
             user.last_login_ip = ip
             user.last_user_agent = ua
+            if platform:
+                user.last_client_platform = platform
+            if client_os:
+                user.last_client_os = client_os
+            if device:
+                user.last_device = device
             if region:
                 user.region = region
         except Exception:
