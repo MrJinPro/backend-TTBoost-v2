@@ -67,6 +67,48 @@ def _read_meminfo_bytes() -> tuple[int | None, int | None]:
         return (None, None)
 
 
+def _read_proc_cpu_percent(interval_sec: float = 0.1) -> float | None:
+    """Best-effort CPU usage percent on Linux via /proc/stat.
+
+    We sample twice and compute usage over the interval.
+    """
+
+    def _read_cpu_line() -> tuple[int, int] | None:
+        try:
+            with open("/proc/stat", "r", encoding="utf-8", errors="ignore") as f:
+                for line in f:
+                    if line.startswith("cpu "):
+                        parts = line.strip().split()
+                        nums = [int(x) for x in parts[1:] if x.isdigit()]
+                        if len(nums) < 4:
+                            return None
+                        total = sum(nums)
+                        idle = nums[3] + (nums[4] if len(nums) > 4 else 0)
+                        return (total, idle)
+            return None
+        except Exception:
+            return None
+
+    a = _read_cpu_line()
+    if a is None:
+        return None
+    try:
+        time.sleep(max(0.0, float(interval_sec)))
+    except Exception:
+        pass
+    b = _read_cpu_line()
+    if b is None:
+        return None
+
+    total_delta = b[0] - a[0]
+    idle_delta = b[1] - a[1]
+    if total_delta <= 0:
+        return None
+    usage = (1.0 - (idle_delta / total_delta)) * 100.0
+    # clamp just in case of clock/tick anomalies
+    return float(max(0.0, min(100.0, usage)))
+
+
 ROLES_ORDER = [
     "user",
     "support",
@@ -225,6 +267,9 @@ def get_server_status(_user: models.User = Depends(require_staff_user)):
         if psutil is not None:
             cpu_count = int(psutil.cpu_count(logical=True) or 0) or None
             cpu_percent = float(psutil.cpu_percent(interval=0.1))
+        else:
+            cpu_count = int(os.cpu_count() or 0) or None
+            cpu_percent = _read_proc_cpu_percent(0.1)
     except Exception:
         cpu_percent = None
 
