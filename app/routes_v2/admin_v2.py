@@ -2,6 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException
 import logging
 import os
 import shutil
+import socket
+import time
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from sqlalchemy import func, or_
@@ -24,6 +26,45 @@ from app.routes_v2 import ws_v2
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
+
+
+def _try_import_psutil():
+    try:
+        import psutil  # type: ignore
+        return psutil
+    except Exception:
+        return None
+
+
+def _read_proc_uptime_sec() -> int | None:
+    try:
+        with open("/proc/uptime", "r", encoding="utf-8", errors="ignore") as f:
+            raw = (f.read() or "").strip().split()
+        if not raw:
+            return None
+        return int(float(raw[0]))
+    except Exception:
+        return None
+
+
+def _read_meminfo_bytes() -> tuple[int | None, int | None]:
+    """Returns (total_bytes, available_bytes) best-effort."""
+    try:
+        mem_total_kb = None
+        mem_avail_kb = None
+        with open("/proc/meminfo", "r", encoding="utf-8", errors="ignore") as f:
+            for line in f:
+                if line.startswith("MemTotal:"):
+                    mem_total_kb = int(line.split()[1])
+                elif line.startswith("MemAvailable:"):
+                    mem_avail_kb = int(line.split()[1])
+                if mem_total_kb is not None and mem_avail_kb is not None:
+                    break
+        if mem_total_kb is None or mem_avail_kb is None:
+            return (None, None)
+        return (mem_total_kb * 1024, mem_avail_kb * 1024)
+    except Exception:
+        return (None, None)
 
 
 ROLES_ORDER = [
@@ -134,6 +175,119 @@ class RoleItem(BaseModel):
 
 class RolesResponse(BaseModel):
     items: list[RoleItem]
+
+
+class AdminServerStatusResponse(BaseModel):
+    status: str = "ok"
+    now: str
+    hostname: str | None = None
+    pid: int
+
+    # Load average (Linux)
+    load1: float | None = None
+    load5: float | None = None
+    load15: float | None = None
+
+    # CPU
+    cpu_percent: float | None = None
+    cpu_count: int | None = None
+
+    # Memory
+    mem_total_mb: int | None = None
+    mem_used_mb: int | None = None
+    mem_used_percent: float | None = None
+
+    # Disk (root filesystem)
+    disk_total_gb: int | None = None
+    disk_used_gb: int | None = None
+    disk_used_percent: float | None = None
+    disk_path: str = "/"
+
+    # Uptime
+    uptime_sec: int | None = None
+
+
+@router.get("/server/status", response_model=AdminServerStatusResponse)
+def get_server_status(_user: models.User = Depends(require_staff_user)):
+    psutil = _try_import_psutil()
+
+    # loadavg
+    load1 = load5 = load15 = None
+    try:
+        la = os.getloadavg()
+        load1, load5, load15 = float(la[0]), float(la[1]), float(la[2])
+    except Exception:
+        pass
+
+    cpu_percent = None
+    cpu_count = None
+    try:
+        if psutil is not None:
+            cpu_count = int(psutil.cpu_count(logical=True) or 0) or None
+            cpu_percent = float(psutil.cpu_percent(interval=0.1))
+    except Exception:
+        cpu_percent = None
+
+    mem_total_mb = mem_used_mb = None
+    mem_used_percent = None
+    try:
+        if psutil is not None:
+            vm = psutil.virtual_memory()
+            mem_total_mb = int(vm.total // (1024 * 1024))
+            mem_used_mb = int(vm.used // (1024 * 1024))
+            mem_used_percent = float(vm.percent)
+        else:
+            total_b, avail_b = _read_meminfo_bytes()
+            if total_b is not None and avail_b is not None:
+                used_b = max(0, total_b - avail_b)
+                mem_total_mb = int(total_b // (1024 * 1024))
+                mem_used_mb = int(used_b // (1024 * 1024))
+                if total_b > 0:
+                    mem_used_percent = round((used_b / total_b) * 100.0, 2)
+    except Exception:
+        pass
+
+    disk_path = os.getenv("TT_DISK_PATH", "/") or "/"
+    disk_total_gb = disk_used_gb = None
+    disk_used_percent = None
+    try:
+        du = shutil.disk_usage(disk_path)
+        disk_total_gb = int(du.total // (1024 ** 3))
+        disk_used_gb = int(du.used // (1024 ** 3))
+        if du.total > 0:
+            disk_used_percent = round((du.used / du.total) * 100.0, 2)
+    except Exception:
+        pass
+
+    uptime_sec = None
+    try:
+        if psutil is not None:
+            boot_time = float(psutil.boot_time())
+            uptime_sec = int(time.time() - boot_time)
+        else:
+            uptime_sec = _read_proc_uptime_sec()
+    except Exception:
+        uptime_sec = None
+
+    return AdminServerStatusResponse(
+        status="ok",
+        now=datetime.utcnow().isoformat() + "Z",
+        hostname=(socket.gethostname() or None),
+        pid=int(os.getpid()),
+        load1=load1,
+        load5=load5,
+        load15=load15,
+        cpu_percent=cpu_percent,
+        cpu_count=cpu_count,
+        mem_total_mb=mem_total_mb,
+        mem_used_mb=mem_used_mb,
+        mem_used_percent=mem_used_percent,
+        disk_total_gb=disk_total_gb,
+        disk_used_gb=disk_used_gb,
+        disk_used_percent=disk_used_percent,
+        disk_path=disk_path,
+        uptime_sec=uptime_sec,
+    )
 
 
 @router.get("/roles", response_model=RolesResponse)
