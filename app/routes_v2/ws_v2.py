@@ -176,10 +176,10 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
     greeted_in_silence: set[str] = set()
     recent_silence_phrases: list[str] = []
     donor_diamonds_total: dict[str, int] = {}
-    _allowed_trigger_ids_cache: set[int] | None = None
+    _allowed_trigger_ids_cache: set[str] | None = None
     _allowed_trigger_ids_cache_at: float = 0.0
 
-    def _cooldown_allows(trigger_id: int, seconds: float | int | None, username: str | None = None) -> bool:
+    def _cooldown_allows(trigger_id: str, seconds: float | int | None, username: str | None = None) -> bool:
         if not seconds:
             return True
         try:
@@ -189,7 +189,7 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
         if seconds_f <= 0:
             return True
         now = time.monotonic()
-        key = ("global", int(trigger_id), username or "*")
+        key = ("global", str(trigger_id), username or "*")
         last = _cooldown.get(key)
         if last is not None and (now - float(last)) < seconds_f:
             return False
@@ -204,7 +204,7 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
             return v in ("true", "1", "yes", "*")
         return False
 
-    def _get_allowed_trigger_ids() -> set[int] | None:
+    def _get_allowed_trigger_ids() -> set[str] | None:
         nonlocal _allowed_trigger_ids_cache, _allowed_trigger_ids_cache_at
         if tariff.id != TARIFF_FREE.id:
             return None
@@ -218,7 +218,7 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
             .limit(FREE_MAX_TRIGGERS)
             .all()
         )
-        _allowed_trigger_ids_cache = {int(r[0]) for r in rows}
+        _allowed_trigger_ids_cache = {str(r[0]) for r in rows}
         _allowed_trigger_ids_cache_at = now
         return _allowed_trigger_ids_cache
 
@@ -622,6 +622,9 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
         if not viewer_key:
             return
 
+        # Для TTS/логов нужен читабельный юзер заранее
+        display_user = (login_raw or nickname_raw or viewer_key)
+
         first_time = viewer_key not in seen_viewers
         if first_time:
             seen_viewers.add(viewer_key)
@@ -715,7 +718,6 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
         
         # ВСЕГДА отправляем событие на фронтенд (для отображения в UI)
         # Для UI отдаём читабельные значения, но сохраняем и нормализованное поле
-        display_user = (login_raw or nickname_raw or viewer_key)
         payload = {
             "type": "viewer_join",
             "user": display_user,
