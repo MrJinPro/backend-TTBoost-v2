@@ -215,11 +215,63 @@ def _migrate_push_tokens_postgres():
         )
 
 
+def _migrate_password_reset_tokens_sqlite():
+    if not DATABASE_URL.startswith("sqlite"):
+        return
+    with engine.begin() as conn:
+        conn.exec_driver_sql(
+            """
+            CREATE TABLE IF NOT EXISTS password_reset_tokens (
+              id VARCHAR PRIMARY KEY,
+              user_id VARCHAR NOT NULL,
+              code_hash VARCHAR(128) NOT NULL,
+              expires_at TIMESTAMP NOT NULL,
+              used_at TIMESTAMP,
+              attempts INTEGER NOT NULL DEFAULT 0,
+              request_ip VARCHAR(64),
+              user_agent VARCHAR(255),
+              created_at TIMESTAMP NOT NULL
+            )
+            """
+        )
+        try:
+            conn.exec_driver_sql("CREATE INDEX IF NOT EXISTS ix_password_reset_tokens_user_id ON password_reset_tokens(user_id)")
+        except Exception:
+            pass
+
+
+def _migrate_password_reset_tokens_postgres():
+    if not engine.dialect.name.startswith("postgres"):
+        return
+    with engine.begin() as conn:
+        conn.exec_driver_sql(
+            """
+            CREATE TABLE IF NOT EXISTS password_reset_tokens (
+              id VARCHAR PRIMARY KEY,
+              user_id VARCHAR NOT NULL,
+              code_hash VARCHAR(128) NOT NULL,
+              expires_at TIMESTAMP NOT NULL,
+              used_at TIMESTAMP,
+              attempts INTEGER NOT NULL DEFAULT 0,
+              request_ip VARCHAR(64),
+              user_agent VARCHAR(255),
+              created_at TIMESTAMP NOT NULL,
+              CONSTRAINT fk_password_reset_user_id FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+            )
+            """
+        )
+        conn.exec_driver_sql(
+            "CREATE INDEX IF NOT EXISTS ix_password_reset_tokens_user_id ON password_reset_tokens(user_id)"
+        )
+
+
 # Extend init_db with best-effort Postgres migrations
 def init_db():
     from . import models  # noqa: F401 ensure models are imported
     Base.metadata.create_all(bind=engine)
     _migrate_notifications_sqlite()
     _migrate_push_tokens_sqlite()
+    _migrate_password_reset_tokens_sqlite()
     _migrate_notifications_postgres()
     _migrate_push_tokens_postgres()
+    _migrate_password_reset_tokens_postgres()

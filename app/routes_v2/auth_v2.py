@@ -8,8 +8,14 @@ from app.db.database import SessionLocal, init_db
 from app.db import models
 from app.services.security import hash_password, verify_password, create_access_token, decode_token
 from datetime import datetime
+from datetime import timedelta
+import hashlib
+import hmac
 import re
 from app.services.plans import resolve_tariff
+import secrets
+
+from app.services.email_resend import send_email, ResendError
 
 
 router = APIRouter()
@@ -184,6 +190,187 @@ def login(req: LoginRequest, request: Request, db: Session = Depends(get_db)):
 
     token = create_access_token(user.id)
     return AuthResponse(access_token=token)
+
+
+class PasswordResetRequest(BaseModel):
+    login_or_email: str
+
+
+class PasswordResetRequestResponse(BaseModel):
+    status: str = "ok"
+
+
+class PasswordResetConfirmRequest(BaseModel):
+    login_or_email: str
+    code: str
+    new_password: str
+
+
+class PasswordResetConfirmResponse(BaseModel):
+    status: str = "ok"
+
+
+def _hash_reset_code(code: str) -> str:
+    # Short numeric codes must never be stored in plaintext.
+    # We salt with a server secret to prevent rainbow tables.
+    secret = (os.getenv("RESET_CODE_SECRET") or os.getenv("JWT_SECRET") or "dev-secret-change-me").encode("utf-8")
+    msg = (code or "").strip().encode("utf-8")
+    return hmac.new(secret, msg, hashlib.sha256).hexdigest()
+
+
+def _extract_request_ip(request: Request) -> str | None:
+    xff = request.headers.get("x-forwarded-for")
+    if xff:
+        return xff.split(",")[0].strip() or None
+    return request.client.host if request.client else None
+
+
+@router.post("/password/reset/request", response_model=PasswordResetRequestResponse)
+async def request_password_reset(req: PasswordResetRequest, request: Request, db: Session = Depends(get_db)):
+    """Send a one-time reset code to the user's email.
+
+    Privacy: always returns {status: ok} even if user/email doesn't exist.
+    """
+    init_db()
+
+    raw = (req.login_or_email or "").strip()
+    if not raw:
+        raise HTTPException(status_code=400, detail="login_or_email is required")
+
+    value = raw.strip().lower()
+    is_email = "@" in value
+
+    user = None
+    if is_email:
+        user = db.query(models.User).filter(func.lower(models.User.email) == value).first()
+    else:
+        username = _normalize_username(value)
+        # Case-insensitive for backward-compat.
+        user = db.query(models.User).filter(func.lower(models.User.username) == username).first()
+
+    # If no user or no email, do not disclose.
+    if not user or not getattr(user, "email", None):
+        return PasswordResetRequestResponse()
+
+    # Basic send cooldown: don't spam.
+    now = datetime.utcnow()
+    cooldown_sec = int(os.getenv("RESET_SEND_COOLDOWN_SEC", "60") or "60")
+    try:
+        last = (
+            db.query(models.PasswordResetToken)
+            .filter(models.PasswordResetToken.user_id == user.id)
+            .order_by(models.PasswordResetToken.created_at.desc())
+            .first()
+        )
+        if last and last.created_at and (now - last.created_at).total_seconds() < cooldown_sec:
+            return PasswordResetRequestResponse()
+    except Exception:
+        pass
+
+    ttl_min = int(os.getenv("RESET_CODE_TTL_MIN", "15") or "15")
+    if ttl_min < 5:
+        ttl_min = 5
+    if ttl_min > 60:
+        ttl_min = 60
+
+    code = f"{secrets.randbelow(1_000_000):06d}"
+    token = models.PasswordResetToken(
+        user_id=user.id,
+        code_hash=_hash_reset_code(code),
+        expires_at=now + timedelta(minutes=ttl_min),
+        used_at=None,
+        attempts=0,
+        request_ip=_extract_request_ip(request),
+        user_agent=(request.headers.get("user-agent") or "")[:255] or None,
+    )
+    db.add(token)
+    db.commit()
+
+    subject = "Сброс пароля NovaBoost"
+    text = (
+        "Код для сброса пароля:\n\n"
+        f"{code}\n\n"
+        f"Срок действия: {ttl_min} мин.\n\n"
+        "Если это были не вы — просто игнорируйте письмо."
+    )
+    try:
+        await send_email(to_email=str(user.email).strip(), subject=subject, text=text)
+    except ResendError as e:
+        # Configuration / upstream errors should be visible to client.
+        raise HTTPException(status_code=502, detail=str(e))
+    except Exception:
+        raise HTTPException(status_code=502, detail="email send failed")
+
+    return PasswordResetRequestResponse()
+
+
+@router.post("/password/reset/confirm", response_model=PasswordResetConfirmResponse)
+def confirm_password_reset(req: PasswordResetConfirmRequest, db: Session = Depends(get_db)):
+    init_db()
+    raw = (req.login_or_email or "").strip()
+    if not raw:
+        raise HTTPException(status_code=400, detail="login_or_email is required")
+    code = (req.code or "").strip()
+    if not code or len(code) < 4:
+        raise HTTPException(status_code=400, detail="invalid code")
+
+    _validate_password(req.new_password)
+
+    value = raw.strip().lower()
+    is_email = "@" in value
+
+    user = None
+    if is_email:
+        user = db.query(models.User).filter(func.lower(models.User.email) == value).first()
+    else:
+        username = _normalize_username(value)
+        user = db.query(models.User).filter(func.lower(models.User.username) == username).first()
+
+    # Don't disclose user existence.
+    if not user:
+        raise HTTPException(status_code=401, detail="invalid code")
+
+    now = datetime.utcnow()
+    token = (
+        db.query(models.PasswordResetToken)
+        .filter(
+            models.PasswordResetToken.user_id == user.id,
+            models.PasswordResetToken.used_at.is_(None),
+            models.PasswordResetToken.expires_at > now,
+        )
+        .order_by(models.PasswordResetToken.created_at.desc())
+        .first()
+    )
+    if not token:
+        raise HTTPException(status_code=401, detail="invalid code")
+
+    max_attempts = int(os.getenv("RESET_CODE_MAX_ATTEMPTS", "10") or "10")
+    if token.attempts is not None and int(token.attempts) >= max_attempts:
+        raise HTTPException(status_code=429, detail="too many attempts")
+
+    expected = str(token.code_hash or "")
+    actual = _hash_reset_code(code)
+    if not hmac.compare_digest(expected, actual):
+        try:
+            token.attempts = int(token.attempts or 0) + 1
+            db.add(token)
+            db.commit()
+        except Exception:
+            try:
+                db.rollback()
+            except Exception:
+                pass
+        raise HTTPException(status_code=401, detail="invalid code")
+
+    # Code matches: set new password and consume token.
+    user.password_hash = hash_password(req.new_password)
+    user.last_login_at = now
+    token.used_at = now
+    token.attempts = int(token.attempts or 0)
+    db.add(user)
+    db.add(token)
+    db.commit()
+    return PasswordResetConfirmResponse()
 
 
 @router.post("/redeem-license", response_model=RedeemLicenseResponse)
