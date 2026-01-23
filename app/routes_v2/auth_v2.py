@@ -109,6 +109,9 @@ def register(req: RegisterRequest, db: Session = Depends(get_db)):
     _validate_password(req.password)
 
     email = _normalize_email(req.email) if req.email is not None else None
+    require_email = (os.getenv("REQUIRE_EMAIL_FOR_REGISTER") or "").strip() == "1"
+    if require_email and not email:
+        raise HTTPException(400, detail="email is required")
     if email is not None:
         _validate_email(email)
         # Uniqueness check (case-insensitive)
