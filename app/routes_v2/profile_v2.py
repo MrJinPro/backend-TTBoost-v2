@@ -9,11 +9,15 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Request
 from pydantic import BaseModel
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 
 from app.db.database import SessionLocal
 from app.db import models
 from app.routes_v2.auth_v2 import get_current_user
 from app.services.security import hash_password, verify_password
+
+
+_EMAIL_RE = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
 
 
 router = APIRouter()
@@ -106,7 +110,20 @@ def update_profile(
 ):
     # `user` comes from auth_v2 DB session; merge into this request session.
     user = db.merge(user)
-    email = (req.email or "").strip() or None
+    email = (req.email or "").strip().lower() or None
+    if email is not None:
+        if len(email) > 256 or not _EMAIL_RE.match(email):
+            raise HTTPException(status_code=400, detail="invalid email")
+        # Uniqueness check (case-insensitive)
+        exists = (
+            db.query(models.User)
+            .filter(models.User.id != user.id)
+            .filter(models.User.email.is_not(None))
+            .filter(func.lower(models.User.email) == email)
+            .first()
+        )
+        if exists:
+            raise HTTPException(status_code=409, detail="email already in use")
     user.email = email
     db.commit()
     return UpdateProfileResponse(email=user.email)

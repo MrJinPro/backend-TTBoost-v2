@@ -265,6 +265,34 @@ def _migrate_password_reset_tokens_postgres():
         )
 
 
+def _migrate_users_email_unique_sqlite():
+    if not DATABASE_URL.startswith("sqlite"):
+        return
+    with engine.begin() as conn:
+        # Case-insensitive unique index for email (allows multiple NULL/empty).
+        try:
+            conn.exec_driver_sql(
+                "CREATE UNIQUE INDEX IF NOT EXISTS ux_users_email_nocase ON users(email COLLATE NOCASE) WHERE email IS NOT NULL AND email <> ''"
+            )
+        except Exception:
+            pass
+
+
+def _migrate_users_email_unique_postgres():
+    if not engine.dialect.name.startswith("postgres"):
+        return
+    with engine.begin() as conn:
+        # Case-insensitive unique index for email.
+        # Note: requires no duplicates already present.
+        try:
+            conn.exec_driver_sql(
+                "CREATE UNIQUE INDEX IF NOT EXISTS ux_users_email_lower ON users (lower(email)) WHERE email IS NOT NULL AND email <> ''"
+            )
+        except Exception:
+            # If duplicates exist, index creation will fail; app-level checks still prevent new duplicates.
+            pass
+
+
 # Extend init_db with best-effort Postgres migrations
 def init_db():
     from . import models  # noqa: F401 ensure models are imported
@@ -272,6 +300,8 @@ def init_db():
     _migrate_notifications_sqlite()
     _migrate_push_tokens_sqlite()
     _migrate_password_reset_tokens_sqlite()
+    _migrate_users_email_unique_sqlite()
     _migrate_notifications_postgres()
     _migrate_push_tokens_postgres()
     _migrate_password_reset_tokens_postgres()
+    _migrate_users_email_unique_postgres()

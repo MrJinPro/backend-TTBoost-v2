@@ -22,6 +22,7 @@ router = APIRouter()
 
 
 _USERNAME_RE = re.compile(r"^[a-z0-9._-]{2,64}$")
+_EMAIL_RE = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
 
 
 def _normalize_username(raw: str) -> str:
@@ -38,6 +39,27 @@ def _validate_password(password: str) -> None:
         raise HTTPException(400, detail="invalid password")
 
 
+def _normalize_email(raw: str) -> str:
+    return (raw or "").strip().lower()
+
+
+def _validate_email(email: str) -> None:
+    if not email or len(email) > 256 or not _EMAIL_RE.match(email):
+        raise HTTPException(400, detail="invalid email")
+
+
+def _generate_username_from_email(email: str) -> str:
+    # username does NOT allow '@', so we auto-generate a safe one.
+    local = (email.split("@", 1)[0] or "user").strip().lower()
+    local = re.sub(r"[^a-z0-9._-]+", "-", local)
+    local = re.sub(r"-+", "-", local).strip("-._")
+    if len(local) < 2:
+        local = "user"
+    local = local[:24]
+    suffix = secrets.token_hex(3)  # 6 chars
+    return f"{local}-{suffix}"[:64]
+
+
 def get_db():
     db = SessionLocal()
     try:
@@ -47,7 +69,9 @@ def get_db():
 
 
 class RegisterRequest(BaseModel):
-    username: str
+    # Backward-compat: allow old clients registering by username.
+    username: str | None = None
+    email: str | None = None
     password: str
 
 
@@ -82,13 +106,33 @@ class UpgradeLicenseResponse(BaseModel):
 @router.post("/register", response_model=AuthResponse)
 def register(req: RegisterRequest, db: Session = Depends(get_db)):
     init_db()
-    username = _normalize_username(req.username)
-    _validate_username(username)
+    _validate_password(req.password)
+
+    email = _normalize_email(req.email) if req.email is not None else None
+    if email is not None:
+        _validate_email(email)
+        # Uniqueness check (case-insensitive)
+        exists_email = db.query(models.User).filter(func.lower(models.User.email) == email).first()
+        if exists_email:
+            raise HTTPException(409, detail="email already in use")
+
+    username_raw = (req.username or "").strip()
+    if email is not None and not username_raw:
+        username = _generate_username_from_email(email)
+    else:
+        if not username_raw:
+            raise HTTPException(400, detail="username or email is required")
+        username = _normalize_username(username_raw)
+        _validate_username(username)
+
     _validate_password(req.password)
     exists = db.query(models.User).filter(models.User.username == username).first()
     if exists:
         raise HTTPException(409, detail="user exists")
+
     user = models.User(username=username, password_hash=hash_password(req.password))
+    if email is not None:
+        user.email = email
     db.add(user)
     db.flush()
     # default settings
@@ -106,16 +150,25 @@ class LoginRequest(BaseModel):
 
 @router.post("/login", response_model=AuthResponse)
 def login(req: LoginRequest, request: Request, db: Session = Depends(get_db)):
-    username = _normalize_username(req.username)
-    # Backward-compat: older deployments may have stored mixed-case usernames.
-    # We normalize input to lowercase, so search case-insensitively.
-    user = db.query(models.User).filter(func.lower(models.User.username) == username).first()
+    ident_raw = (req.username or "").strip()
+    if not ident_raw:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="invalid credentials")
+
+    # Allow login by email OR username (backward-compat).
+    if "@" in ident_raw:
+        email = _normalize_email(ident_raw)
+        user = db.query(models.User).filter(func.lower(models.User.email) == email).first()
+    else:
+        username = _normalize_username(ident_raw)
+        # Backward-compat: older deployments may have stored mixed-case usernames.
+        user = db.query(models.User).filter(func.lower(models.User.username) == username).first()
+
     auth_debug = os.getenv("AUTH_DEBUG") == "1"
     if not user:
         if auth_debug:
             # Логируем причину конкретно
             import logging
-            logging.getLogger(__name__).warning(f"AUTH_DEBUG login fail: user '{username}' not found")
+            logging.getLogger(__name__).warning(f"AUTH_DEBUG login fail: user '{ident_raw}' not found")
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid credentials")
     if not verify_password(req.password, user.password_hash):
         if auth_debug:
