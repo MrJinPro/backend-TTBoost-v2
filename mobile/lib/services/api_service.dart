@@ -218,6 +218,52 @@ class ApiService {
     }
   }
 
+  Future<bool> requestPasswordReset({required String loginOrEmail}) async {
+    try {
+      _setLastError(null);
+      final uri = Uri.parse('$baseUrl/v2/auth/password/reset/request');
+      final resp = await http.post(
+        uri,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'login_or_email': loginOrEmail}),
+      );
+      if (resp.statusCode == 200) return true;
+      _setLastError(_extractErrorMessage(resp));
+      return false;
+    } catch (e) {
+      _setLastError('Не удалось подключиться к серверу');
+      print('requestPasswordReset error: $e');
+      return false;
+    }
+  }
+
+  Future<bool> confirmPasswordReset({
+    required String loginOrEmail,
+    required String code,
+    required String newPassword,
+  }) async {
+    try {
+      _setLastError(null);
+      final uri = Uri.parse('$baseUrl/v2/auth/password/reset/confirm');
+      final resp = await http.post(
+        uri,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'login_or_email': loginOrEmail,
+          'code': code,
+          'new_password': newPassword,
+        }),
+      );
+      if (resp.statusCode == 200) return true;
+      _setLastError(_extractErrorMessage(resp));
+      return false;
+    } catch (e) {
+      _setLastError('Не удалось подключиться к серверу');
+      print('confirmPasswordReset error: $e');
+      return false;
+    }
+  }
+
   Future<bool> deleteAccount({required String confirm, String? password}) async {
     try {
       _setLastError(null);
@@ -750,7 +796,9 @@ class ApiService {
         uri,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
-          'username': username,
+          // New flow: treat input as email, server auto-generates username.
+          // Backward-compat: server still accepts username if email omitted.
+          'email': username,
           'password': password,
         }),
       );
