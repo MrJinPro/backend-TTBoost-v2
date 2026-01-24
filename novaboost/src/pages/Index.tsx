@@ -31,7 +31,7 @@ const Index = () => {
 
             <div className="flex justify-center mb-16">
               <Button asChild variant="gold" size="lg">
-                <a href={ANDROID_TEST_URL} target="_blank" rel="noreferrer" aria-label="Скачать Android (тест)">
+                <a href="https://play.google.com/apps/testing/com.mrjinpro.novaboostmobile" target="_blank" rel="noreferrer" aria-label="Скачать Android (тест)">
                   <Play className="h-5 w-5" />
                   Скачать для теста (Android)
                 </a>
