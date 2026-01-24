@@ -2,7 +2,9 @@ import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Link } from "react-router-dom";
 import starLogo from "@/assets/star-logo.png";
-import { Sparkles, Zap, Shield } from "lucide-react";
+import { Sparkles, Zap, Shield, Play } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { ANDROID_TEST_URL } from "@/lib/config";
 
 const Index = () => {
   return (
@@ -26,6 +28,15 @@ const Index = () => {
             <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-12">
               Инструменты для озвучки и алёртов во время LIVE‑эфиров: TTS, подарки, триггеры и виджеты.
             </p>
+
+            <div className="flex justify-center mb-16">
+              <Button asChild variant="gold" size="lg">
+                <a href={ANDROID_TEST_URL} target="_blank" rel="noreferrer" aria-label="Скачать Android (тест)">
+                  <Play className="h-5 w-5" />
+                  Скачать для теста (Android)
+                </a>
+              </Button>
+            </div>
           </div>
 
           {/* Features */}
