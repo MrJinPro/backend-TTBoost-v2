@@ -10,3 +10,4 @@ class UserSettings(BaseModel):
     likes_enabled: bool = False
     tts_lang: str = "ru"
     tts_tld: str = "com"  # Google TTS accent (com = female)
+# Изменения 
