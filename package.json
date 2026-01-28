@@ -1,0 +1,12 @@
+{
+  "name": "ttboost-mobile",
+  "version": "1.0.0",
+  "description": "> Профессиональная система озвучки и кастомных триггеров для TikTok Live стримов",
+  "main": "tiktok-gifts.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}

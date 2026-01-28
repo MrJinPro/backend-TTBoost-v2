@@ -412,9 +412,13 @@ class ApiService {
     String? selectedVoiceId,
     bool? ttsEnabled,
     bool? giftSoundsEnabled,
+    bool? silenceEnabled,
     bool? autoConnectLive,
     double? ttsVolume,
     double? giftVolume,
+    String? chatTtsMode,
+    String? chatTtsPrefixes,
+    int? chatTtsMinDiamonds,
   }) async {
     try {
       final body = <String, dynamic>{};
@@ -425,9 +429,14 @@ class ApiService {
 
       if (ttsEnabled != null) body['tts_enabled'] = ttsEnabled;
       if (giftSoundsEnabled != null) body['gift_sounds_enabled'] = giftSoundsEnabled;
+      if (silenceEnabled != null) body['silence_enabled'] = silenceEnabled;
       if (autoConnectLive != null) body['auto_connect_live'] = autoConnectLive;
       if (ttsVolume != null) body['tts_volume'] = ttsVolume.round();
       if (giftVolume != null) body['gifts_volume'] = giftVolume.round();
+
+      if (chatTtsMode != null) body['chat_tts_mode'] = chatTtsMode;
+      if (chatTtsPrefixes != null) body['chat_tts_prefixes'] = chatTtsPrefixes;
+      if (chatTtsMinDiamonds != null) body['chat_tts_min_diamonds'] = chatTtsMinDiamonds;
 
       // v2 settings
       final uriV2 = Uri.parse('$baseUrl/v2/settings/update');

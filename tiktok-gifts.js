@@ -1,0 +1,5431 @@
+// Полный каталог подарков TikTok с изображениями и ценами
+// Автоматически сгенерирован из gifts-library.json
+// Дата обновления: 2025-10-28
+// Всего подарков: 902
+
+const TIKTOK_GIFTS = [
+  {
+    "id": 7604,
+    "name": "2023",
+    "image": "https://cdn.dps.vc/iblock/8fb/8fba3d5f6bf547ba8c94d3f393992d46/e3cfc1cfea30d7c139f7c4943f5d3b26.webp",
+    "coins": 1,
+    "sound": "/static/sounds/global/gift_7604.mp3"
+  },
+  {
+    "id": 9639,
+    "name": "2024",
+    "image": "https://cdn.dps.vc/iblock/f79/f797d3eaa506c47ce534b347685c7f6c/90bd72b7405a064bd5b95d37a28f53c5.webp",
+    "coins": 1
+  },
+  {
+    "id": 13382,
+    "name": "2025",
+    "image": "https://cdn.dps.vc/iblock/bb5/bb5a5f601554450bbf8d31605208eb71/287e79592dbb3754b8aac74f39877040.webp",
+    "coins": 1
+  },
+  {
+    "id": 13506,
+    "name": "2025 Love",
+    "image": "https://cdn.dps.vc/iblock/9f1/9f12db97d903bc56126bf9c3e0113f86/d7662a21a473385c2c90a953104547d7.webp",
+    "coins": 1
+  },
+  {
+    "id": 7831,
+    "name": "Alien Peace Sign",
+    "image": "https://cdn.dps.vc/iblock/5f7/5f7b29f5c7a4ca3a4dbbe8dc0e195459/cd83433a0f1697a0b66a891cbd7cf1af.webp",
+    "coins": 1
+  },
+  {
+    "id": 7316,
+    "name": "Anti Hero",
+    "image": "https://cdn.dps.vc/iblock/d5f/d5f1cee5ab178c6180cf3596df2a8208/892d3208126cc6c46e605c52ffbb5a60.webp",
+    "coins": 1
+  },
+  {
+    "id": 8237,
+    "name": "April",
+    "image": "https://cdn.dps.vc/iblock/286/2868dcf1aa87ea32265bbd75e75d9f60/ca42b293ad5e3062659989fa985dbbc0.webp",
+    "coins": 1
+  },
+  {
+    "id": 7897,
+    "name": "Baseball",
+    "image": "https://cdn.dps.vc/iblock/923/92341a47e85be94fb6a6699a6c430a93/d60527955f9597a43d339357fed6a5fc.webp",
+    "coins": 1
+  },
+  {
+    "id": 6269,
+    "name": "Basketball",
+    "image": "https://cdn.dps.vc/iblock/1e1/1e15c5768844b752893c47c9699ffa5e/ac594ceeb59aa16782bfa62a46d832d8.png",
+    "coins": 1
+  },
+  {
+    "id": 6926,
+    "name": "Basketball",
+    "image": "https://cdn.dps.vc/iblock/fe9/fe9d1af2b294c7358529820fa79ce482/81c11d02495754fcb2fedbc535383fa7.webp",
+    "coins": 1
+  },
+  {
+    "id": 9097,
+    "name": "Birthday Cake",
+    "image": "https://cdn.dps.vc/iblock/5b9/5b9eca4a99e965cb25183681a07a5276/c28f7e9c4a8e42460225ff2d12300ae7.webp",
+    "coins": 1
+  },
+  {
+    "id": 5644,
+    "name": "Bungeo-ppang",
+    "image": "https://cdn.dps.vc/iblock/7af/7afe4a4d67c1343a2df4703537b897eb/cd51c9bbb8291363ea4189bd2370eb8c.png",
+    "coins": 1
+  },
+  {
+    "id": 6784,
+    "name": "Cake Slice",
+    "image": "https://cdn.dps.vc/iblock/a1d/a1dfaa8ad7e0b7a164af7468971f8118/ad3a323fa40f3dd967e65049d2d0764f.webp",
+    "coins": 1
+  },
+  {
+    "id": 6046,
+    "name": "Cat Paws",
+    "image": "https://cdn.dps.vc/iblock/c04/c04061e18b637df6759417bfe5418c9c/89bc2c5278f4a3c28acebdd10f6bc089.webp",
+    "coins": 1
+  },
+  {
+    "id": 7233,
+    "name": "Chestnuts",
+    "image": "https://cdn.dps.vc/iblock/b16/b165eccc2fc0ecdb85149432f8d40e94/e9aa3a5c8c9ae6baf20464d915fcbbc6.webp",
+    "coins": 1
+  },
+  {
+    "id": 7296,
+    "name": "Chestnuts",
+    "image": "https://cdn.dps.vc/iblock/7c7/7c7c8f9303c92aa20fce0e9e1a70e336/42e6c7a2865e19498ee04a7a1d700521.webp",
+    "coins": 1
+  },
+  {
+    "id": 7086,
+    "name": "Chili",
+    "image": "https://cdn.dps.vc/iblock/4e4/4e476335c1d0a47efc33a40688d0fc75/ab85d5eccda4bf6509874c9533739b62.webp",
+    "coins": 1
+  },
+  {
+    "id": 5860,
+    "name": "Chocolate",
+    "image": "https://cdn.dps.vc/iblock/522/52287f41673e2fd836c83ec78e95f08a/77307666e41e09e54052fd321c2906c4.png",
+    "coins": 1
+  },
+  {
+    "id": 6002,
+    "name": "Chocolate Stick",
+    "image": "https://cdn.dps.vc/iblock/5c9/5c9487af2038c340fdbeb0b9ea4ff83e/b377ae8024881b93822f7b0a6bfe04e8.png",
+    "coins": 1
+  },
+  {
+    "id": 5826,
+    "name": "Cloud Bread",
+    "image": "https://cdn.dps.vc/iblock/116/1166fd0ea70e5a7b7a51d718f2cbd06c/6ebf49c51e627d917d96291316c3f812.png",
+    "coins": 1
+  },
+  {
+    "id": 5333,
+    "name": "Coffee",
+    "image": "https://cdn.dps.vc/iblock/920/920b64634d946a2238950c353c16df81/0fe22d9bdee1bd6d9d77f66bcd8cf45a.png",
+    "coins": 1
+  },
+  {
+    "id": 5479,
+    "name": "Coffee",
+    "image": "https://cdn.dps.vc/iblock/c01/c01ca7de81469018ef06e3b0e09a2814/04bb6e747afdb5334e8c29074e24f474.webp",
+    "coins": 1
+  },
+  {
+    "id": 13035,
+    "name": "Crystal Rose",
+    "image": "https://cdn.dps.vc/iblock/3b0/3b0373c364a622141546960a3fd185f2/36552073474c638f41309e4314f9fc6c.webp",
+    "coins": 1
+  },
+  {
+    "id": 6447,
+    "name": "Daisies",
+    "image": "https://cdn.dps.vc/iblock/e11/e110e47562d77ab5fa26cc31e840f801/a4a1823ef2c1bc65c4dc2a4e82ec446b.png",
+    "coins": 1
+  },
+  {
+    "id": 14295,
+    "name": "Dates",
+    "image": "https://cdn.dps.vc/iblock/c18/c18460b4814bc35f2cbd343102a31161/76a18b6a6f471c6261d5a2681409e1e5.webp",
+    "coins": 1
+  },
+  {
+    "id": 5906,
+    "name": "Earth",
+    "image": "https://cdn.dps.vc/iblock/0db/0db54eaf38fe9ca66924e04a545c71d0/56c6ce0c159cdc5469db4d47c01b3b95.webp",
+    "coins": 1
+  },
+  {
+    "id": 5685,
+    "name": "Enjoy Music",
+    "image": "https://cdn.dps.vc/iblock/82b/82b1fc25e1aab4c5502c31bfd1c001d7/ce0e2cc4cecb12e0fc2938eb4871008c.webp",
+    "coins": 1
+  },
+  {
+    "id": 8495,
+    "name": "Fairy wings",
+    "image": "https://cdn.dps.vc/iblock/f7c/f7c6b11488938695bb0f3836d3eb6d98/bfdf297ce4fd01a5c2dc1087a30f7ce8.webp",
+    "coins": 1
+  },
+  {
+    "id": 5523,
+    "name": "Fire",
+    "image": "https://cdn.dps.vc/iblock/0f1/0f100548d20594a29c36938ceaea1a62/9e8ba4ba863ec74182826cd0ec1204f9.webp",
+    "coins": 1
+  },
+  {
+    "id": 9087,
+    "name": "Flame heart",
+    "image": "https://cdn.dps.vc/iblock/10d/10df10624cdeebe8ff5e0e89e8c8e960/28b8da2878a420f8465cbbc1ec1e6b58.webp",
+    "coins": 1
+  },
+  {
+    "id": 6093,
+    "name": "Football",
+    "image": "https://cdn.dps.vc/iblock/2e1/2e13ae32a1a89c24cf891ffa79d63ecc/3e53b8b47bfa1760ce4f3f4d71966516.png",
+    "coins": 1
+  },
+  {
+    "id": 7933,
+    "name": "Funny Face",
+    "image": "https://cdn.dps.vc/iblock/65b/65be33e0d88d5cb55e5e968b67417fc1/2530e112c1891007fc956255f5c7f0ad.webp",
+    "coins": 1
+  },
+  {
+    "id": 7002,
+    "name": "Garden Gnome",
+    "image": "https://cdn.dps.vc/iblock/c1e/c1efcf386f4ffc5626e0be1ef1ecd93a/210fa9d66c1f0c1968608b40c4e698ea.webp",
+    "coins": 1
+  },
+  {
+    "id": 6064,
+    "name": "GG",
+    "image": "https://cdn.dps.vc/iblock/232/232e2afc8e6c022c5c78df18cf196663/f2ba6300ef54121763648a60d465eef5.png",
+    "coins": 1
+  },
+  {
+    "id": 8286,
+    "name": "GG",
+    "image": "https://cdn.dps.vc/iblock/993/993d6fe6ba90a007abd712557c96be80/26dd80bd9499dbed22cd6f1ac6ef6fd1.webp",
+    "coins": 1
+  },
+  {
+    "id": 5593,
+    "name": "Gingerbread Heart",
+    "image": "https://cdn.dps.vc/iblock/3aa/3aa99bd0ce5bb4e4d0bcf42bda3cb247/bf0f3d3eef206caf8ecb97d3b46afb66.png",
+    "coins": 1
+  },
+  {
+    "id": 6649,
+    "name": "Give It All",
+    "image": "https://cdn.dps.vc/iblock/de8/de8468d1003361452021c2d4796bb0f6/574aa0cdd7b418a2a3af2ca4739e9e7f.webp",
+    "coins": 1
+  },
+  {
+    "id": 6788,
+    "name": "Glow Stick",
+    "image": "https://cdn.dps.vc/iblock/751/751d663d0939f5d4a5178c32731a8c03/29d8d050f88ee2eb30b4099c86017d58.webp",
+    "coins": 1
+  },
+  {
+    "id": 7021,
+    "name": "Go Snacking",
+    "image": "https://cdn.dps.vc/iblock/666/6661d244aca6ec5f3de19372316e871e/f967ba18a333cd1489396cb608371824.webp",
+    "coins": 1
+  },
+  {
+    "id": 7234,
+    "name": "Grapes",
+    "image": "https://cdn.dps.vc/iblock/442/442580106ac8748b79ef450eb25b5981/df624c619c48b583adee184bca134c80.webp",
+    "coins": 1
+  },
+  {
+    "id": 8203,
+    "name": "Great Team",
+    "image": "https://cdn.dps.vc/iblock/95f/95f3f1519e2b1d025b9a0a1e2faa2fa5/ff1b5216cf3b50aa851d6bd865957dba.webp",
+    "coins": 1
+  },
+  {
+    "id": 7073,
+    "name": "Harvest Festival",
+    "image": "https://cdn.dps.vc/iblock/1f7/1f7cc70b38ac725b01586e1d1daa7cc1/8b053a13e770f0e285d38f66c2e98bbb.webp",
+    "coins": 1
+  },
+  {
+    "id": 6247,
+    "name": "Heart",
+    "image": "https://cdn.dps.vc/iblock/21d/21de8189873fc8550b8f19501effab4f/0be54b4cf3e40c52fca6be3f71220d69.png",
+    "coins": 1
+  },
+  {
+    "id": 7934,
+    "name": "Heart Me",
+    "image": "https://cdn.dps.vc/iblock/13e/13e5b040286e1eb50502af4539441cce/f82b75d67c3e4553d278404babdf91e2.webp",
+    "coins": 1
+  },
+  {
+    "id": 10448,
+    "name": "Heart Puff",
+    "image": "https://cdn.dps.vc/iblock/428/4289343623c4eadcf998e441f79a7e75/84d4ffa6b47296eddd449d183957c0b0.webp",
+    "coins": 1
+  },
+  {
+    "id": 6603,
+    "name": "Hi July",
+    "image": "https://cdn.dps.vc/iblock/e03/e0301a9670584be92d945ff3cb889b99/0fbb7b11f916953201588b5bfbcb3f5a.png",
+    "coins": 1
+  },
+  {
+    "id": 7176,
+    "name": "Hi November",
+    "image": "https://cdn.dps.vc/iblock/2e1/2e1bd0d30bac3377a114d2080f9687b0/4213592ba44947c98100df3dd8969f32.webp",
+    "coins": 1
+  },
+  {
+    "id": 7250,
+    "name": "Hot Water Bottle",
+    "image": "https://cdn.dps.vc/iblock/b2d/b2df44ded399459307ff834c7b023012/df970d1febac600ed4175467c327d10f.webp",
+    "coins": 1
+  },
+  {
+    "id": 7048,
+    "name": "I LOVE KR",
+    "image": "https://cdn.dps.vc/iblock/a33/a330586aeae257203d4ae0685a8c7599/cc67f4e57346c9acef62ecee527695dd.webp",
+    "coins": 1
+  },
+  {
+    "id": 7139,
+    "name": "I LOVE TR",
+    "image": "https://cdn.dps.vc/iblock/84d/84d68e92c471e7da792aa98d856c824c/7728ac60043efb9c96e2ce0f77dbef31.webp",
+    "coins": 1
+  },
+  {
+    "id": 5827,
+    "name": "Ice Cream Cone",
+    "image": "https://cdn.dps.vc/iblock/1a1/1a13988014fd9fb5990b3060beb2151d/71ba7d4c6eeaef46e5cc11fbf36ba3fa.png",
+    "coins": 1
+  },
+  {
+    "id": 5464,
+    "name": "Ice Tea",
+    "image": "https://cdn.dps.vc/iblock/531/5313a4ca89a7c7588a88898c8f1e9053/dab85392562772099474a050c251d340.png",
+    "coins": 1
+  },
+  {
+    "id": 6928,
+    "name": "It's corn",
+    "image": "https://cdn.dps.vc/iblock/d48/d48869b41c99cf004857fb74aff97552/75f200300cdaf3424287814ec55e9656.webp",
+    "coins": 1
+  },
+  {
+    "id": 6652,
+    "name": "Lightning Bolt",
+    "image": "https://cdn.dps.vc/iblock/265/2655cafe6afc1fa0fca76a732bad4730/bfb4abdf65da281c7ccf0b682f3406a3.webp",
+    "coins": 1
+  },
+  {
+    "id": 9334,
+    "name": "LIVE Fest",
+    "image": "https://cdn.dps.vc/iblock/8b1/8b1f728c5244700329d02ece036b6fb7/28d7c3bcfd764ad24dde668aea7e4aba.webp",
+    "coins": 1
+  },
+  {
+    "id": 7050,
+    "name": "Love Hangul",
+    "image": "https://cdn.dps.vc/iblock/cbe/cbec14bfbd7a08879ed3407271ee8071/00155d009644335398d32c4d35b60a79.webp",
+    "coins": 1
+  },
+  {
+    "id": 7932,
+    "name": "Love Letter",
+    "image": "https://cdn.dps.vc/iblock/a40/a40cb58d5e8c07fa3e46a9acb4e34f6f/477507a1b14df0a22ef895c6214f3789.webp",
+    "coins": 1
+  },
+  {
+    "id": 6890,
+    "name": "Love you",
+    "image": "https://cdn.dps.vc/iblock/0d9/0d984742e147a8bf2fd0f06b1421a825/c42e82a95ae799de0e860947971440ed.webp",
+    "coins": 1
+  },
+  {
+    "id": 7375,
+    "name": "Lucky Pig",
+    "image": "https://cdn.dps.vc/iblock/bf8/bf8e32bd0bf5a916195b5848db571f4f/a9241b01b970aa44c2d5cea5e8ba69d6.webp",
+    "coins": 1
+  },
+  {
+    "id": 7976,
+    "name": "March",
+    "image": "https://cdn.dps.vc/iblock/ba4/ba44cb084cab8c9c63b4513a145813f4/56531d239586a3d4552859cb2b23314d.webp",
+    "coins": 1
+  },
+  {
+    "id": 7070,
+    "name": "Match Star",
+    "image": "https://cdn.dps.vc/iblock/497/497fa45aa565639b858e333ae2e0450c/f381f7c1c9a66fb6712e78a3b210b3ab.webp",
+    "coins": 1
+  },
+  {
+    "id": 7074,
+    "name": "Match Star",
+    "image": "https://cdn.dps.vc/iblock/bd5/bd50fed09a13493a57589939f8419460/5b136dca770fbb5c96dc9c62e20bf6b0.webp",
+    "coins": 1
+  },
+  {
+    "id": 6470,
+    "name": "May",
+    "image": "https://cdn.dps.vc/iblock/ec6/ec6d320bb93df97057208f5163d81a92/67cb233e8cf0454213300c945b2f9256.webp",
+    "coins": 1
+  },
+  {
+    "id": 6042,
+    "name": "Mini Speaker",
+    "image": "https://cdn.dps.vc/iblock/1b1/1b117cbff78bfb7f50ba4d90a16c6112/30f4b176fd30683e3cbfc9013fe96d82.png",
+    "coins": 1
+  },
+  {
+    "id": 7742,
+    "name": "Monty",
+    "image": "https://cdn.dps.vc/iblock/c70/c70e3a9404b18068056d04d5394d739a/4e0e55d9d10a7747b7caf462cd87b4b3.webp",
+    "coins": 1
+  },
+  {
+    "id": 5588,
+    "name": "Nasi Lemak",
+    "image": "https://cdn.dps.vc/iblock/565/56533f45e52bfd5f73f31ddf75812f46/f9aadd4e8227fa94828795c763b22fff.png",
+    "coins": 1
+  },
+  {
+    "id": 9081,
+    "name": "New Universe",
+    "image": "https://cdn.dps.vc/iblock/ff9/ff906a964a6ad9c4504438302d9354b8/3ee4796c239930c395afb3d7ef10295a.webp",
+    "coins": 1
+  },
+  {
+    "id": 5778,
+    "name": "Orange Juice",
+    "image": "https://cdn.dps.vc/iblock/3d6/3d635024d8744f8648306d56a5c4f62f/be0f5f006bd2350e904b23b607e4f06b.png",
+    "coins": 1
+  },
+  {
+    "id": 13651,
+    "name": "Popular Vote",
+    "image": "https://cdn.dps.vc/iblock/b1d/b1dadc45c3955bd326ba1d3138e9a28a/f4baa1aa42578ff121051cf9c385673c.webp",
+    "coins": 1
+  },
+  {
+    "id": 9175,
+    "name": "Pretzel",
+    "image": "https://cdn.dps.vc/iblock/a67/a6797793eb382a99d38b2a0c37ec9b58/04ea1042707a361ad0f4668d0d759daa.webp",
+    "coins": 1
+  },
+  {
+    "id": 10247,
+    "name": "Ramadan Kareem",
+    "image": "https://cdn.dps.vc/iblock/f7b/f7b425d5d15eba6d843b430746100211/18ba610f52f7ba06fe3fbfb3127c346c.webp",
+    "coins": 1
+  },
+  {
+    "id": 14141,
+    "name": "Ramadan Kareem",
+    "image": "https://cdn.dps.vc/iblock/c1b/c1b5e0e1a890f752c0490682457723eb/c6b70b0b78d9ae9149011afd28622b61.webp",
+    "coins": 1
+  },
+  {
+    "id": 14130,
+    "name": "Ramadan Welcome",
+    "image": "https://cdn.dps.vc/iblock/c73/c73880ff11095363d2506f62f73c2812/e924c1bed61fe9d3066fd3689175b618.webp",
+    "coins": 1
+  },
+  {
+    "id": 6383,
+    "name": "Raya Rice",
+    "image": "https://cdn.dps.vc/iblock/e0c/e0c375df5bdce1c926f46244ced54ecc/1bd688843c1c24370b8c4a74686c2c0d.png",
+    "coins": 1
+  },
+  {
+    "id": 5655,
+    "name": "Rose",
+    "image": "https://cdn.dps.vc/iblock/f59/f5902abbd13178017285a308606fd0dd/cf6a40558018965a8171cf5a575dd9de.png",
+    "coins": 1
+  },
+  {
+    "id": 7003,
+    "name": "Sapling",
+    "image": "https://cdn.dps.vc/iblock/020/020f204d8bf49c321c77c718d15972e5/f515f03da38b6a2663fc40879119bc5c.webp",
+    "coins": 1
+  },
+  {
+    "id": 13282,
+    "name": "Slay",
+    "image": "https://cdn.dps.vc/iblock/1b2/1b2e20225b3c3250310919d1cc7332da/80768186d2f6130db874ccf2fb21c58c.webp",
+    "coins": 1
+  },
+  {
+    "id": 7394,
+    "name": "Sneakerhead",
+    "image": "https://cdn.dps.vc/iblock/f64/f648c76bae6ef273077c74cc9312b126/87f4891550b2cfd3e49973f7f87dbdb2.webp",
+    "coins": 1
+  },
+  {
+    "id": 7024,
+    "name": "So Beautiful",
+    "image": "https://cdn.dps.vc/iblock/ad6/ad67c8d6c93ff4c375568b0bfabbed6f/c68dfd6fda7e8bd84f0bc7fa9ce47af0.webp",
+    "coins": 1
+  },
+  {
+    "id": 7283,
+    "name": "Soccer",
+    "image": "https://cdn.dps.vc/iblock/b66/b66678fc470a853df0b9c8d547d53809/81e216e2cb71bebe600bb5ff0ed61e62.webp",
+    "coins": 1
+  },
+  {
+    "id": 7213,
+    "name": "Squirrel",
+    "image": "https://cdn.dps.vc/iblock/5c3/5c37dce1eab0d67386329f3a2920a874/38104bd52d316ea76464433b3b07dea7.webp",
+    "coins": 1
+  },
+  {
+    "id": 7072,
+    "name": "Sub Star",
+    "image": "https://cdn.dps.vc/iblock/98f/98fea40fc19cc9dbd9a083b0844c163b/af7dd985812299d89f6cfa49c84e7eaf.webp",
+    "coins": 1
+  },
+  {
+    "id": 8202,
+    "name": "Superb Team",
+    "image": "https://cdn.dps.vc/iblock/e6e/e6e8cdd5e84f701dc627b8cc3e280d4c/29ce845878feb46152b20a75a3259d56.webp",
+    "coins": 1
+  },
+  {
+    "id": 12355,
+    "name": "Team Cheers",
+    "image": "https://cdn.dps.vc/iblock/ce1/ce1cb88b5a719ac18025da6e9c53cfc8/39c8a6b88f9f861f7de7c43c2b45db1d.webp",
+    "coins": 1
+  },
+  {
+    "id": 5462,
+    "name": "Tempe Tofu",
+    "image": "https://cdn.dps.vc/iblock/c93/c9341080d8efd5849e32f1e394a7a96a/c2992a332ca93e9114a6ab0e8b31effd.png",
+    "coins": 1
+  },
+  {
+    "id": 6169,
+    "name": "Tennis",
+    "image": "https://cdn.dps.vc/iblock/f20/f20121609887f7ff35952c1bc52529e2/9ff66229b1f81d21b15444ba2b53db98.png",
+    "coins": 1
+  },
+  {
+    "id": 9818,
+    "name": "Tennis",
+    "image": "https://cdn.dps.vc/iblock/22d/22d0d214090fd1edb5d347fb4c844ef7/b354b4d738106bb1872ab218157072ae.webp",
+    "coins": 1
+  },
+  {
+    "id": 6246,
+    "name": "Thumbs Up",
+    "image": "https://cdn.dps.vc/iblock/267/2675b04a24fc0d674ca25874493769c4/49252fd7c65b99a3acf3e2ee18af2d67.png",
+    "coins": 1
+  },
+  {
+    "id": 6635,
+    "name": "Thunder Hammer",
+    "image": "https://cdn.dps.vc/iblock/401/401ff4c96ee1f2301db5a6fed5d53103/830012ba80bac708f9281417ede8696c.png",
+    "coins": 1
+  },
+  {
+    "id": 5269,
+    "name": "TikTok",
+    "image": "https://cdn.dps.vc/iblock/50f/50f8e7cf26128a6e10d0b792019c1303/94aa2d574cfe6e3893c087cfb5a5efcd.png",
+    "coins": 1
+  },
+  {
+    "id": 7867,
+    "name": "Wasp",
+    "image": "https://cdn.dps.vc/iblock/a2e/a2ee3b391f273bed4c62678256de1d67/fb7e033b22eec6c13fb9a0a4d4bb0ed7.webp",
+    "coins": 1
+  },
+  {
+    "id": 8201,
+    "name": "We are a team",
+    "image": "https://cdn.dps.vc/iblock/5d2/5d2c4cc3cedfb9b6f230165990d2d2d3/0262b6d01e39dd56c2e877e13061c56d.webp",
+    "coins": 1
+  },
+  {
+    "id": 5760,
+    "name": "Weights",
+    "image": "https://cdn.dps.vc/iblock/d6f/d6f46242fd4f0396f5c5070ff960e83c/87884fe9998fea43e8aa56ecce15a541.png",
+    "coins": 1
+  },
+  {
+    "id": 13298,
+    "name": "Wink Charm",
+    "image": "https://cdn.dps.vc/iblock/0bc/0bce9ad35763929c36d9e91d1c53cbe4/e56297b66e1ac3639f86f3fb7bb8e518.webp",
+    "coins": 1
+  },
+  {
+    "id": 7160,
+    "name": "Wishing Bottle",
+    "image": "https://cdn.dps.vc/iblock/381/381ef41d500da1120bdfcf83f97e76fc/1a1c9b6be78144f22b8e858effc39333.webp",
+    "coins": 1
+  },
+  {
+    "id": 9139,
+    "name": "Team Bracelet",
+    "image": "https://cdn.dps.vc/iblock/e84/e849ee7af8ced1bc1305b089eabd2300/69f347a883e4f7562894c98a5f6d3963.webp",
+    "coins": 2
+  },
+  {
+    "id": 7974,
+    "name": "Anemo Slime",
+    "image": "https://cdn.dps.vc/iblock/8b0/8b0d71102fd2ec5bd933dd7b13d05494/0e4b5a7426584dfccd59a45dad66fd96.webp",
+    "coins": 5
+  },
+  {
+    "id": 8297,
+    "name": "Anemo Slime",
+    "image": "https://cdn.dps.vc/iblock/bda/bdaab62a1b0e4c545f642c756527befb/f8c85e3a422614f15130d0703bd8ad6a.webp",
+    "coins": 5
+  },
+  {
+    "id": 7224,
+    "name": "Big Love",
+    "image": "https://cdn.dps.vc/iblock/9d7/9d791fea266e119ffd938095526a1b55/1923108683e8c0aba3b78e1d0e8137cf.webp",
+    "coins": 5
+  },
+  {
+    "id": 5319,
+    "name": "Blue Bead",
+    "image": "https://cdn.dps.vc/iblock/afe/afe8100602b9b735b74ab34365032ec7/d778bfcb66bff177989590909b969ef2.png",
+    "coins": 5
+  },
+  {
+    "id": 12865,
+    "name": "Bread",
+    "image": "https://cdn.dps.vc/iblock/d91/d915c02ea36fb2fef03916bfb14a763e/605af73702b749c67f528a9085b7a4bc.webp",
+    "coins": 5
+  },
+  {
+    "id": 6704,
+    "name": "Chill",
+    "image": "https://cdn.dps.vc/iblock/7df/7dfcee6b2702691bf9c8ca0966b3c4b1/144aa8fff9ce8c64aa7fcb507bf6c1cd.webp",
+    "coins": 5
+  },
+  {
+    "id": 6883,
+    "name": "Cookie",
+    "image": "https://cdn.dps.vc/iblock/fd2/fd20c8c619b1d43efb9f2fe1923c48a7/45c056f74c9f214dc55d464eab43b224.webp",
+    "coins": 5
+  },
+  {
+    "id": 8186,
+    "name": "Cornflower",
+    "image": "https://cdn.dps.vc/iblock/025/025c50c390f6a12148a69728284c7298/36b50fe529db9d7db028b0774842e103.webp",
+    "coins": 5
+  },
+  {
+    "id": 8352,
+    "name": "Cotton's Shell",
+    "image": "https://cdn.dps.vc/iblock/766/7665d59f0ef96aecd2dac6fc5b0c19a4/3b169a12b4f8686c68d596f6d47d2f77.webp",
+    "coins": 5
+  },
+  {
+    "id": 10268,
+    "name": "Easter egg",
+    "image": "https://cdn.dps.vc/iblock/fa1/fa1e175915f1a6b3b56a581305e0b4fe/42f70e12f26c941c014dd07d2ab5cfb4.webp",
+    "coins": 5
+  },
+  {
+    "id": 7735,
+    "name": "Espresso",
+    "image": "https://cdn.dps.vc/iblock/f1d/f1da849cd40d0aee5356a42fa2f2e943/291daa44fb75169111ae32e65d47b0dd.webp",
+    "coins": 5
+  },
+  {
+    "id": 5487,
+    "name": "Finger Heart",
+    "image": "https://cdn.dps.vc/iblock/688/688f0c350f9cd9751cb02659f4ab105e/2b2d66c2f9767fc8332ee1b5ba0c1057.png",
+    "coins": 5
+  },
+  {
+    "id": 5719,
+    "name": "Fire",
+    "image": "https://cdn.dps.vc/iblock/441/4412d8bb2050dfd3780ac56f887c961a/240ad3fc994753581879bb4ab90afb88.png",
+    "coins": 5
+  },
+  {
+    "id": 12829,
+    "name": "Fluffy Penguin",
+    "image": "https://cdn.dps.vc/iblock/4db/4dbac2bf32ac4abb1c04d8a40ca2088a/ea1e4b3da953728217d4faf3f4427f16.webp",
+    "coins": 5
+  },
+  {
+    "id": 5894,
+    "name": "Football",
+    "image": "https://cdn.dps.vc/iblock/c26/c266d3a510b4d06cb2f1cc574bc9247d/7125c3d9741749395f647ce72f3b0941.png",
+    "coins": 5
+  },
+  {
+    "id": 7136,
+    "name": "Golden Player",
+    "image": "https://cdn.dps.vc/iblock/ab0/ab094aa2e955a6936a685b16d44933ee/e482a1a5723a2ea9653140c080ef8e58.webp",
+    "coins": 5
+  },
+  {
+    "id": 6126,
+    "name": "Gummy",
+    "image": "https://cdn.dps.vc/iblock/c33/c338d672d2ccd9de8df40d7afe23e041/cf38b075df9389388a847e24a5af4a9e.png",
+    "coins": 5
+  },
+  {
+    "id": 7501,
+    "name": "Hello Traveler",
+    "image": "https://cdn.dps.vc/iblock/a46/a4668dd315e2d9d84fd267fd0bc9ca59/0eb68fd9e58d9c9072d8ec7185103371.webp",
+    "coins": 5
+  },
+  {
+    "id": 5757,
+    "name": "Ice cream",
+    "image": "https://cdn.dps.vc/iblock/24a/24af6068b37268c45133d1055eef924c/0fd9ac15921b932e81c18789af22263b.png",
+    "coins": 5
+  },
+  {
+    "id": 8963,
+    "name": "Ice cream",
+    "image": "https://cdn.dps.vc/iblock/f72/f726165be6e93bdc69724375e7931dde/2e749d8d397b3ce5e6bcc90402f27c7d.webp",
+    "coins": 5
+  },
+  {
+    "id": 10694,
+    "name": "Ladybug",
+    "image": "https://cdn.dps.vc/iblock/ec5/ec5dd2712496c966df574c48e0cd03d8/9fb794029fc765abdfb2ab97c40a10e6.webp",
+    "coins": 5
+  },
+  {
+    "id": 10179,
+    "name": "Lily of the Valley",
+    "image": "https://cdn.dps.vc/iblock/d1f/d1f1877a28d2ce5d6fa5559d3d119ade/eebe6bcbee2cc5cd949453b2e9fe978c.webp",
+    "coins": 5
+  },
+  {
+    "id": 5650,
+    "name": "Mic",
+    "image": "https://cdn.dps.vc/iblock/1db/1dbec91a90cdeca9f7fb1ea7280ad5cd/cae0a287f4d2e8d0e1558dcbb4aa3b2f.png",
+    "coins": 5
+  },
+  {
+    "id": 8205,
+    "name": "No.1 Team",
+    "image": "https://cdn.dps.vc/iblock/27f/27fe97cb0f1b8056fa0aedc918ea560e/966df61a39e36fe0f7237e55c3298117.webp",
+    "coins": 5
+  },
+  {
+    "id": 37,
+    "name": "Panda",
+    "image": "https://cdn.dps.vc/iblock/833/833aadcba552a8a2cc779dd8d4c537c7/f952c72ee1f40e4fcd07d713b3da6565.png",
+    "coins": 5
+  },
+  {
+    "id": 8815,
+    "name": "Pink shoes",
+    "image": "https://cdn.dps.vc/iblock/387/387c559abfc868aa8f7d605a25748c14/06e08ba736cb17076b9c314058160ad2.webp",
+    "coins": 5
+  },
+  {
+    "id": 8843,
+    "name": "Pink shoes",
+    "image": "https://cdn.dps.vc/iblock/e32/e328784531bfcd4773983c6a8e205a44/a3b5a6f4fa914fdf10b754ee59dc34a4.webp",
+    "coins": 5
+  },
+  {
+    "id": 8810,
+    "name": "Pinky promise",
+    "image": "https://cdn.dps.vc/iblock/686/6864e9132aa300e189e93054ad735407/fe1a1a4405f77f009f4a76a184bafc52.webp",
+    "coins": 5
+  },
+  {
+    "id": 9287,
+    "name": "Potato",
+    "image": "https://cdn.dps.vc/iblock/c52/c529d685dd317de2a119956cbb4abeb2/67f880f08b914fe1b61e9c238715c4fd.webp",
+    "coins": 5
+  },
+  {
+    "id": 7396,
+    "name": "Pumpkin Pie",
+    "image": "https://cdn.dps.vc/iblock/abf/abf5efb8fac6f64568b472c3afdb3e25/f85e4ef55b8c7d03f81351babd833c69.webp",
+    "coins": 5
+  },
+  {
+    "id": 6733,
+    "name": "Telescope",
+    "image": "https://cdn.dps.vc/iblock/0ff/0ff6c8d47e3d601ef9f775bfa6cf9647/4489d8324898af2a82d18ea04166db2c.webp",
+    "coins": 5
+  },
+  {
+    "id": 10604,
+    "name": "Tofu",
+    "image": "https://cdn.dps.vc/iblock/61d/61de461991ae9fcc49564c3862bfffe8/d061fdf7a6b95d640d89c38bcc765f93.webp",
+    "coins": 5
+  },
+  {
+    "id": 5645,
+    "name": "Tteokbokki",
+    "image": "https://cdn.dps.vc/iblock/81c/81ca5954462f21f506095fe410dd2aaf/c07e9b0bb8d0559874b780495cc0e451.png",
+    "coins": 5
+  },
+  {
+    "id": 5994,
+    "name": "Turkish coffee",
+    "image": "https://cdn.dps.vc/iblock/b1a/b1af09b6f6a337f74c8c0aa3c8ca4ae6/ed0261db4a52540a272958783d97713e.png",
+    "coins": 5
+  },
+  {
+    "id": 6774,
+    "name": "Wide Eye Wurstie",
+    "image": "https://cdn.dps.vc/iblock/009/00985e0e1bf5ab19a3c4c757f0ce91b7/e25e88198cbeeee06e8e49fa64332e44.webp",
+    "coins": 5
+  },
+  {
+    "id": 10093,
+    "name": "Wide Eye Wurstie",
+    "image": "https://cdn.dps.vc/iblock/f4c/f4c00b57a833d29739a4000272b5276d/6e2334c87b888ac2e50c34309969e703.webp",
+    "coins": 5
+  },
+  {
+    "id": 6519,
+    "name": "Guacamole",
+    "image": "https://cdn.dps.vc/iblock/207/20793577805a0b4fe0efeb37cc0bd7d9/10e97510121def59e538f0290d2d751a.png",
+    "coins": 6
+  },
+  {
+    "id": 5959,
+    "name": "Waving Hand",
+    "image": "https://cdn.dps.vc/iblock/6da/6da44060164719c3bcb171fb06d6d0d4/a80d1fa6879b0970246f41c444dca47c.webp",
+    "coins": 7
+  },
+  {
+    "id": 9622,
+    "name": "Applause",
+    "image": "https://cdn.dps.vc/iblock/2b8/2b8f13788d0abac39606d84bd7105aea/dad43c4b9b445a829e159e1c1e1b5059.webp",
+    "coins": 9
+  },
+  {
+    "id": 8243,
+    "name": "Cheer You Up",
+    "image": "https://cdn.dps.vc/iblock/788/788d5d3a74a511c5dad52353ffa00b14/bbc76c1cf6b20e20b2b4f149c04cb23d.webp",
+    "coins": 9
+  },
+  {
+    "id": 6059,
+    "name": "Hand Wave",
+    "image": "https://cdn.dps.vc/iblock/c80/c805a9c5c4647c816a003f9882f53a7b/3f3cc197f466a19170c0759dd1e9f1f1.png",
+    "coins": 9
+  },
+  {
+    "id": 7088,
+    "name": "Nachos",
+    "image": "https://cdn.dps.vc/iblock/ff1/ff16cd1c796189ed8fcfdb019eb224ef/1ae8b0b05294c56b99197256fcaa3fd4.webp",
+    "coins": 9
+  },
+  {
+    "id": 9719,
+    "name": "Snowboard",
+    "image": "https://cdn.dps.vc/iblock/866/866a750db19b9b09f4dc96d4e1eaa662/2feceeb1c782ddae492804aadbfa943a.webp",
+    "coins": 9
+  },
+  {
+    "id": 6113,
+    "name": "Taco",
+    "image": "https://cdn.dps.vc/iblock/6d8/6d809e8e6318e64b7e8c80fd325b7a0b/fa9bf2e6d0a5a19b945e6c4cc4e10af8.png",
+    "coins": 9
+  },
+  {
+    "id": 7087,
+    "name": "Taco",
+    "image": "https://cdn.dps.vc/iblock/5e1/5e1e4be13d7ba14e46d500180914f450/e5f81b83f7f2ceb8d8b51ec30f522439.webp",
+    "coins": 9
+  },
+  {
+    "id": 12356,
+    "name": "Team Power",
+    "image": "https://cdn.dps.vc/iblock/59b/59bdc6d49d10b8c1f9f89379a8a727d6/65fbf0c4d22e231dc180b22db1b8b692.webp",
+    "coins": 9
+  },
+  {
+    "id": 6350,
+    "name": "Welcome",
+    "image": "https://cdn.dps.vc/iblock/dda/ddaf400cc8b931bf1f1b2cdad4a9f7b0/2239c73a8edc68cfe66d2fae426d83bc.png",
+    "coins": 9
+  },
+  {
+    "id": 6990,
+    "name": "ASMR Time",
+    "image": "https://cdn.dps.vc/iblock/49d/49dccba4525df92ed17678cc6ea47e95/b2c8c52d5294bb531d7d87a4c3ff97fe.webp",
+    "coins": 10
+  },
+  {
+    "id": 9458,
+    "name": "ASMR Time",
+    "image": "https://cdn.dps.vc/iblock/917/917cab72ab2555ce661744479de69327/0584997f3b9d83da6f0b3851f5699da6.webp",
+    "coins": 10
+  },
+  {
+    "id": 5756,
+    "name": "Balloons",
+    "image": "https://cdn.dps.vc/iblock/462/462490a4e0da5abad033f4a57564041c/fe0831b660748b851ffd0e5a74847105.png",
+    "coins": 10
+  },
+  {
+    "id": 8206,
+    "name": "Bunny",
+    "image": "https://cdn.dps.vc/iblock/936/936db384f48352352933a0dd6cd293b9/161b928cedd45bced6705f64917fed66.webp",
+    "coins": 10
+  },
+  {
+    "id": 10521,
+    "name": "Cherry Blossom Bunny",
+    "image": "https://cdn.dps.vc/iblock/439/439854ea3170e5b9fc596b6eecf7c70e/3d932257ef663b36312ea4b77be4223e.webp",
+    "coins": 10
+  },
+  {
+    "id": 8165,
+    "name": "Chick",
+    "image": "https://cdn.dps.vc/iblock/54e/54e5c232c74094c8e4b4d5678552f756/8132c0b012e7100540e1f1e2a5b3265d.webp",
+    "coins": 10
+  },
+  {
+    "id": 6209,
+    "name": "Chicken Leg",
+    "image": "https://cdn.dps.vc/iblock/ef7/ef776169ede6c4a635cef2b3ab35d29a/7683229a73330c04463d2b97984ea114.png",
+    "coins": 10
+  },
+  {
+    "id": 6503,
+    "name": "Choco Pie",
+    "image": "https://cdn.dps.vc/iblock/5a7/5a7610069bd417a2847f34c6c0b2821d/5faa955edd066d1140abb048f32be815.webp",
+    "coins": 10
+  },
+  {
+    "id": 5933,
+    "name": "Coffee",
+    "image": "https://cdn.dps.vc/iblock/6d7/6d7c47d7f1862904fb26bf7b8297befb/fe6a95bcfc5abe6545f44983045aae65.png",
+    "coins": 10
+  },
+  {
+    "id": 8740,
+    "name": "Crocodile",
+    "image": "https://cdn.dps.vc/iblock/4e2/4e2d9df24c472158b8ed93546fc73b16/75722a173b75d601e0a80a679902529f.webp",
+    "coins": 10
+  },
+  {
+    "id": 9184,
+    "name": "Cube",
+    "image": "https://cdn.dps.vc/iblock/69d/69dab4e352882c0bd29c3864e24d80de/258857221189c76260b6af5eeb43e93b.webp",
+    "coins": 10
+  },
+  {
+    "id": 8097,
+    "name": "Dallah",
+    "image": "https://cdn.dps.vc/iblock/402/402ec89b471788374f63bd0d906e49c2/bbb7055a407d84bd3be843f5ca9fdc4b.webp",
+    "coins": 10
+  },
+  {
+    "id": 8298,
+    "name": "Dehya",
+    "image": "https://cdn.dps.vc/iblock/c69/c6958678de541ee2bc86ca0705a092d6/d33c50b1f67560f9673724a34b01a63d.webp",
+    "coins": 10
+  },
+  {
+    "id": 8108,
+    "name": "Dog Bone",
+    "image": "https://cdn.dps.vc/iblock/8ba/8badf8e0a5bcbf8d98ed6c4fc0e16c69/b0a8a8020986eb564713c042d23f83b2.webp",
+    "coins": 10
+  },
+  {
+    "id": 14560,
+    "name": "Easter Potato",
+    "image": "https://cdn.dps.vc/iblock/bdd/bdda26d6b6ea98d6528f248f7bc5b499/115108331ee3112228cb9fee1bddd90f.webp",
+    "coins": 10
+  },
+  {
+    "id": 11108,
+    "name": "EWC",
+    "image": "https://cdn.dps.vc/iblock/125/125030edd857cab74bc07e161190bc00/86981314c218a008ecc7af92635ccef1.webp",
+    "coins": 10
+  },
+  {
+    "id": 9947,
+    "name": "Friendship Necklace",
+    "image": "https://cdn.dps.vc/iblock/fbc/fbc3d5e21fd0e80c91e6368adc131d5b/384165e9235c13d54ed3bfb1e08852c4.webp",
+    "coins": 10
+  },
+  {
+    "id": 6052,
+    "name": "Gamepad",
+    "image": "https://cdn.dps.vc/iblock/711/711b578c104edcf1639ff4e2e7779660/6cbb6613fbbd40dac6dfd8857b05545a.png",
+    "coins": 10
+  },
+  {
+    "id": 5853,
+    "name": "Gold Boxing Gloves",
+    "image": "https://cdn.dps.vc/iblock/34e/34e26796343ec1e15963499660dcf41a/81b8242f0efa7ea248465200dff32eaa.webp",
+    "coins": 10
+  },
+  {
+    "id": 5480,
+    "name": "Heart",
+    "image": "https://cdn.dps.vc/iblock/b7a/b7ae3af2d67d7b7708a69d765531712a/7a382fcc2e03076c9e4b089176de1395.webp",
+    "coins": 10
+  },
+  {
+    "id": 13300,
+    "name": "Heart Gaze",
+    "image": "https://cdn.dps.vc/iblock/8f1/8f115441695dacb2c6e36a0e74483e70/ef005c109b0a68af0ad19eca80052f2f.webp",
+    "coins": 10
+  },
+  {
+    "id": 8692,
+    "name": "Hi Bear",
+    "image": "https://cdn.dps.vc/iblock/f34/f34b75494926337d0bede7003aee0af9/1cb25dfee5bac6dc49b19222ed6967f7.webp",
+    "coins": 10
+  },
+  {
+    "id": 9784,
+    "name": "Horseshoe",
+    "image": "https://cdn.dps.vc/iblock/160/160df3b848396c0456f9ef4ce7251197/82ac95688a0337d88b69b989d400c3b7.webp",
+    "coins": 10
+  },
+  {
+    "id": 5779,
+    "name": "I love you",
+    "image": "https://cdn.dps.vc/iblock/98a/98aec966c166c73997ef2acda553682d/13c611a6fa3e8a8e00e7e6d4989bf56c.png",
+    "coins": 10
+  },
+  {
+    "id": 6545,
+    "name": "Ice Lolly",
+    "image": "https://cdn.dps.vc/iblock/93d/93dda2498d64aa0a29d444103a7804dd/92fd7397fffbaa8755cb233815964bbf.png",
+    "coins": 10
+  },
+  {
+    "id": 6975,
+    "name": "Lederhosen",
+    "image": "https://cdn.dps.vc/iblock/7c7/7c72a908dce6d9df4db0a6159be1751b/2ff181aa1fae6088a37f942d51401176.webp",
+    "coins": 10
+  },
+  {
+    "id": 12745,
+    "name": "Little Ghost",
+    "image": "https://cdn.dps.vc/iblock/9b8/9b8c7545b9f37124a5f434101f534cd5/2b2c0ad9dd874e882036d4aeb60a84a4.webp",
+    "coins": 10
+  },
+  {
+    "id": 5657,
+    "name": "Lollipop",
+    "image": "https://cdn.dps.vc/iblock/857/85755cf3d5e2e5349efff7eeedbfff46/b5e02fcff0a73b906d530028d460e59d.png",
+    "coins": 10
+  },
+  {
+    "id": 6125,
+    "name": "Love You",
+    "image": "https://cdn.dps.vc/iblock/df0/df0c467bdbd803c8dc6a844499723d20/af65c7b68fb75877a5ecad188c27880a.png",
+    "coins": 10
+  },
+  {
+    "id": 6843,
+    "name": "Marvin the Monkey",
+    "image": "https://cdn.dps.vc/iblock/31a/31a03cf8430fa062064dd9e544910de2/e7939198db3920aeaf3d95167712af0e.webp",
+    "coins": 10
+  },
+  {
+    "id": 7089,
+    "name": "Mate tea",
+    "image": "https://cdn.dps.vc/iblock/506/506e98699cdfefd679b35ea5170823b0/a95e9e3721c9b86e3342169b3211b30e.webp",
+    "coins": 10
+  },
+  {
+    "id": 8189,
+    "name": "Maxwell",
+    "image": "https://cdn.dps.vc/iblock/82b/82b7041dcdd8fcc1842c0dd7b5a63099/73736d5ec979ad00f4b771397d9b998b.webp",
+    "coins": 10
+  },
+  {
+    "id": 8283,
+    "name": "Mushroom",
+    "image": "https://cdn.dps.vc/iblock/883/883cbcd93cbfc9c443eeeb7278d03d87/b421f5e48d0fdbfda7c4475bbab69ff4.webp",
+    "coins": 10
+  },
+  {
+    "id": 7341,
+    "name": "Panther",
+    "image": "https://cdn.dps.vc/iblock/74f/74f246d0f575fa20ccc456b80f5547ea/32f205cf24dcf07f5e8f308d9d425d59.webp",
+    "coins": 10
+  },
+  {
+    "id": 9952,
+    "name": "Potato in love",
+    "image": "https://cdn.dps.vc/iblock/7c8/7c8c7e1604610576ecce211f0d2bd2e5/434464ab6cc07d5a6a2155823604afa5.webp",
+    "coins": 10
+  },
+  {
+    "id": 7056,
+    "name": "Pretzel",
+    "image": "https://cdn.dps.vc/iblock/3fd/3fdb36621abdc0daf7b4e2f924263d80/771e3b065da9318186d2ade5f7db03ac.webp",
+    "coins": 10
+  },
+  {
+    "id": 7997,
+    "name": "Rosa",
+    "image": "https://cdn.dps.vc/iblock/486/486a2490c987c2bb97b6068fd5aac5ab/49d9045fcfe94bbfbd08c3363bb4512a.webp",
+    "coins": 10
+  },
+  {
+    "id": 8913,
+    "name": "Rosa",
+    "image": "https://cdn.dps.vc/iblock/d75/d75e85cc034e46f992262e4791eebdb5/5bcd13609b96c3cea7d67a6f68b29a18.webp",
+    "coins": 10
+  },
+  {
+    "id": 6249,
+    "name": "Rugby Ball",
+    "image": "https://cdn.dps.vc/iblock/d53/d53d3efae1c69b949373db455da077cf/fa22f0507a304597b013268524a8573f.png",
+    "coins": 10
+  },
+  {
+    "id": 6124,
+    "name": "Sausage",
+    "image": "https://cdn.dps.vc/iblock/df8/df881441ea8702ab97e414a4f1bd0f2a/74408e64e3907ff9f2e39bde299c9d50.png",
+    "coins": 10
+  },
+  {
+    "id": 8581,
+    "name": "Stars Snap",
+    "image": "https://cdn.dps.vc/iblock/318/318a8ce7e87f37f90bf5e3fbf773d827/e67f69439ae7c4bbf03bdaffd6e961a2.webp",
+    "coins": 10
+  },
+  {
+    "id": 6856,
+    "name": "Ticket",
+    "image": "https://cdn.dps.vc/iblock/434/434746bffe494ac6ad2eb5e7e4384955/92e426ea0b4d4a9f89d7e2786115cd20.webp",
+    "coins": 10
+  },
+  {
+    "id": 6560,
+    "name": "Tiny Diny",
+    "image": "https://cdn.dps.vc/iblock/504/50412c09b6d36020e28ee09ceb45f22b/aa96e43206d46ed5f25e8f476f67da45.png",
+    "coins": 10
+  },
+  {
+    "id": 7553,
+    "name": "Tiny Diny",
+    "image": "https://cdn.dps.vc/iblock/d09/d097727ea3a683b722652c2bf320b060/47e91b463d859907957bfc0e32e90c04.webp",
+    "coins": 10
+  },
+  {
+    "id": 7591,
+    "name": "Tiny Diny",
+    "image": "https://cdn.dps.vc/iblock/b24/b24309d4ea6722875678e492ae12fb3f/864ac7928a78b43be2d1ee93915a53f5.webp",
+    "coins": 10
+  },
+  {
+    "id": 7403,
+    "name": "Tucker the Turkey",
+    "image": "https://cdn.dps.vc/iblock/8f7/8f7fcac557fb70fa0bbd69809c112c0e/978e0bcdcd8cbf4cbdfdb53d9fc39eaa.webp",
+    "coins": 10
+  },
+  {
+    "id": 8826,
+    "name": "Watermelon",
+    "image": "https://cdn.dps.vc/iblock/84e/84e29ce96978961b12f1e88dd985b938/08e2a0ac2c2e2794aa2558e67d387639.webp",
+    "coins": 10
+  },
+  {
+    "id": 8767,
+    "name": "Golden Trumpet",
+    "image": "https://cdn.dps.vc/iblock/a44/a4441a11d3cb073e855088a4eff72fdb/020b0d041c38b00b730b28806dbe6cc5.webp",
+    "coins": 15
+  },
+  {
+    "id": 13652,
+    "name": "My Melody & Kuromi",
+    "image": "https://cdn.dps.vc/iblock/14a/14abcc28217246bb1bec29b98ec9d2bd/36b5e0353bbfe30885aa8d6343b571ef.webp",
+    "coins": 15
+  },
+  {
+    "id": 8448,
+    "name": "Raccoon",
+    "image": "https://cdn.dps.vc/iblock/539/5396582d174489f32525f871cb3087f8/041896a3554f3d4b8c86f486bc81b125.webp",
+    "coins": 15
+  },
+  {
+    "id": 9962,
+    "name": "Tiny Diny in love",
+    "image": "https://cdn.dps.vc/iblock/a1b/a1b55f7e220dc240ee7e4ffdb4fff4b6/787e62cde0906b9655a3ce8c70b9b693.webp",
+    "coins": 15
+  },
+  {
+    "id": 6106,
+    "name": "Appetizers",
+    "image": "https://cdn.dps.vc/iblock/76b/76b94aaced493a2448cf655b5468feaf/8c1bea41ec9fb547f0a0eb46d658a1c8.png",
+    "coins": 19
+  },
+  {
+    "id": 8552,
+    "name": "Baby fox",
+    "image": "https://cdn.dps.vc/iblock/b7d/b7df9be24aa630c9b04db3974f103a73/17a445fd5256e13281e64c718b5112fe.webp",
+    "coins": 20
+  },
+  {
+    "id": 5720,
+    "name": "Cake",
+    "image": "https://cdn.dps.vc/iblock/edb/edbe349c5a4be01ec1fbf2225d0f48dc/4169ef7f0263177384205df6663451c8.png",
+    "coins": 20
+  },
+  {
+    "id": 6248,
+    "name": "DJ Set",
+    "image": "https://cdn.dps.vc/iblock/d75/d7572b61a93c092616c038eff95cee10/305f02f65f6fab1bb4c6f3d90ce6c043.png",
+    "coins": 20
+  },
+  {
+    "id": 5740,
+    "name": "Headphones",
+    "image": "https://cdn.dps.vc/iblock/c85/c855c7003790c37323c0454fb8d88da2/3ae51d5df6848ac6871061d536a23f6f.png",
+    "coins": 20
+  },
+  {
+    "id": 7542,
+    "name": "KO",
+    "image": "https://cdn.dps.vc/iblock/e5e/e5efb63a21695a08d9647508aca3c95e/cffda8af4cc1a9f4a66eb01b11f4db85.webp",
+    "coins": 20
+  },
+  {
+    "id": 7655,
+    "name": "KO",
+    "image": "https://cdn.dps.vc/iblock/aa6/aa613e765fe5c42519bd83d2d4705118/7db90e1f83b8c87c74dfdc8ee88440cb.webp",
+    "coins": 20
+  },
+  {
+    "id": 5919,
+    "name": "Love you",
+    "image": "https://cdn.dps.vc/iblock/728/728eb443836e4ea999aa2cf341f26561/69d6c2bce8f5523d186a03b7eef20e1b.png",
+    "coins": 20
+  },
+  {
+    "id": 7543,
+    "name": "M4 Beatrix",
+    "image": "https://cdn.dps.vc/iblock/bda/bdaf5a42e3e788628aee4d75446310e4/2089c0537e7645d02ed0647862564bed.webp",
+    "coins": 20
+  },
+  {
+    "id": 7656,
+    "name": "M4 Beatrix",
+    "image": "https://cdn.dps.vc/iblock/da7/da77071a5194b9d7a3a6e94a9dcb5a4f/04a7595d5f7ffb42c9e28a697f0feed3.webp",
+    "coins": 20
+  },
+  {
+    "id": 5658,
+    "name": "Perfume",
+    "image": "https://cdn.dps.vc/iblock/8af/8af143c49ed92f431b6312185ea03b0a/cd5792b709a7f56cbb2b6669a0e13c29.png",
+    "coins": 20
+  },
+  {
+    "id": 14115,
+    "name": "S Flowers",
+    "image": "https://cdn.dps.vc/iblock/11b/11be2dd4d86b4f306f3e9694075381ba/c1b9b14e6f7cbd96d890de05a180c561.webp",
+    "coins": 20
+  },
+  {
+    "id": 7131,
+    "name": "Scented Candle",
+    "image": "https://cdn.dps.vc/iblock/01f/01f4015c4cad98734c55ecd42824ace3/eb1d8dd998edd8f658c43c60d33b9904.webp",
+    "coins": 20
+  },
+  {
+    "id": 7226,
+    "name": "Sushi Set",
+    "image": "https://cdn.dps.vc/iblock/097/09752a51af505fbde2e9aa853d1ada62/3b981d4797111c44c45fbd8de5201fbe.webp",
+    "coins": 20
+  },
+  {
+    "id": 6726,
+    "name": "Tea",
+    "image": "https://cdn.dps.vc/iblock/b0b/b0ba111b6319a8c9e384d5ca7b814e4c/6cd6f620512cd42711bc1235124b3265.webp",
+    "coins": 20
+  },
+  {
+    "id": 5780,
+    "name": "Bouquet Flower",
+    "image": "https://cdn.dps.vc/iblock/ceb/cebb5d5f7004d6ccf9336ae20281be88/5061b1767c2325fe6704eb08d97c5cb8.png",
+    "coins": 30
+  },
+  {
+    "id": 8217,
+    "name": "Capybara",
+    "image": "https://cdn.dps.vc/iblock/e94/e944534be54186446d7c38563c772029/553d899c4bd4be31e7b051bb36e842f8.webp",
+    "coins": 30
+  },
+  {
+    "id": 7837,
+    "name": "Choco Strawberries",
+    "image": "https://cdn.dps.vc/iblock/791/7913d94ea7979d96332bb0f1ec0915aa/bbdff72cdcf98f8f9103b5ea3a3055e1.webp",
+    "coins": 30
+  },
+  {
+    "id": 5961,
+    "name": "Coffee",
+    "image": "https://cdn.dps.vc/iblock/87b/87b2a811f1ca8c09060e2bd63a3b3be7/ae6288eb1eab67474807c64b9d69b5e6.webp",
+    "coins": 30
+  },
+  {
+    "id": 5879,
+    "name": "Doughnut",
+    "image": "https://cdn.dps.vc/iblock/ae6/ae65a581d82f828e9e3834cd8444986a/9a1acf1d35f2cbef7a4c3929f9587567.png",
+    "coins": 30
+  },
+  {
+    "id": 6582,
+    "name": "Golden Gamepad",
+    "image": "https://cdn.dps.vc/iblock/e85/e85940610dd45adc8733b51106c60712/ca839e1139ca0b94070c1e38093e95ec.png",
+    "coins": 30
+  },
+  {
+    "id": 6070,
+    "name": "Mirror",
+    "image": "https://cdn.dps.vc/iblock/306/306868d3fb21b7dffe7012c3d340cddc/718a6093224eda33ed0062de345d4edd.png",
+    "coins": 30
+  },
+  {
+    "id": 7055,
+    "name": "Pizza",
+    "image": "https://cdn.dps.vc/iblock/c9d/c9d7f483cc0059a1e8165bfbd1341688/307a559eb2b371b92b8ea36ae96bfa30.webp",
+    "coins": 40
+  },
+  {
+    "id": 5707,
+    "name": "Love you",
+    "image": "https://cdn.dps.vc/iblock/ebc/ebc8250bba491bb31de4d4f157069f24/2a1810e910efdec008095096b137f356.png",
+    "coins": 49
+  },
+  {
+    "id": 8259,
+    "name": "Sign language love",
+    "image": "https://cdn.dps.vc/iblock/230/230e7edc8986e8d5f633a2883cbf3667/75b756118ea0ea79126828b48b27644e.webp",
+    "coins": 49
+  },
+  {
+    "id": 7851,
+    "name": "Football Helmet",
+    "image": "https://cdn.dps.vc/iblock/9cc/9cce61670c1a81b7954fcf3520dc15a2/b78182e9fd2ff1c6ae1256abd8e2e2bf.webp",
+    "coins": 50
+  },
+  {
+    "id": 5303,
+    "name": "Tea",
+    "image": "https://cdn.dps.vc/iblock/240/24051d7263606ed2b02f24f8455cb0a5/4f1cc7de604a1369c5770cc02cbee920.png",
+    "coins": 50
+  },
+  {
+    "id": 7391,
+    "name": "I'm shy",
+    "image": "https://cdn.dps.vc/iblock/d8b/d8bf38c1dad2734992e8ee44a379aa26/4b072fda0a53005a35b7271e4548bb96.webp",
+    "coins": 55
+  },
+  {
+    "id": 10300,
+    "name": "Butterfly",
+    "image": "https://cdn.dps.vc/iblock/73a/73a81de45895133bd37adfc1d30fd6d9/0af32ed48bd95aebb69d4ce0669c0ef9.webp",
+    "coins": 88
+  },
+  {
+    "id": 8238,
+    "name": "Hi April",
+    "image": "https://cdn.dps.vc/iblock/88e/88e25becb6f23daa0e97669a3b2905fb/d7b74b5b1e20c22e9baa4f1f02f1c6f5.webp",
+    "coins": 88
+  },
+  {
+    "id": 7977,
+    "name": "Hi March",
+    "image": "https://cdn.dps.vc/iblock/e22/e2266686271c7a90ff04517f248c6f73/0459d679c01a5bfa5a4be1d61ec81ec8.webp",
+    "coins": 88
+  },
+  {
+    "id": 6471,
+    "name": "Hi May",
+    "image": "https://cdn.dps.vc/iblock/970/970b0a868ce24c4b7b7059a904fa7b00/622d597d3cec282d6d2c8129fedd5075.png",
+    "coins": 88
+  },
+  {
+    "id": 8077,
+    "name": "March",
+    "image": "https://cdn.dps.vc/iblock/563/563e36a03f028ccf8d6ed380e3f04f8f/3097c2f24b4eb893a9752099920a2e3d.webp",
+    "coins": 88
+  },
+  {
+    "id": 7177,
+    "name": "November",
+    "image": "https://cdn.dps.vc/iblock/ee5/ee55ec79ae4695803d79a7fa0904333c/781835a90e8f6d8f216b54eb2a1b2b8c.webp",
+    "coins": 88
+  },
+  {
+    "id": 8434,
+    "name": "Ruby red",
+    "image": "https://cdn.dps.vc/iblock/405/405fcf52a1de3d14ab9834c1f30cc330/0deed9ee2c79ba6bf2005b0ce667bf60.webp",
+    "coins": 88
+  },
+  {
+    "id": 9836,
+    "name": "Ruby red",
+    "image": "https://cdn.dps.vc/iblock/f31/f312b9b2b92e4c01b99f99ea098cbda1/ea41d129209332c2a6c549704c8cc139.webp",
+    "coins": 88
+  },
+  {
+    "id": 9575,
+    "name": "Family",
+    "image": "https://cdn.dps.vc/iblock/c5e/c5e0febab40ff40a8297dd5385b9ad34/d3488268947cb10167a09c09efd0750e.webp",
+    "coins": 90
+  },
+  {
+    "id": 9933,
+    "name": "Fist bump",
+    "image": "https://cdn.dps.vc/iblock/a94/a94c825205051127fff01270036bb7c5/cab43dad450bd66af187eb114644e92a.webp",
+    "coins": 90
+  },
+  {
+    "id": 9582,
+    "name": "Sending strength",
+    "image": "https://cdn.dps.vc/iblock/444/4448ac223b4c90bcbc5518b4f1ba3986/d8dc040a70f1c50ccde4d99c035f82ca.webp",
+    "coins": 90
+  },
+  {
+    "id": 9255,
+    "name": "Aerobic headband",
+    "image": "https://cdn.dps.vc/iblock/3d9/3d98c2fbc96922da37a9d22881bb06b9/0a99af132ab8e3fe9806d2412abc6bf0.webp",
+    "coins": 99
+  },
+  {
+    "id": 9096,
+    "name": "Birthday Crown",
+    "image": "https://cdn.dps.vc/iblock/c07/c073f2d950a252aa24b7343655208c8a/68f6af6dc16ab51396cef18f50a43792.webp",
+    "coins": 99
+  },
+  {
+    "id": 5866,
+    "name": "Birthday Hat",
+    "image": "https://cdn.dps.vc/iblock/626/626b5c670090e1b20b15659bdc852c72/e75b762129d26f346be85d454d826a00.png",
+    "coins": 99
+  },
+  {
+    "id": 7989,
+    "name": "Boxing Robe",
+    "image": "https://cdn.dps.vc/iblock/653/653d737cee4ef1f2cbd1d69d3aebdcee/478170842ea659c42df24028ea92f883.webp",
+    "coins": 99
+  },
+  {
+    "id": 6559,
+    "name": "Breakthrough Star",
+    "image": "https://cdn.dps.vc/iblock/948/9487a63b1237c16ce6611e792f931d9d/1da48e340682fc9e3b9daa5b3503a6e7.webp",
+    "coins": 99
+  },
+  {
+    "id": 13087,
+    "name": "Bubble Gum",
+    "image": "https://cdn.dps.vc/iblock/dd9/dd980c151d85713fc7c55a26c4a20b2d/0b1bad4a75c23c841270d6208429e320.webp",
+    "coins": 99
+  },
+  {
+    "id": 6627,
+    "name": "Bucket Hat",
+    "image": "https://cdn.dps.vc/iblock/b17/b171f313a2ba4af15e8645f02d24d4e7/a58831515ce8102cb72841e8ed45ed08.webp",
+    "coins": 99
+  },
+  {
+    "id": 6104,
+    "name": "Cap",
+    "image": "https://cdn.dps.vc/iblock/349/349b158378b1b0f0fa447869c8f2e690/7a65e6037be114fa888bf04177a62f6a.png",
+    "coins": 99
+  },
+  {
+    "id": 14126,
+    "name": "Crescent Chain",
+    "image": "https://cdn.dps.vc/iblock/27c/27c54959677c1f2d02570f3338dea6e8/aec4b72c6bdbc365c496c282866a62e9.webp",
+    "coins": 99
+  },
+  {
+    "id": 6435,
+    "name": "Daffodils",
+    "image": "https://cdn.dps.vc/iblock/2ed/2edf26fa90a7b3ca44c0d7c77a765c77/c333c68579488e9a36f4130481932b7c.png",
+    "coins": 99
+  },
+  {
+    "id": 6723,
+    "name": "Guitar",
+    "image": "https://cdn.dps.vc/iblock/95e/95e6348b4ebcc6a163b9be452f3ee3ff/84a43f426dabe8772de4d6002827b064.webp",
+    "coins": 99
+  },
+  {
+    "id": 7092,
+    "name": "Guitar",
+    "image": "https://cdn.dps.vc/iblock/5b6/5b657901ae6913dc23094f29e1450318/ba8b1c60d24c93fa641fa7f7ff5c1c5f.webp",
+    "coins": 99
+  },
+  {
+    "id": 7883,
+    "name": "Guitar",
+    "image": "https://cdn.dps.vc/iblock/808/808c6a6e16e3ff0ee02479354102e337/ce5fe5c52bca407ac24c253361ec1968.webp",
+    "coins": 99
+  },
+  {
+    "id": 8455,
+    "name": "Happy Mother's Day",
+    "image": "https://cdn.dps.vc/iblock/a0f/a0ff283ce42ad27a03d6b8b98e81463b/9e5a49a9bae80f0afa30257d562cec8e.webp",
+    "coins": 99
+  },
+  {
+    "id": 6427,
+    "name": "Hat and Mustache",
+    "image": "https://cdn.dps.vc/iblock/2d8/2d8065490de12823e64617fe407c138b/b5ba8728531da2e0e52e23b9479c246a.png",
+    "coins": 99
+  },
+  {
+    "id": 6525,
+    "name": "Honorable Person",
+    "image": "https://cdn.dps.vc/iblock/46d/46deaf56b0ee85c34e23e793dbcbab73/4e8f3162028de2f938cda110554d51cc.webp",
+    "coins": 99
+  },
+  {
+    "id": 6661,
+    "name": "Kiss your Heart",
+    "image": "https://cdn.dps.vc/iblock/13d/13d940df83e04a30523ca88c080ee8d8/213f06af314da4637a9ae8fc25bfaea3.webp",
+    "coins": 99
+  },
+  {
+    "id": 12678,
+    "name": "Level-up Sparks",
+    "image": "https://cdn.dps.vc/iblock/04b/04b0e4c4405e1e22d3d67d81ac5149cf/2c37c911111e2aab224121e6844e48f1.webp",
+    "coins": 99
+  },
+  {
+    "id": 8130,
+    "name": "Like-Pop",
+    "image": "https://cdn.dps.vc/iblock/272/2726ba4a1c7bbd0d4a483207b12d8f71/9c96b3106699eadcdf54c3e379418b99.webp",
+    "coins": 99
+  },
+  {
+    "id": 6097,
+    "name": "Little Crown",
+    "image": "https://cdn.dps.vc/iblock/50d/50df20e691bbeeeb1c2faf03c2c86243/2b412c3b322b27cd9836bbe636ea2a1d.png",
+    "coins": 99
+  },
+  {
+    "id": 11180,
+    "name": "Love Painting",
+    "image": "https://cdn.dps.vc/iblock/486/48616c5f7436e577c4df64463eb30dd9/7f90468809d9653f839d24fbcd57a1e2.webp",
+    "coins": 99
+  },
+  {
+    "id": 14109,
+    "name": "Mark of Love",
+    "image": "https://cdn.dps.vc/iblock/e0c/e0c154f4695302ad8376c3563151c25b/968721d4e540ad95a1795d2b70f15b96.webp",
+    "coins": 99
+  },
+  {
+    "id": 14287,
+    "name": "Murtabak",
+    "image": "https://cdn.dps.vc/iblock/69d/69d22ea1b52d70f99349028e0ef4ce16/7901d9210f9839f3d8bcf8046efb03bb.webp",
+    "coins": 99
+  },
+  {
+    "id": 8155,
+    "name": "My favourite",
+    "image": "https://cdn.dps.vc/iblock/c4f/c4f75ee454e7958671db08dfb0ecc0df/83bc324a57610cf85584ef3659dfae2d.webp",
+    "coins": 99
+  },
+  {
+    "id": 8156,
+    "name": "My favourite",
+    "image": "https://cdn.dps.vc/iblock/8cf/8cfe4cfffd783a468357fd89e2f110e6/b1cc3eaf279274fbfdf8af48f2200f59.webp",
+    "coins": 99
+  },
+  {
+    "id": 5659,
+    "name": "Paper Crane",
+    "image": "https://cdn.dps.vc/iblock/6a0/6a0b418bc4ae8f04be3194c88389e9e7/bf071c7cc84cf3aac6435adbd222f577.png",
+    "coins": 99
+  },
+  {
+    "id": 5793,
+    "name": "Play Samba",
+    "image": "https://cdn.dps.vc/iblock/864/864f362bf1d66abf1acbb64bf0de43c8/0c5fad0d89d2b2a92ed30829059a59c3.png",
+    "coins": 99
+  },
+  {
+    "id": 6793,
+    "name": "Ranking Lit",
+    "image": "https://cdn.dps.vc/iblock/c6d/c6d4c3f55a9faff0a9e8a126197bf528/ddc2c77b1f92cdba3e2f74d9bef5d516.webp",
+    "coins": 99
+  },
+  {
+    "id": 9795,
+    "name": "Self care mask",
+    "image": "https://cdn.dps.vc/iblock/14b/14b57a75b075b6fd8618498ca810584c/bfa877f242a48ac36c0a2d8e7a51903c.webp",
+    "coins": 99
+  },
+  {
+    "id": 6432,
+    "name": "Star",
+    "image": "https://cdn.dps.vc/iblock/cc9/cc9317321e70cc776adc68bd3e0e66e7/4f3082259def021d1a2ed29e77a77713.png",
+    "coins": 99
+  },
+  {
+    "id": 12357,
+    "name": "Team Victory",
+    "image": "https://cdn.dps.vc/iblock/8db/8dbde73129634515690bea5aa045405d/fc4000e5637790f630ec2b353ff3d37f.webp",
+    "coins": 99
+  },
+  {
+    "id": 5927,
+    "name": "Balalaika",
+    "image": "https://cdn.dps.vc/iblock/d88/d88bc38371769262c006dccbaa43c9ff/1e0f5adda0546879e07126492ba6001c.webp",
+    "coins": 100
+  },
+  {
+    "id": 6487,
+    "name": "Chicken and Cola",
+    "image": "https://cdn.dps.vc/iblock/8e5/8e53ea3eefa37bfe9582392f3d141787/658afdede03040e1fce51a2d9441b684.webp",
+    "coins": 100
+  },
+  {
+    "id": 5585,
+    "name": "Confetti",
+    "image": "https://cdn.dps.vc/iblock/364/3640905e132905eb2b0ff64a068db337/fcb80819257fb17f881eeb85b3a0b0d2.png",
+    "coins": 100
+  },
+  {
+    "id": 5737,
+    "name": "Flowers",
+    "image": "https://cdn.dps.vc/iblock/d88/d88747be57256cd119fcd494a9f7f2df/3bfd01905c5b0b4de3ffeb0d3e698c00.png",
+    "coins": 100
+  },
+  {
+    "id": 6740,
+    "name": "Foamy Drink",
+    "image": "https://cdn.dps.vc/iblock/cc8/cc8133c73d5ca2cb5fde306f5b4e2a11/fb273956755fe6fbf7263023a9c36ebe.webp",
+    "coins": 100
+  },
+  {
+    "id": 6467,
+    "name": "Game Controller",
+    "image": "https://cdn.dps.vc/iblock/603/6032c1b0d5c2c07abe04956b3cdd45cd/d75d75a7e81f96f39d2ffd574063924f.png",
+    "coins": 100
+  },
+  {
+    "id": 6960,
+    "name": "Game Controller",
+    "image": "https://cdn.dps.vc/iblock/030/030f63329d68d21c5faacab88006a17f/fbb8dd78b47184321d93e3ae5a1f2cca.webp",
+    "coins": 100
+  },
+  {
+    "id": 5924,
+    "name": "Hand Heart",
+    "image": "https://cdn.dps.vc/iblock/5ce/5cebff2a4b737063778ac5374e9e4792/f9bf5c945eb61002916feff420a1cc3a.png",
+    "coins": 100
+  },
+  {
+    "id": 6968,
+    "name": "Hand Heart",
+    "image": "https://cdn.dps.vc/iblock/9f0/9f0bfed08f1d3b9e852469d6a4debeda/519497b062ded1019c958d5d0b352a7e.webp",
+    "coins": 100
+  },
+  {
+    "id": 5660,
+    "name": "Hand Hearts",
+    "image": "https://cdn.dps.vc/iblock/9ae/9aed27eb6e8cea1b14e14c2e15eb7308/4ccd4fad65bab7a9b8f9c66a321476b2.png",
+    "coins": 100
+  },
+  {
+    "id": 9333,
+    "name": "LIVE Fest Clappers",
+    "image": "https://cdn.dps.vc/iblock/af2/af2a21fe9241a2206614de05cc8adcf2/88baf8d80223649a70e414421f8a95b5.webp",
+    "coins": 100
+  },
+  {
+    "id": 7121,
+    "name": "Marvelous Confetti",
+    "image": "https://cdn.dps.vc/iblock/a2e/a2e6e84d5786d5a4afb05d03cb76c519/cc8b527c9b83f76ee7fc314cc8cb80f6.webp",
+    "coins": 100
+  },
+  {
+    "id": 7029,
+    "name": "Match Wand",
+    "image": "https://cdn.dps.vc/iblock/cb8/cb8be2865ae41bb724da5f5ae0192d4e/29e9af643ce5fcc267605f68a6656e2d.webp",
+    "coins": 100
+  },
+  {
+    "id": 7810,
+    "name": "Match Wand",
+    "image": "https://cdn.dps.vc/iblock/841/841037f168f5e2757ead3d4989d40850/cac3e62b0c75d0914fe2e588832e14ee.webp",
+    "coins": 100
+  },
+  {
+    "id": 5486,
+    "name": "Mishka Bear",
+    "image": "https://cdn.dps.vc/iblock/880/8809f52dbf40e0d670067f8c223d7c04/c603798bc6cd2bdc5a032ddbeb55e258.png",
+    "coins": 100
+  },
+  {
+    "id": 5566,
+    "name": "Mishka Bear",
+    "image": "https://cdn.dps.vc/iblock/010/010ccc7a5d5e21231b46cea3223d5b1f/aa9c15ca87e4df8dad9be22164978fc2.png",
+    "coins": 100
+  },
+  {
+    "id": 7163,
+    "name": "Mishka Bear",
+    "image": "https://cdn.dps.vc/iblock/0cc/0ccd22056d7cd20351cfb11a8ec62bf1/4f7f3b65fad302160471f52bfc45fc34.webp",
+    "coins": 100
+  },
+  {
+    "id": 7264,
+    "name": "Mishka Bear",
+    "image": "https://cdn.dps.vc/iblock/664/66499983178b4afcbb41d1381b0a3614/746053e277f2a390a5bd1aa256e445f3.webp",
+    "coins": 100
+  },
+  {
+    "id": 6472,
+    "name": "Mp3",
+    "image": "https://cdn.dps.vc/iblock/20a/20a06df8f2d9428df8fd690a7ce4bdaf/40a50efc8884f8c973a58a749350c9c3.png",
+    "coins": 100
+  },
+  {
+    "id": 13301,
+    "name": "Singing Magic",
+    "image": "https://cdn.dps.vc/iblock/9c4/9c4157f085b91351607c95830f63975e/77fb5734ecbf55c18f2d68435bb7e458.webp",
+    "coins": 100
+  },
+  {
+    "id": 5513,
+    "name": "Treasure Chest",
+    "image": "https://cdn.dps.vc/iblock/ef8/ef8e2b32aa2e81e7c7efa1e6913dcbc6/0282de629a9d41f4862150bec2e4f35b.png",
+    "coins": 100
+  },
+  {
+    "id": 14000,
+    "name": "Bowknot",
+    "image": "https://cdn.dps.vc/iblock/499/499de801202760b39666911db4f9e241/e18caabb6d33ef47a16e77b53a1c2ec9.webp",
+    "coins": 149
+  },
+  {
+    "id": 5284,
+    "name": "Kiss",
+    "image": "https://cdn.dps.vc/iblock/d3d/d3df4a0ecebd25c21e7ce5a6f910f8f1/d9ce143ac4707f74d8b1fe4708a92ab3.png",
+    "coins": 150
+  },
+  {
+    "id": 5481,
+    "name": "Kiss",
+    "image": "https://cdn.dps.vc/iblock/5cc/5cca201687ef878daf36dfe39fd26807/b2171e9cc191783679794f42246c4ceb.webp",
+    "coins": 150
+  },
+  {
+    "id": 5577,
+    "name": "Kiss",
+    "image": "https://cdn.dps.vc/iblock/c0e/c0e0930ab93f9187cebe2e6a7c4af8d4/7f2d4edfac34eeb6e4d6fcbee47ba8d0.png",
+    "coins": 150
+  },
+  {
+    "id": 10282,
+    "name": "Kiss",
+    "image": "https://cdn.dps.vc/iblock/71c/71c8d26966f52188a6ace42aee8252bc/d95a67958465226ca94f8ea472e3e63a.webp",
+    "coins": 150
+  },
+  {
+    "id": 5300,
+    "name": "Sceptre",
+    "image": "https://cdn.dps.vc/iblock/080/080d7e9dc934f98dd8cf5dce3b5075b2/a62a3963f6d2822177763b51d4328d37.png",
+    "coins": 150
+  },
+  {
+    "id": 7364,
+    "name": "Sceptre",
+    "image": "https://cdn.dps.vc/iblock/d2d/d2d1b0359f480a7db08e490364d056b2/bcb44a039dfa4d148af6cde9f233ea13.webp",
+    "coins": 150
+  },
+  {
+    "id": 6618,
+    "name": "Socks and Sandals",
+    "image": "https://cdn.dps.vc/iblock/da2/da28ef4030197f812686f10b2c3f06c7/7cb8ebff6f6028e2a56b2c0c268c3620.webp",
+    "coins": 150
+  },
+  {
+    "id": 5729,
+    "name": "Butterfly",
+    "image": "https://cdn.dps.vc/iblock/452/452ae452eb33dfc55a52248b13c1672c/82022fd917229b464490c1a59c87feb4.png",
+    "coins": 169
+  },
+  {
+    "id": 5915,
+    "name": "Music Note",
+    "image": "https://cdn.dps.vc/iblock/cc1/cc17f136f458a86943d7fd503c0a34b4/c56797b8b830d159f31fe5ca5527f586.png",
+    "coins": 169
+  },
+  {
+    "id": 6776,
+    "name": "Birthday Glasses",
+    "image": "https://cdn.dps.vc/iblock/98d/98deaf0a4a818ba6b0333ca9aee4db59/97520c1ceae957c77ef1dbcc0f092187.webp",
+    "coins": 199
+  },
+  {
+    "id": 9589,
+    "name": "Birthday Glasses",
+    "image": "https://cdn.dps.vc/iblock/065/06511cfd9177aacad7cd9336f5b732d1/27d77d71d300fde3ea88cfe1ff72c9f0.webp",
+    "coins": 199
+  },
+  {
+    "id": 6713,
+    "name": "Cheer For You",
+    "image": "https://cdn.dps.vc/iblock/9ac/9aca1e40fff8679e8d37ef5c566fb872/15abbbe55a2269339a6b28e5c582fbfd.webp",
+    "coins": 199
+  },
+  {
+    "id": 13075,
+    "name": "Cheering Crab",
+    "image": "https://cdn.dps.vc/iblock/bec/bec556c4df493f66d48dad0baab34b07/f897b3ecca45a859b0acd593e3b7792b.webp",
+    "coins": 199
+  },
+  {
+    "id": 6725,
+    "name": "Chef's Hat",
+    "image": "https://cdn.dps.vc/iblock/da8/da87653d13440ecbe3a6f04abb4e6314/08ab9e948762a6bb041bb1963cacf07f.webp",
+    "coins": 199
+  },
+  {
+    "id": 7016,
+    "name": "Chef's Kiss",
+    "image": "https://cdn.dps.vc/iblock/be2/be2d88eb75a875345716e8e72f4cb6c1/ad63012a0e0c16526f28bb75fe119e0d.webp",
+    "coins": 199
+  },
+  {
+    "id": 11177,
+    "name": "Coffee Magic",
+    "image": "https://cdn.dps.vc/iblock/854/854d7a8c07ac02dbfb368790f0d92833/4d1969898d829e4cfb237ef52776bbc3.webp",
+    "coins": 199
+  },
+  {
+    "id": 8842,
+    "name": "Cowboy Hat",
+    "image": "https://cdn.dps.vc/iblock/5f3/5f3df5eccbc82f458fdacd0f82d13e40/40980853c80e3da0e902a1db49ea9798.webp",
+    "coins": 199
+  },
+  {
+    "id": 5502,
+    "name": "Crown",
+    "image": "https://cdn.dps.vc/iblock/758/7584af00e82831bcfd9993a0809a2cbd/c2ce45eb539543ef4cd60e9db8cc23e0.png",
+    "coins": 199
+  },
+  {
+    "id": 5713,
+    "name": "Crown",
+    "image": "https://cdn.dps.vc/iblock/e5f/e5f3fb8fd23314b0d5c77f4cc1e8371f/23b5573f5f080382a0be8a8013dbab2b.png",
+    "coins": 199
+  },
+  {
+    "id": 7545,
+    "name": "Feather Hat",
+    "image": "https://cdn.dps.vc/iblock/a34/a348051e15e9de47b89a23a9a688526b/530fe08e5162bb722eac73314c43972f.webp",
+    "coins": 199
+  },
+  {
+    "id": 7091,
+    "name": "Fruits Hat",
+    "image": "https://cdn.dps.vc/iblock/404/404cc4794702cc6feb93bf4517bc0762/05846cb2d9548cf2f0573159110ecb64.webp",
+    "coins": 199
+  },
+  {
+    "id": 6491,
+    "name": "Full English",
+    "image": "https://cdn.dps.vc/iblock/046/0460e60b4ae09aa8319e75b26f9faf87/b1f6aeb51cbe15700dc2f29eec174a5a.webp",
+    "coins": 199
+  },
+  {
+    "id": 7549,
+    "name": "Gamer Cat",
+    "image": "https://cdn.dps.vc/iblock/e36/e36cb42edac42a0636f8785b80c274dc/bbd87fef7b269564a4ca32009879c0ab.webp",
+    "coins": 199
+  },
+  {
+    "id": 6437,
+    "name": "Garland Headpiece",
+    "image": "https://cdn.dps.vc/iblock/c42/c42c09a6f9075eca708111ea59a33ebd/c097bdc90a3bff337a25f6c53aa1aee5.png",
+    "coins": 199
+  },
+  {
+    "id": 5734,
+    "name": "Goggles",
+    "image": "https://cdn.dps.vc/iblock/d72/d72b0ed3743ac09f6593ff529caba3f7/a51257da433617b620e76dcfa2b1da0c.png",
+    "coins": 199
+  },
+  {
+    "id": 8066,
+    "name": "Goggles",
+    "image": "https://cdn.dps.vc/iblock/7b2/7b2f9df1b79a2832a1c849843a88863d/5207ae96e4b06bc496c826859fc828b8.webp",
+    "coins": 199
+  },
+  {
+    "id": 5937,
+    "name": "Hanging Lights",
+    "image": "https://cdn.dps.vc/iblock/e03/e03da22fa8c302dbf1d9439c65380549/6d9f912b5a9253f91c01ed58e3ccbe47.png",
+    "coins": 199
+  },
+  {
+    "id": 6101,
+    "name": "Happy New Year",
+    "image": "https://cdn.dps.vc/iblock/717/71785e60184d69e928972250d3029262/75e3567557eb65c1d9bab3ff99357cdf.webp",
+    "coins": 199
+  },
+  {
+    "id": 6609,
+    "name": "Headphone",
+    "image": "https://cdn.dps.vc/iblock/ce9/ce95ea6922db1e776296819861d69ddb/b0b11c041a28d46e51ff1ed8f288fe91.webp",
+    "coins": 199
+  },
+  {
+    "id": 8017,
+    "name": "Headphone",
+    "image": "https://cdn.dps.vc/iblock/055/05573a16af395b896b26847bc77fbb5e/55c0f27976902374940cfb54f22728d0.webp",
+    "coins": 199
+  },
+  {
+    "id": 5586,
+    "name": "Hearts",
+    "image": "https://cdn.dps.vc/iblock/f28/f2886812bc78d33eab9d70e86b665753/b97d8bfa0bc6d960cad3bfcf5716be12.png",
+    "coins": 199
+  },
+  {
+    "id": 7780,
+    "name": "Ice hockey",
+    "image": "https://cdn.dps.vc/iblock/2f2/2f28a4627c1149db4c9715fdf6702b9e/5139a343ec5772b6333b452743d45a8f.webp",
+    "coins": 199
+  },
+  {
+    "id": 7749,
+    "name": "Ice skating",
+    "image": "https://cdn.dps.vc/iblock/bca/bca431a96e357d4a81ca36a861290830/2b4ad3b82b5dfea987fcbde0e6a620db.webp",
+    "coins": 199
+  },
+  {
+    "id": 6565,
+    "name": "Indoor Fan",
+    "image": "https://cdn.dps.vc/iblock/499/499dc6bf36be95e90398a56d18bfeebe/231f634c0c86d034f193477f208f66ca.webp",
+    "coins": 199
+  },
+  {
+    "id": 7262,
+    "name": "Jungle Hat",
+    "image": "https://cdn.dps.vc/iblock/872/872acdd2b7b2599f6866e1230f18dfcc/f10df6cbafc160a9d8216a61a7995cd1.webp",
+    "coins": 199
+  },
+  {
+    "id": 7090,
+    "name": "Kite",
+    "image": "https://cdn.dps.vc/iblock/5e6/5e680ff5ebdf550a30e5bf614ee5a68e/ceee4022ccbc11a5adb30f993ac47521.webp",
+    "coins": 199
+  },
+  {
+    "id": 8672,
+    "name": "Knight Helmet",
+    "image": "https://cdn.dps.vc/iblock/291/2915da07301fcb6a9a4d3e515931c2c8/31ebb4cad7a264fe9657a3ddfaca4eaa.webp",
+    "coins": 199
+  },
+  {
+    "id": 8744,
+    "name": "Lemond Buddy",
+    "image": "https://cdn.dps.vc/iblock/282/28210d38f8625d7c3f39bb85e1fd59c4/61f609f602fc0f3cc2bff6cf94d32fbe.webp",
+    "coins": 199
+  },
+  {
+    "id": 5880,
+    "name": "Lock and Key",
+    "image": "https://cdn.dps.vc/iblock/daf/daf918a2e001ce161e116e5c3a2a4cfb/f673b5dfc3bba9a9529425a4fa9e446f.png",
+    "coins": 199
+  },
+  {
+    "id": 13981,
+    "name": "Love Charger",
+    "image": "https://cdn.dps.vc/iblock/582/5828dc05aa0071f8fda3ba1eb388d531/46f15a5d5537203d351498b3888e5d4e.webp",
+    "coins": 199
+  },
+  {
+    "id": 6436,
+    "name": "Love Focus",
+    "image": "https://cdn.dps.vc/iblock/cd1/cd1096cb1507fe07b633dad0b0aee967/d6b2e544219ed4d3c3263d319ab9bc5f.png",
+    "coins": 199
+  },
+  {
+    "id": 6671,
+    "name": "Love You",
+    "image": "https://cdn.dps.vc/iblock/e7a/e7a3ea587e77f417c83596ad2a729f4e/fc521ab0494eb35cef33fde0c2b51555.webp",
+    "coins": 199
+  },
+  {
+    "id": 6242,
+    "name": "Mariachi Hat",
+    "image": "https://cdn.dps.vc/iblock/51c/51c4798a037aeb652d43631af3e7634e/846f79297d6cf7d029fa3074765139c7.png",
+    "coins": 199
+  },
+  {
+    "id": 7094,
+    "name": "Mariachi Hat",
+    "image": "https://cdn.dps.vc/iblock/ada/ada653db47b3c097d794fc908a604357/aad16e67de36036f1ddfaf22627d6824.webp",
+    "coins": 199
+  },
+  {
+    "id": 10573,
+    "name": "Massage for You",
+    "image": "https://cdn.dps.vc/iblock/41b/41b682ffa303c273fed8b860db5a2e48/d63d16dca53ea85c4d10b30354d2cc25.webp",
+    "coins": 199
+  },
+  {
+    "id": 9534,
+    "name": "Meerkat",
+    "image": "https://cdn.dps.vc/iblock/6ed/6edf8b58085a9055032c476b992c56f3/0fcffc36370101d1de85221fc59f1a72.webp",
+    "coins": 199
+  },
+  {
+    "id": 7204,
+    "name": "Panther Paws",
+    "image": "https://cdn.dps.vc/iblock/6e0/6e097d88e5e088d0228c702456e58450/72afb8bfa2231766da6817e911702d4b.webp",
+    "coins": 199
+  },
+  {
+    "id": 8358,
+    "name": "Panther Paws",
+    "image": "https://cdn.dps.vc/iblock/a25/a25d2409e1d851566987913c9fb9860f/6aeb9164cf39e2602933d28dbd106119.webp",
+    "coins": 199
+  },
+  {
+    "id": 6398,
+    "name": "Party hat",
+    "image": "https://cdn.dps.vc/iblock/e92/e924ae4ad405da962162650abe98c01f/403b19fc0f2f47739d32448548be3263.png",
+    "coins": 199
+  },
+  {
+    "id": 6694,
+    "name": "Pinch Cheek",
+    "image": "https://cdn.dps.vc/iblock/f6c/f6c95968ca266cbb2527af09989eaea0/27be132509198253b5c48e5495038e5b.png",
+    "coins": 199
+  },
+  {
+    "id": 7927,
+    "name": "Puppy Love",
+    "image": "https://cdn.dps.vc/iblock/669/66987a73df074dbe87e1038cbc3c6755/62b5cc4c7414d33dde55b7a201ba5281.webp",
+    "coins": 199
+  },
+  {
+    "id": 14474,
+    "name": "Ramadan Moon",
+    "image": "https://cdn.dps.vc/iblock/12a/12a526073a96afb4cae7e05674c0ad36/c64c2bf5def5b3258fe74426a74fc306.webp",
+    "coins": 199
+  },
+  {
+    "id": 6794,
+    "name": "Ranking Lit",
+    "image": "https://cdn.dps.vc/iblock/483/48361b1d6c97776878786862fe1701eb/8b107fcf42005bcd7f6099472032dbae.webp",
+    "coins": 199
+  },
+  {
+    "id": 6795,
+    "name": "Ranking Lit",
+    "image": "https://cdn.dps.vc/iblock/1a7/1a714959f22cae47ddd2bd66498c40e9/ccfd6f578fd7ca4f33ac4d23eb7f51ad.webp",
+    "coins": 199
+  },
+  {
+    "id": 6796,
+    "name": "Ranking Lit",
+    "image": "https://cdn.dps.vc/iblock/649/649a830a2f64be4dc424293692f713c5/5619a1419a930b88670bb2cabe6218cd.webp",
+    "coins": 199
+  },
+  {
+    "id": 7166,
+    "name": "Roman Empire",
+    "image": "https://cdn.dps.vc/iblock/c77/c778c4e5cd1c68a50dcc06e4bfc3aa08/48edf8b190d98b0a3cc4623e6cc9a22c.webp",
+    "coins": 199
+  },
+  {
+    "id": 8600,
+    "name": "Sending positivity",
+    "image": "https://cdn.dps.vc/iblock/29b/29b0e9cb18e3479d17188235f8fdf480/58c6e916f44dcdda9d2f68dbdae77ddb.webp",
+    "coins": 199
+  },
+  {
+    "id": 7839,
+    "name": "Shiba Inu",
+    "image": "https://cdn.dps.vc/iblock/3c4/3c40e306064bb00719cb77dec261891a/bc24ae9f8a52d13475897170332d546f.webp",
+    "coins": 199
+  },
+  {
+    "id": 7781,
+    "name": "Ski Goggles",
+    "image": "https://cdn.dps.vc/iblock/f42/f42cbce436db4e60adbf85641a768a12/fa9a4cea3c23829cf6f0725fea8d3c1a.webp",
+    "coins": 199
+  },
+  {
+    "id": 7747,
+    "name": "Snowboard",
+    "image": "https://cdn.dps.vc/iblock/9f1/9f1a3c5fe2fe7ef505a144e01fc37d29/cbac5622c575d34dfd943bc2a8f3d80c.webp",
+    "coins": 199
+  },
+  {
+    "id": 14294,
+    "name": "Sparklers",
+    "image": "https://cdn.dps.vc/iblock/de4/de428968931b258c73992568e3e0efd9/9ac971c837b76d98c1f054fa57c593ce.webp",
+    "coins": 199
+  },
+  {
+    "id": 9152,
+    "name": "Spin with me",
+    "image": "https://cdn.dps.vc/iblock/381/381c3caff2abb306635fd946008d3cc5/d270b43cdd93c3e79324a80c725bbff3.webp",
+    "coins": 199
+  },
+  {
+    "id": 10560,
+    "name": "Stinging Bee",
+    "image": "https://cdn.dps.vc/iblock/c96/c96aedeeaa88028972a494d9747d8329/26e1c9ab623bbafafdbe57aa5660fcf8.webp",
+    "coins": 199
+  },
+  {
+    "id": 8597,
+    "name": "Suitcase",
+    "image": "https://cdn.dps.vc/iblock/50f/50f04937063753d6de255d2b5a080c1c/4f101c7c50ddbe8bd26a2ce5f8c16896.webp",
+    "coins": 199
+  },
+  {
+    "id": 6634,
+    "name": "Sunday Roast",
+    "image": "https://cdn.dps.vc/iblock/218/218658dfe16bf8eeb11824cae5788028/95bbb526ea861ef2ba3dbe020431374f.webp",
+    "coins": 199
+  },
+  {
+    "id": 5509,
+    "name": "Sunglasses",
+    "image": "https://cdn.dps.vc/iblock/919/9191409989dbc6bb4808ce18f8d0d0d7/bc837a05add0cf0f37e946d605df1a54.png",
+    "coins": 199
+  },
+  {
+    "id": 7824,
+    "name": "The Passion Rose",
+    "image": "https://cdn.dps.vc/iblock/1f7/1f7ff4f8a00e2aaaaa91337e3c035bef/813a759c5b88d3af96aa7b810b88fcf4.webp",
+    "coins": 199
+  },
+  {
+    "id": 7835,
+    "name": "The Passion Rose",
+    "image": "https://cdn.dps.vc/iblock/c3d/c3d0ba3211f8dbd471180427afc05dbb/702c139809f990c7b7d9b552bd02825e.webp",
+    "coins": 199
+  },
+  {
+    "id": 7458,
+    "name": "Wooly Hat",
+    "image": "https://cdn.dps.vc/iblock/0b6/0b67f9db77c8bbb8191af6048fa869e3/59cd91097f8eebb95ec331e3f2598cbb.webp",
+    "coins": 199
+  },
+  {
+    "id": 5598,
+    "name": "Diamond Heart necklace",
+    "image": "https://cdn.dps.vc/iblock/d77/d77639893a76f2f8bf4c2c4d789e00cb/2740d5941e1512225daeecb8f841eb96.png",
+    "coins": 200
+  },
+  {
+    "id": 5599,
+    "name": "Gold necklace",
+    "image": "https://cdn.dps.vc/iblock/aa2/aa26035cd47797211a9ce1b5e51fd7ac/85e66a118c564c318e369974510f371d.png",
+    "coins": 200
+  },
+  {
+    "id": 5738,
+    "name": "Heart",
+    "image": "https://cdn.dps.vc/iblock/046/046417f5f825f44235c2ae98c56703a2/925cc55f3650d03ad58de6fa0edec143.png",
+    "coins": 200
+  },
+  {
+    "id": 8839,
+    "name": "Leon’s Cake",
+    "image": "https://cdn.dps.vc/iblock/712/712ad6bee00088139060c9b8aa6ba6c4/a3e38c8daa4b21778fb8c2442f15dfe6.webp",
+    "coins": 200
+  },
+  {
+    "id": 6585,
+    "name": "Match! Match!",
+    "image": "https://cdn.dps.vc/iblock/e85/e8540f87aa7e0f43f9d638a52d06b983/978b14b69c03d2f2340837dad8b6dd98.webp",
+    "coins": 200
+  },
+  {
+    "id": 7068,
+    "name": "Match! Match!",
+    "image": "https://cdn.dps.vc/iblock/cb4/cb43e14c94694d3d3ae355bdfc517afd/494cd902b8018b35b6dc0f0016c89694.webp",
+    "coins": 200
+  },
+  {
+    "id": 6840,
+    "name": "On Fire",
+    "image": "https://cdn.dps.vc/iblock/cba/cba95075d6b63b84fbc52abb9d1d8208/d93ecc0b966bf972f01e77339a68e124.webp",
+    "coins": 200
+  },
+  {
+    "id": 6958,
+    "name": "On Fire",
+    "image": "https://cdn.dps.vc/iblock/4ec/4ec314b4ee7dff4e92a8e1e75100dddf/19c9b5d8b5f24b1465632a31e55edca1.webp",
+    "coins": 200
+  },
+  {
+    "id": 5325,
+    "name": "Tulip Box",
+    "image": "https://cdn.dps.vc/iblock/d44/d4471e5deb9cb5831f846ca4c9df9c5d/7d1236ecd67b3e655c3dfd72673a423d.png",
+    "coins": 200
+  },
+  {
+    "id": 8454,
+    "name": "Tulip Box",
+    "image": "https://cdn.dps.vc/iblock/a06/a065091bf40a8160be874d786d5e35ba/6fe56b19ae9d440a2a8f1fc444c4c63f.webp",
+    "coins": 200
+  },
+  {
+    "id": 7836,
+    "name": "Rose Bear",
+    "image": "https://cdn.dps.vc/iblock/353/353c248d677950ab0cff68c039a4d7a5/2ad781e10715b17d17f180aefb784d27.webp",
+    "coins": 214
+  },
+  {
+    "id": 5482,
+    "name": "Shiba Inu",
+    "image": "https://cdn.dps.vc/iblock/a7e/a7ea6aebc44c52508dcbd85d8061af25/30b933d7c271571931f4e0d6788fd459.webp",
+    "coins": 222
+  },
+  {
+    "id": 9640,
+    "name": "2024 Glasses",
+    "image": "https://cdn.dps.vc/iblock/52f/52f48c74d52f2bca80af84f0d9e19a5d/a7f950c0cf38bc8f91ec6edab65b8ced.webp",
+    "coins": 224
+  },
+  {
+    "id": 9643,
+    "name": "2024 JoyLens",
+    "image": "https://cdn.dps.vc/iblock/ef8/ef8d8b3231538acce14630d2c64fab81/551774eb0fb29b7b9b1ab0c8246207f0.webp",
+    "coins": 224
+  },
+  {
+    "id": 13383,
+    "name": "2025 Glasses",
+    "image": "https://cdn.dps.vc/iblock/e34/e348a3db35549e4db2d72e21135c12d6/79bd6d4136e16f76dcad59da024118e1.webp",
+    "coins": 225
+  },
+  {
+    "id": 10547,
+    "name": "Pinch Face",
+    "image": "https://cdn.dps.vc/iblock/d44/d441167974b0d9b93ec72185ef935d00/7aa13be09b1df8aec5327af871e7fb12.webp",
+    "coins": 249
+  },
+  {
+    "id": 6322,
+    "name": "Camping",
+    "image": "https://cdn.dps.vc/iblock/9a9/9a9370a392311149be37e7c40c3e960d/ecb9dcdacf3a2ae0abef79baf0c4f41c.webp",
+    "coins": 250
+  },
+  {
+    "id": 6591,
+    "name": "Pancake",
+    "image": "https://cdn.dps.vc/iblock/3dc/3dca9046e6b08349fc508873eab6b489/dc02419fb8a87589334506ea087edebd.png",
+    "coins": 250
+  },
+  {
+    "id": 6007,
+    "name": "Boxing Gloves",
+    "image": "https://cdn.dps.vc/iblock/e4a/e4ac69d94221b6157d4381b779b0c7a5/2fbb331b9697c6515c9bb1a4487153a6.png",
+    "coins": 299
+  },
+  {
+    "id": 5902,
+    "name": "Bridal Veil",
+    "image": "https://cdn.dps.vc/iblock/ac0/ac0cbd1870dd92251f6ef620acb652e5/fe8eca664be736231b8e8e2cc2237a15.png",
+    "coins": 299
+  },
+  {
+    "id": 13073,
+    "name": "Butterfly for You",
+    "image": "https://cdn.dps.vc/iblock/83b/83baa1090bc6b64061dc3cf72698c6f8/23405e1c16e742380ee37b9cd239774b.webp",
+    "coins": 299
+  },
+  {
+    "id": 8216,
+    "name": "Classic Breakfast",
+    "image": "https://cdn.dps.vc/iblock/2fa/2fa91c9c2d1791e896f3121097b28993/c4acadc8172a9fd486cef51f8dd07c90.webp",
+    "coins": 299
+  },
+  {
+    "id": 6267,
+    "name": "Corgi",
+    "image": "https://cdn.dps.vc/iblock/5ad/5ada6717da571d87542b081113bddaa6/2fe60d73a96b698efc61a1a434b4f3ed.png",
+    "coins": 299
+  },
+  {
+    "id": 8587,
+    "name": "Crystal Shoe",
+    "image": "https://cdn.dps.vc/iblock/33c/33c8cc850f14fe205047e7b4618adb3a/bfffc199bb8688a18849af778f52ce5f.webp",
+    "coins": 299
+  },
+  {
+    "id": 7313,
+    "name": "Cuddle Season",
+    "image": "https://cdn.dps.vc/iblock/828/8289c687daaf6a55d0602569308b2ca3/7ef5e9dc0196bbb0b26f8c4e16d8ba8e.webp",
+    "coins": 299
+  },
+  {
+    "id": 6532,
+    "name": "Dancing Cactus",
+    "image": "https://cdn.dps.vc/iblock/d94/d94439c3d68eee66c54e2684aa56a277/a18b71ee72683b6b1b49c0e64901e13e.png",
+    "coins": 299
+  },
+  {
+    "id": 10574,
+    "name": "Dancing Flower",
+    "image": "https://cdn.dps.vc/iblock/ab4/ab439a8ae4b3c654de57f4a281d2793a/0404c958960edc9c2831e2dae658f40a.webp",
+    "coins": 299
+  },
+  {
+    "id": 6757,
+    "name": "Dash",
+    "image": "https://cdn.dps.vc/iblock/b35/b356ce71b1272dffc836a14df85700d2/16e177319d9f5cf312440139715612f5.webp",
+    "coins": 299
+  },
+  {
+    "id": 7532,
+    "name": "Dream Team",
+    "image": "https://cdn.dps.vc/iblock/252/2523636860d9336ab7cd149bbfb94533/b171f50afc37dc216144b4bc9ca259a1.webp",
+    "coins": 299
+  },
+  {
+    "id": 6265,
+    "name": "Duck",
+    "image": "https://cdn.dps.vc/iblock/7cc/7ccb5acba5bb4359f402941267f3d88e/1032cb33afecc207c136dcd2cf0bbea1.png",
+    "coins": 299
+  },
+  {
+    "id": 9827,
+    "name": "Earmuffs",
+    "image": "https://cdn.dps.vc/iblock/597/5974e9bdf9beec4f09ed0e9d1763153f/cf360a2685acfb702dc053ac061feaae.webp",
+    "coins": 299
+  },
+  {
+    "id": 8260,
+    "name": "Elephant trunk",
+    "image": "https://cdn.dps.vc/iblock/1ea/1eafea22e99969312cda7c142d8eb3c5/59f72e0dce1bc4fcf83a34f56872b492.webp",
+    "coins": 299
+  },
+  {
+    "id": 9536,
+    "name": "Fake smile",
+    "image": "https://cdn.dps.vc/iblock/07f/07f23e1a197f90bae99340e46f89f23a/cc81619bbd055d12a2dbf0b71a791424.webp",
+    "coins": 299
+  },
+  {
+    "id": 6895,
+    "name": "FrankTastic",
+    "image": "https://cdn.dps.vc/iblock/2ff/2ff3fd741763781f262d4a7083424134/4ccf92dd13979bd00973e27cd70713c8.webp",
+    "coins": 299
+  },
+  {
+    "id": 10092,
+    "name": "FrankTastic",
+    "image": "https://cdn.dps.vc/iblock/56c/56cc5d2560a255cb4e50d789651bf411/cb4aaa0389147d58e5513fa6272e27b3.webp",
+    "coins": 299
+  },
+  {
+    "id": 6752,
+    "name": "Friend",
+    "image": "https://cdn.dps.vc/iblock/b70/b70182f7b0698b28b35b8816a4baa025/444dad1c4154d1d0be3629c32b2dec19.webp",
+    "coins": 299
+  },
+  {
+    "id": 9465,
+    "name": "Fruit Friends",
+    "image": "https://cdn.dps.vc/iblock/e41/e415f8e1f537e70967637222a2d5ace4/d7c71da16a76392b31745a0894577342.webp",
+    "coins": 299
+  },
+  {
+    "id": 7222,
+    "name": "Full moon",
+    "image": "https://cdn.dps.vc/iblock/e64/e64dd135280596ce7f1aebbdc3e33a80/494b818b6a4217f1807255ca148c7b2d.webp",
+    "coins": 299
+  },
+  {
+    "id": 7254,
+    "name": "Gus the Groundhog",
+    "image": "https://cdn.dps.vc/iblock/da9/da93907f372be1af579b5fb2898e82ed/01af2ddebf789ad3c88e2284cee102dc.webp",
+    "coins": 299
+  },
+  {
+    "id": 6868,
+    "name": "Hedgehog",
+    "image": "https://cdn.dps.vc/iblock/841/841e924150793d6961df0a1c89cc67ca/5886839b7de0b1289303081f9af380f8.webp",
+    "coins": 299
+  },
+  {
+    "id": 7494,
+    "name": "Henry the Hedgehog",
+    "image": "https://cdn.dps.vc/iblock/fdf/fdfa2ea1446cea2a947c31ae9db4771e/78252db9f8b649515d72b421945167db.webp",
+    "coins": 299
+  },
+  {
+    "id": 11935,
+    "name": "Love Bomb",
+    "image": "https://cdn.dps.vc/iblock/a3a/a3a9c07d4c1f02d5f2d19574a1a41ffa/e0a287654d42efd3a18b0176b0519161.webp",
+    "coins": 299
+  },
+  {
+    "id": 7495,
+    "name": "Lucy the Llama",
+    "image": "https://cdn.dps.vc/iblock/e0c/e0c5c60f315fa64b5453336644f0ed5e/1181041c54bb3f884fc70a4affb75c02.webp",
+    "coins": 299
+  },
+  {
+    "id": 5968,
+    "name": "Moonlight Boat",
+    "image": "https://cdn.dps.vc/iblock/6c7/6c76b8f44e54b934337967bea211b5e4/c0bef58b43430287bf29075f6b3c775d.webp",
+    "coins": 299
+  },
+  {
+    "id": 11179,
+    "name": "Naughty Chicken",
+    "image": "https://cdn.dps.vc/iblock/bcc/bcc3daecc7d90724ec417fba6b4b030a/df49006e8434ef3c2f0862281ddaad6d.webp",
+    "coins": 299
+  },
+  {
+    "id": 7331,
+    "name": "Pawfect",
+    "image": "https://cdn.dps.vc/iblock/aa8/aa89612e771b66bdb5c3b53f947fde21/ce415b02b2246402c2f72faf265336a0.webp",
+    "coins": 299
+  },
+  {
+    "id": 9535,
+    "name": "Play for you",
+    "image": "https://cdn.dps.vc/iblock/374/374e3e985cb850bbe38baacdaf27918f/f553461ad7dc1522fbcbd6d0e6ae75a3.webp",
+    "coins": 299
+  },
+  {
+    "id": 11183,
+    "name": "Play for You",
+    "image": "https://cdn.dps.vc/iblock/ef7/ef73fe06824d18e17041028fc00084e1/7927462f3af2b85a7509481af9d0fb3e.webp",
+    "coins": 299
+  },
+  {
+    "id": 6939,
+    "name": "Pug",
+    "image": "https://cdn.dps.vc/iblock/367/367d7a870b489f203c084bd4338b5fba/6efbd5b994d91fa8a467bd338fcead92.webp",
+    "coins": 299
+  },
+  {
+    "id": 8141,
+    "name": "Ramadan Crescent",
+    "image": "https://cdn.dps.vc/iblock/0de/0de5d8d88a121b8037e998fef917c201/d1d9111fea7bddee90dde3c0ae72ba15.webp",
+    "coins": 299
+  },
+  {
+    "id": 14142,
+    "name": "Ramadan Crescent",
+    "image": "https://cdn.dps.vc/iblock/980/9808fee42bcfc97f22f663c889c6e55d/32e8798194345a0d5fefb2bf94e92ddf.webp",
+    "coins": 299
+  },
+  {
+    "id": 14418,
+    "name": "Ramadan Crescent",
+    "image": "https://cdn.dps.vc/iblock/478/4781aa6c5e6a7ea33dc570de07973450/114c31cf99541378a8e182651156b9b8.webp",
+    "coins": 299
+  },
+  {
+    "id": 5882,
+    "name": "Rock 'n' Roll",
+    "image": "https://cdn.dps.vc/iblock/954/9549b94076c5bd9d0f7c1b053575d6b5/0449df20dda027cdecb5c4fb1eb433c4.png",
+    "coins": 299
+  },
+  {
+    "id": 11808,
+    "name": "Rock Star",
+    "image": "https://cdn.dps.vc/iblock/f00/f002c2da107d1621fa5219bd82d4193e/bc480bb8036bdca6f30067b9226847b1.webp",
+    "coins": 299
+  },
+  {
+    "id": 7988,
+    "name": "Sail Away",
+    "image": "https://cdn.dps.vc/iblock/bc1/bc1422a9ae1b7b6acfff7d667a3a85b1/16a16271de7e7f508191a7606d2f2dd0.webp",
+    "coins": 299
+  },
+  {
+    "id": 8111,
+    "name": "Superpower",
+    "image": "https://cdn.dps.vc/iblock/3d7/3d7c19e8efe9ef54aea45c48fa1b7c99/b3f6922a794374338c672b5a4c936aa0.webp",
+    "coins": 299
+  },
+  {
+    "id": 8496,
+    "name": "Tiara",
+    "image": "https://cdn.dps.vc/iblock/1b1/1b1ee7b697bae41ee2cbf834d1f1099e/303eec791a710c2417bb5075529681d9.webp",
+    "coins": 299
+  },
+  {
+    "id": 8873,
+    "name": "TikTok Crown",
+    "image": "https://cdn.dps.vc/iblock/a79/a790613bdf2e83725d0519bbf289529d/83bb670c15ab91b9192c50300f4c8054.webp",
+    "coins": 299
+  },
+  {
+    "id": 7503,
+    "name": "We Love",
+    "image": "https://cdn.dps.vc/iblock/679/679e9e38e38f8a4ce707328aa92b8997/9fedb22710af980bbf7b3092b08ecb94.webp",
+    "coins": 299
+  },
+  {
+    "id": 8673,
+    "name": "You're sweet",
+    "image": "https://cdn.dps.vc/iblock/498/498513c8e9b6fd8b5214df25020058f9/628acf851ea5856f99a30b6f0b6f65a0.webp",
+    "coins": 299
+  },
+  {
+    "id": 5661,
+    "name": "Air Dancer",
+    "image": "https://cdn.dps.vc/iblock/8ab/8abe051a8ba9b99026dc3c0a12b59b9e/914def28d5bd9a77be433f35a51d3bc2.png",
+    "coins": 300
+  },
+  {
+    "id": 6857,
+    "name": "Air Dancer",
+    "image": "https://cdn.dps.vc/iblock/8ac/8ac90d96b3714052c9c562954187207b/66c8186fe09c7d7adbc5513c29971791.webp",
+    "coins": 300
+  },
+  {
+    "id": 5776,
+    "name": "Birthday Cake",
+    "image": "https://cdn.dps.vc/iblock/15b/15b90a8410ae99caf0c2bb06b3efac4b/95b0e8efca45f197166d926310d532a4.png",
+    "coins": 300
+  },
+  {
+    "id": 6071,
+    "name": "Birthday Cake",
+    "image": "https://cdn.dps.vc/iblock/9e8/9e8a10cccba69c6c0ff2ed83fc6bd159/1ec601915a4f7bc2de7550893ab4faf8.png",
+    "coins": 300
+  },
+  {
+    "id": 5929,
+    "name": "Celebration Rice",
+    "image": "https://cdn.dps.vc/iblock/39d/39dddc09363b056bff4671be4f6730eb/83feaed68d48efff46eded6d40e2318c.png",
+    "coins": 300
+  },
+  {
+    "id": 5283,
+    "name": "Diamond ring of love",
+    "image": "https://cdn.dps.vc/iblock/433/4334f4d32ccb792976b1097ae605d1d0/890c718960ebebdd65f1843ec944f483.png",
+    "coins": 300
+  },
+  {
+    "id": 5569,
+    "name": "Diamond ring of love",
+    "image": "https://cdn.dps.vc/iblock/b51/b51040db9cad0b42963a3e92cdb6a0f5/227066eeb54fadcb19440fbf2a0b5be0.png",
+    "coins": 300
+  },
+  {
+    "id": 10283,
+    "name": "Diamond Ring of love",
+    "image": "https://cdn.dps.vc/iblock/569/56963789de3ff40c4db9b5207d36aa50/2c9ad6bd4a9bb34c5020aff46535f20e.webp",
+    "coins": 300
+  },
+  {
+    "id": 13987,
+    "name": "Feather Mask",
+    "image": "https://cdn.dps.vc/iblock/523/5235a4f101b1aae8e1bf78c4bd7db80a/0d8ae50f63a4caead2655b856c95cea4.webp",
+    "coins": 300
+  },
+  {
+    "id": 5301,
+    "name": "Oud",
+    "image": "https://cdn.dps.vc/iblock/6ba/6ba340c152f9154c8d7c45d18bcb5914/6be86ee5d8a8ebaa17d93b766589b151.png",
+    "coins": 300
+  },
+  {
+    "id": 8392,
+    "name": "I love music",
+    "image": "https://cdn.dps.vc/iblock/757/7578dd5937689a7fd7b03751e72e67b9/051e5abcb68d51ae38b094696c5eaa06.webp",
+    "coins": 398
+  },
+  {
+    "id": 8349,
+    "name": "Cotton the Seal",
+    "image": "https://cdn.dps.vc/iblock/6da/6dac7ca9a1f92e28287a9ef01e55a560/d0317b7d3411edd28a393a56d24a863f.webp",
+    "coins": 399
+  },
+  {
+    "id": 8852,
+    "name": "Cotton the Seal",
+    "image": "https://cdn.dps.vc/iblock/a36/a36238dfeb0d768707d336eac32cdf82/cf84e06c4c8f1e9dce3db677fd4770a5.webp",
+    "coins": 399
+  },
+  {
+    "id": 9537,
+    "name": "Fire up",
+    "image": "https://cdn.dps.vc/iblock/88c/88c491ada9fe26ed4d0562a7689f786b/1c7a13547f04d262c989c2c6f2020096.webp",
+    "coins": 399
+  },
+  {
+    "id": 8107,
+    "name": "Flower Flight",
+    "image": "https://cdn.dps.vc/iblock/11c/11c22329b25a8e4ad00887e1274eeaa9/1f25de2a24cf87ebef6ee30708f10b04.webp",
+    "coins": 399
+  },
+  {
+    "id": 8327,
+    "name": "Flower Flight",
+    "image": "https://cdn.dps.vc/iblock/886/88657108678e20acb23ff7fea5b479f7/144ff90bc7bc304c7c28064812d85ba2.webp",
+    "coins": 399
+  },
+  {
+    "id": 8914,
+    "name": "Forever Rosa",
+    "image": "https://cdn.dps.vc/iblock/a97/a97e8f4489fb62aefe7afd0137e6cdad/3ebbb3e1119ff1c3b7bc9b5ced47a4e0.webp",
+    "coins": 399
+  },
+  {
+    "id": 7895,
+    "name": "Gamer Cyber Mask",
+    "image": "https://cdn.dps.vc/iblock/383/383652cc1fd3cae9402eeae3a8f5ee1e/df8a16397bb0ed28c0e522b4cfb26500.webp",
+    "coins": 399
+  },
+  {
+    "id": 10395,
+    "name": "Gaming Headset",
+    "image": "https://cdn.dps.vc/iblock/628/628e0aef06176b5b452341cc43eaf667/9b67be502767e314916419ba693bf6c4.webp",
+    "coins": 399
+  },
+  {
+    "id": 7606,
+    "name": "Holiday Corgi",
+    "image": "https://cdn.dps.vc/iblock/682/68238464391ebc5d6a420ddc310d61ae/04fbf5a027558497ccb93b1c68ee3479.webp",
+    "coins": 399
+  },
+  {
+    "id": 7750,
+    "name": "Hydro Slime",
+    "image": "https://cdn.dps.vc/iblock/5c3/5c35f0da1235855ed35306cfe35c8cde/8b03420daacb479db0681eae70f9d6a6.webp",
+    "coins": 399
+  },
+  {
+    "id": 12211,
+    "name": "Jollie the Joy Bean",
+    "image": "https://cdn.dps.vc/iblock/f5c/f5c795f063c7404233321d6811253319/cddd7e72aed3f0df9509a340a1c2858a.webp",
+    "coins": 399
+  },
+  {
+    "id": 14507,
+    "name": "Ketupat Tree",
+    "image": "https://cdn.dps.vc/iblock/09e/09eacac58f84a45144668ac81e57f936/28fb1b98bcd498a33817d33ff3c91cba.webp",
+    "coins": 399
+  },
+  {
+    "id": 13653,
+    "name": "Kuromi Head",
+    "image": "https://cdn.dps.vc/iblock/603/603d2698dba8801bf12775847138c3a3/b9eb2f39ff403f0d46b47134472c7e72.webp",
+    "coins": 399
+  },
+  {
+    "id": 14214,
+    "name": "Let butterfly dances",
+    "image": "https://cdn.dps.vc/iblock/460/4609eb83ea0e65ec95f6d6ed48d3352e/76ae772309a00c0f094721f43ceb0f6d.webp",
+    "coins": 399
+  },
+  {
+    "id": 9825,
+    "name": "Magic Rhythm",
+    "image": "https://cdn.dps.vc/iblock/bc6/bc62ea2f3eaa09462ed41f73f0d0ed2f/dd69c9b04b568b51b72b17c683e6c733.webp",
+    "coins": 399
+  },
+  {
+    "id": 9624,
+    "name": "Mic Check",
+    "image": "https://cdn.dps.vc/iblock/187/1870115177408cf51afdc3d41ee300f6/3242f38fdf249f9127bd8c1a4ed9ab7a.webp",
+    "coins": 399
+  },
+  {
+    "id": 14131,
+    "name": "Ramadan Gift Box",
+    "image": "https://cdn.dps.vc/iblock/6ef/6effce7ddde28c64338bbeea46f9aacf/a73b793e308f2e76a846a77858751c2e.webp",
+    "coins": 399
+  },
+  {
+    "id": 11178,
+    "name": "Relaxed Goose",
+    "image": "https://cdn.dps.vc/iblock/e58/e58a82ab5b7946446ad80afa55bf8f7d/4dcadba5cad20fca7ad15bd515c75162.webp",
+    "coins": 399
+  },
+  {
+    "id": 12212,
+    "name": "Rocky the Rock Bean",
+    "image": "https://cdn.dps.vc/iblock/353/353f9e458714c6cfc37d5f7ab5d4535a/04d979214ca158220df384487b1a60e1.webp",
+    "coins": 399
+  },
+  {
+    "id": 12210,
+    "name": "Rosie the Rose Bean",
+    "image": "https://cdn.dps.vc/iblock/bfc/bfce174e2a2393ea7518f92a29647084/7b1d885708f51279b9a53781eb65ec2d.webp",
+    "coins": 399
+  },
+  {
+    "id": 12213,
+    "name": "Sage the Smart Bean",
+    "image": "https://cdn.dps.vc/iblock/c19/c196b13c52f90832281c2b9a58b046c6/9be13fadc835151fc6039666b92413ba.webp",
+    "coins": 399
+  },
+  {
+    "id": 10034,
+    "name": "Sending luck",
+    "image": "https://cdn.dps.vc/iblock/bbb/bbbaa9fb02aa98b3aa0026c7f74eab51/054433f566609faac318feca3b45ef49.webp",
+    "coins": 399
+  },
+  {
+    "id": 6073,
+    "name": "Sweet dreams",
+    "image": "https://cdn.dps.vc/iblock/d8a/d8a35b302921e346074a0c2c5904629c/ba6bb44e3400fe52915e643923cf88e5.png",
+    "coins": 399
+  },
+  {
+    "id": 5899,
+    "name": "Swing",
+    "image": "https://cdn.dps.vc/iblock/8a1/8a16a7c5d463793c8c3ab5aa407a87d8/dee86ec9c8e98ebcc58e2e3c09b93d10.png",
+    "coins": 399
+  },
+  {
+    "id": 11181,
+    "name": "Tom's Hug",
+    "image": "https://cdn.dps.vc/iblock/404/4049cf9bb94987225f08de59751d592a/50a1fb1a054bf4c7965654355d9e26bd.webp",
+    "coins": 399
+  },
+  {
+    "id": 14110,
+    "name": "You Are Loved",
+    "image": "https://cdn.dps.vc/iblock/124/124e1131a210148f75a8a9610ac8fecc/1023cefc7d462e8e146fd806a81672b8.webp",
+    "coins": 399
+  },
+  {
+    "id": 13988,
+    "name": "Crystal Dreams",
+    "image": "https://cdn.dps.vc/iblock/af6/af653d821d9d68f15c5c4905d93cb3d1/0e97aa4db85a5e45b754a43093da92dc.webp",
+    "coins": 400
+  },
+  {
+    "id": 6205,
+    "name": "Love Chat",
+    "image": "https://cdn.dps.vc/iblock/440/4402267722e227b72adc97db92504b75/ae0f562146e701f32ae96761ac67c5cc.png",
+    "coins": 400
+  },
+  {
+    "id": 5662,
+    "name": "Necklace",
+    "image": "https://cdn.dps.vc/iblock/a40/a40013bbd1e38e11c0772f8b605c6c25/567d58bd02385de4af1523980cb03a85.png",
+    "coins": 400
+  },
+  {
+    "id": 13999,
+    "name": "Wishing Cake",
+    "image": "https://cdn.dps.vc/iblock/b40/b40a336e2b98b782d4092ae1b7344b8e/862b84815984a3a85f395a58e7a7c3fe.webp",
+    "coins": 400
+  },
+  {
+    "id": 6390,
+    "name": "Teasing",
+    "image": "https://cdn.dps.vc/iblock/e14/e14c9b35975f1da5b8a5e3f116dae2bb/9f8cea9b65620e8376e44802c25ddf27.png",
+    "coins": 401
+  },
+  {
+    "id": 11809,
+    "name": "Beating Heart",
+    "image": "https://cdn.dps.vc/iblock/646/646f1e3e69ac84a4f7d3b6bc7ec694e6/47e79ffdffaedb1b6a672901659fde09.webp",
+    "coins": 449
+  },
+  {
+    "id": 8793,
+    "name": "Across the board",
+    "image": "https://cdn.dps.vc/iblock/285/285070af9d4f72b74e7d74c22157f2d9/67d9fa3239a7f9a09ef78c832a66e624.webp",
+    "coins": 450
+  },
+  {
+    "id": 14002,
+    "name": "Fairy Mask",
+    "image": "https://cdn.dps.vc/iblock/c3a/c3abf862b60d4216d843f539e846c7e0/58a32d6cfbe4a3da024f3987287acf5b.webp",
+    "coins": 450
+  },
+  {
+    "id": 13983,
+    "name": "Fortune Kitty",
+    "image": "https://cdn.dps.vc/iblock/15c/15c702f89b5a3a8a159b39dcb2363bfc/bd5982ba717048049df37d33bd1104ea.webp",
+    "coins": 450
+  },
+  {
+    "id": 7544,
+    "name": "M4 Trophy",
+    "image": "https://cdn.dps.vc/iblock/f40/f40a34a8e59806907deaa4f74df3462d/8deac28cb21517228bcd354645a987ea.webp",
+    "coins": 450
+  },
+  {
+    "id": 7659,
+    "name": "M4 Trophy",
+    "image": "https://cdn.dps.vc/iblock/4c2/4c2ebb5cece523583d1a53a9c73d2699/79484066b1d9b16e8566e354aaab4f5c.webp",
+    "coins": 450
+  },
+  {
+    "id": 7119,
+    "name": "MPL Trophy",
+    "image": "https://cdn.dps.vc/iblock/981/9816c81ee3e2fdc62ac221051e9ec290/75707f488be3f80faf5affd1cef38deb.webp",
+    "coins": 450
+  },
+  {
+    "id": 5832,
+    "name": "Cool Cat",
+    "image": "https://cdn.dps.vc/iblock/8d4/8d46ea77e77b6381f77b5867422c5f25/4d31f74591b77f27603315eb1f44488f.png",
+    "coins": 499
+  },
+  {
+    "id": 5731,
+    "name": "Coral",
+    "image": "https://cdn.dps.vc/iblock/cbe/cbe961d32956be86339a542b76faed88/cd807cda047c9eaf69c24162916ff1fd.png",
+    "coins": 499
+  },
+  {
+    "id": 8750,
+    "name": "Gold Microphone",
+    "image": "https://cdn.dps.vc/iblock/9c6/9c6311648daf0c2ce0741004b965336b/96731df4e2713d1ea74d147d95f1c0aa.webp",
+    "coins": 499
+  },
+  {
+    "id": 8244,
+    "name": "Hands Up",
+    "image": "https://cdn.dps.vc/iblock/e0f/e0f08e9e2d4ee388e6995b96c0ecdb11/c7e487b976e30be258208b2dcdbeabf8.webp",
+    "coins": 499
+  },
+  {
+    "id": 6415,
+    "name": "Music",
+    "image": "https://cdn.dps.vc/iblock/366/3663e0462a9eb4519288bf93fce16a76/ee50d49d9ab88cac71617c69be201161.webp",
+    "coins": 499
+  },
+  {
+    "id": 6967,
+    "name": "Autumn Leaves",
+    "image": "https://cdn.dps.vc/iblock/f04/f042339687e8abaa2fc0e1976d9b11f4/251a0624bc3a23ba39d75467868dcbf8.webp",
+    "coins": 500
+  },
+  {
+    "id": 7132,
+    "name": "Autumn Leaves",
+    "image": "https://cdn.dps.vc/iblock/37a/37a90014cc006a1b20843ed0f43145ab/1e09f00ba858f02e299449fd5778e9e1.webp",
+    "coins": 500
+  },
+  {
+    "id": 5850,
+    "name": "Bubbles",
+    "image": "https://cdn.dps.vc/iblock/4b1/4b1a012395fd18f6ed835539089dd3c3/98688050698f0180bdd46018a4e98ec1.png",
+    "coins": 500
+  },
+  {
+    "id": 12160,
+    "name": "Couch Potato",
+    "image": "https://cdn.dps.vc/iblock/e46/e46beea02ffc02d242e925bf64574f0d/a913f1408aa74a1dd15e50337362d89f.webp",
+    "coins": 500
+  },
+  {
+    "id": 8074,
+    "name": "Cuddle with Me",
+    "image": "https://cdn.dps.vc/iblock/b73/b73e476594a2e9728a5d0ba459fbfb6c/3c37f3a0b52c276a3374bfc0c1247d5c.webp",
+    "coins": 500
+  },
+  {
+    "id": 8150,
+    "name": "Cuddle with Me",
+    "image": "https://cdn.dps.vc/iblock/696/696b56e2eae5f0d2600ec7ba71680630/a4b92c670194c03856fbfe923e6749b0.webp",
+    "coins": 500
+  },
+  {
+    "id": 5798,
+    "name": "Dancing beaver in sunglasses",
+    "image": "https://cdn.dps.vc/iblock/f0d/f0d0ca698fdf0d0610afd1033d79f4c2/8989843eb6c8f1de3bb6d72260a5d208.png",
+    "coins": 500
+  },
+  {
+    "id": 13718,
+    "name": "Diamond Microphone",
+    "image": "https://cdn.dps.vc/iblock/549/5496e357b1e1c2df8010eaee0cfd2651/be7466ddd265e995809ed6d374c76903.webp",
+    "coins": 500
+  },
+  {
+    "id": 11583,
+    "name": "DJ Glasses",
+    "image": "https://cdn.dps.vc/iblock/b7b/b7b06110bf8e4d06cee64df718f30762/0e7955fb56aea43846ae0c04791c0cb2.webp",
+    "coins": 500
+  },
+  {
+    "id": 7688,
+    "name": "Don’t Do It",
+    "image": "https://cdn.dps.vc/iblock/dca/dcac97e4190d46d113f4bdf2918ee173/4fae166b3f3273b9dbbc2a86bea0ec18.webp",
+    "coins": 500
+  },
+  {
+    "id": 13072,
+    "name": "Dragon Crown",
+    "image": "https://cdn.dps.vc/iblock/7d1/7d1252f53043970285d7335ab796929f/a58723a7aa2de286e91b38dd958a7794.webp",
+    "coins": 500
+  },
+  {
+    "id": 8892,
+    "name": "Dream Team",
+    "image": "https://cdn.dps.vc/iblock/e09/e09d671c035feae8ced7933e71f78c11/a0ea898b564b505716a2efdd50cf572a.webp",
+    "coins": 500
+  },
+  {
+    "id": 7607,
+    "name": "Falling For You",
+    "image": "https://cdn.dps.vc/iblock/26e/26ed7ef80a36c59c52e9179733e9da7a/62c9be7b7b1d7df065f68cd6b0c75718.webp",
+    "coins": 500
+  },
+  {
+    "id": 8232,
+    "name": "Gardening",
+    "image": "https://cdn.dps.vc/iblock/304/304792b9ecf0559337cbd177eac7d286/87a750e1dfaf6d811af3d9970a64501d.webp",
+    "coins": 500
+  },
+  {
+    "id": 7122,
+    "name": "Gem Gun",
+    "image": "https://cdn.dps.vc/iblock/939/9393cb0608187667ef6d5e377f1c0d69/9b5cb58300a50651228e505b7714fdea.webp",
+    "coins": 500
+  },
+  {
+    "id": 7052,
+    "name": "Let's Go",
+    "image": "https://cdn.dps.vc/iblock/991/9910b489ba0945bac0029b664f6f5e7b/ee589541ba7f8fe8db4f782cc9a3fa4e.webp",
+    "coins": 500
+  },
+  {
+    "id": 8795,
+    "name": "Lion's Mane",
+    "image": "https://cdn.dps.vc/iblock/045/04523bab8b99c668a27ba1fec671adb6/7585218f9cc86fcd426f642c31324fae.webp",
+    "coins": 500
+  },
+  {
+    "id": 7985,
+    "name": "Lion’s Mane",
+    "image": "https://cdn.dps.vc/iblock/267/2670a5a8c9666b7afffb3255c2c104ee/abe9a0e7a6ef8b83d94df90f3a356748.webp",
+    "coins": 500
+  },
+  {
+    "id": 7830,
+    "name": "Lobsters in Love",
+    "image": "https://cdn.dps.vc/iblock/ec1/ec191d96a78a158a69d68fb5719f3fbc/cae5bdc98430ec69e7351c0c9a770e7b.webp",
+    "coins": 500
+  },
+  {
+    "id": 5336,
+    "name": "Make it rain",
+    "image": "https://cdn.dps.vc/iblock/770/770e03c64144e6d7830e884cd7140a8a/47af803e978121e760d649d47e67de50.png",
+    "coins": 500
+  },
+  {
+    "id": 14476,
+    "name": "Make it Rain",
+    "image": "https://cdn.dps.vc/iblock/9e3/9e3fa7c738d668553d9d21718bb895a9/772c657ffc471ff9cf550976fc8bbe02.webp",
+    "coins": 500
+  },
+  {
+    "id": 9792,
+    "name": "Manifesting",
+    "image": "https://cdn.dps.vc/iblock/e18/e1816429db217d2163c04c84eda2be39/d29d9bed8d6cff460125f7007d137c7e.webp",
+    "coins": 500
+  },
+  {
+    "id": 5601,
+    "name": "Mic Drop",
+    "image": "https://cdn.dps.vc/iblock/16d/16d6204817b4f467f5327276a47f91d0/282e2ac69759d5c2997b57d71f342986.webp",
+    "coins": 500
+  },
+  {
+    "id": 9623,
+    "name": "Mic Drop",
+    "image": "https://cdn.dps.vc/iblock/ba4/ba40abdb9171a777c58b133bf94ca95c/362a83571e54eec7b85794a44eff8b6f.webp",
+    "coins": 500
+  },
+  {
+    "id": 5739,
+    "name": "Money Gun",
+    "image": "https://cdn.dps.vc/iblock/9a4/9a43836ba2f5741d32533f55cabd70ce/b1c519d50bfd7dad777b1112b4f11618.png",
+    "coins": 500
+  },
+  {
+    "id": 6365,
+    "name": "Money Gun",
+    "image": "https://cdn.dps.vc/iblock/25f/25f030f47cfc60d296bb1041ddb91f6e/ca3357a76a2be178c581530009ce215a.png",
+    "coins": 500
+  },
+  {
+    "id": 7168,
+    "name": "Money Gun",
+    "image": "https://cdn.dps.vc/iblock/248/248d3e4000124666d17b89889bf7468b/9c7aa57e3bd14e2ed6c1d8acd53b1970.webp",
+    "coins": 500
+  },
+  {
+    "id": 5885,
+    "name": "Owl",
+    "image": "https://cdn.dps.vc/iblock/e87/e87fc92de64aa711c6ce23ed3b2214c2/338e115665b1c9f75108b50a43adb95b.png",
+    "coins": 500
+  },
+  {
+    "id": 14143,
+    "name": "Pelita",
+    "image": "https://cdn.dps.vc/iblock/9b5/9b5fac96955b46ec36183290dbffc324/7fb9a0f60609e47d10c2bfabcd16a8d9.webp",
+    "coins": 500
+  },
+  {
+    "id": 7398,
+    "name": "Prince",
+    "image": "https://cdn.dps.vc/iblock/38b/38b4963191222c66267858149e662b7d/d98b625b2a3a261d2c12caaae61b479f.webp",
+    "coins": 500
+  },
+  {
+    "id": 7850,
+    "name": "Quarterback Frank",
+    "image": "https://cdn.dps.vc/iblock/0fe/0fe010e6cf1dcda0933faf78ede246bf/3a1c2bcac380713a57963fe2fc2d24bb.webp",
+    "coins": 500
+  },
+  {
+    "id": 7282,
+    "name": "Spaghetti Kiss",
+    "image": "https://cdn.dps.vc/iblock/fba/fba8022bcf5a189adec072e5ffa1be77/708c406b13d9fd4811ae19a8be9c327b.webp",
+    "coins": 500
+  },
+  {
+    "id": 13172,
+    "name": "Star Map Polaris",
+    "image": "https://cdn.dps.vc/iblock/f8e/f8e90647f6f77a8d336e1acaf25b1db0/6a4ea049059b6d20b99c9a1c2928717b.webp",
+    "coins": 500
+  },
+  {
+    "id": 9908,
+    "name": "Sweet Memories",
+    "image": "https://cdn.dps.vc/iblock/bc3/bc37014ef0d53cb9559ef472c06b75c7/aeb8f2887c6161eaf17bc8284906bd61.webp",
+    "coins": 500
+  },
+  {
+    "id": 5712,
+    "name": "Trophy",
+    "image": "https://cdn.dps.vc/iblock/26f/26f17d2bc63c5e3f218ea2f25b245fa2/95d88e55486d8188f4b73c75def4354c.png",
+    "coins": 500
+  },
+  {
+    "id": 10667,
+    "name": "VR Goggles",
+    "image": "https://cdn.dps.vc/iblock/5fb/5fb7aeb35d6aaaa5adc4180977720af7/5af3aa1cf4565bb6ed6496489589185e.webp",
+    "coins": 500
+  },
+  {
+    "id": 8648,
+    "name": "Window basket",
+    "image": "https://cdn.dps.vc/iblock/a8d/a8d0c44c86385d4cd02ad2d840dcb148/8bbdca8666946a2e7172b3eaeed02303.webp",
+    "coins": 500
+  },
+  {
+    "id": 14114,
+    "name": "XXXL Flowers",
+    "image": "https://cdn.dps.vc/iblock/84f/84f3764c0edf1fa1bbf8a799a76812c1/bec56f2a84612d869bd89872ef701dd4.webp",
+    "coins": 500
+  },
+  {
+    "id": 9948,
+    "name": "You’re Amazing",
+    "image": "https://cdn.dps.vc/iblock/55b/55b3c142739eb9bed113f14c14865929/aee60db73901a951b5fa37d15e5e36a4.webp",
+    "coins": 500
+  },
+  {
+    "id": 6865,
+    "name": "Cooper Skates Home",
+    "image": "https://cdn.dps.vc/iblock/041/04184b09ec8e7bf137d33cf57ce4eec9/3c2e360b023b9980e54e9d9a394883b9.webp",
+    "coins": 599
+  },
+  {
+    "id": 5564,
+    "name": "Applause",
+    "image": "https://cdn.dps.vc/iblock/a09/a0915afcb04a11f902197349b04ba4a0/61917c0c7d2f180a53b66bfd811cf867.png",
+    "coins": 600
+  },
+  {
+    "id": 7266,
+    "name": "Applause",
+    "image": "https://cdn.dps.vc/iblock/054/054e62fc60b158f38edd5db0589f8d6a/1aa46ed1a7f28a63b2581515c67b51a1.webp",
+    "coins": 600
+  },
+  {
+    "id": 6938,
+    "name": "Mermaid",
+    "image": "https://cdn.dps.vc/iblock/386/386c5922deadaafedd55681a927f7011/78756635561cae6fc4225b573e01a84c.webp",
+    "coins": 600
+  },
+  {
+    "id": 6554,
+    "name": "Dance Together",
+    "image": "https://cdn.dps.vc/iblock/803/803c640fa9a7cefeaa37ce5a827bb8f3/d052d0ac9a1a408d3265a11ca8a52725.png",
+    "coins": 699
+  },
+  {
+    "id": 6749,
+    "name": "LIVE Fest Trophy",
+    "image": "https://cdn.dps.vc/iblock/8d7/8d76087c02345f0390f20f7671eaaed3/b14cbe2a29323e45be764700cb9c4a65.webp",
+    "coins": 699
+  },
+  {
+    "id": 5488,
+    "name": "LOVE Balloon",
+    "image": "https://cdn.dps.vc/iblock/02e/02e14e15a34e20b9bc12631b89855609/40e6ba49ff1e8b344199e44b63adcb6f.png",
+    "coins": 699
+  },
+  {
+    "id": 6800,
+    "name": "Piñata",
+    "image": "https://cdn.dps.vc/iblock/b83/b835c566dfe3ebde8a388926dda7a169/04b373b45ffd2c4c5701d48ccef3c75e.webp",
+    "coins": 699
+  },
+  {
+    "id": 7093,
+    "name": "Piñata",
+    "image": "https://cdn.dps.vc/iblock/6a8/6a89df1da2cece908cff30c145658ba4/b9b1d052fbeade32df2ee6879c716810.webp",
+    "coins": 699
+  },
+  {
+    "id": 5897,
+    "name": "Swan",
+    "image": "https://cdn.dps.vc/iblock/bd1/bd1d065774ce50e2c0331dba965d1ac4/a423a5b7b80743d36b8960e79421060c.png",
+    "coins": 699
+  },
+  {
+    "id": 7357,
+    "name": "TikTok Trophy",
+    "image": "https://cdn.dps.vc/iblock/7f6/7f6d5df92bf4b5b559567b9a870d485f/1811197db0860ff395435d51d35598ef.webp",
+    "coins": 699
+  },
+  {
+    "id": 6274,
+    "name": "Basketball Trophy",
+    "image": "https://cdn.dps.vc/iblock/7a8/7a8b3253c99e46879048d2a54b36a422/1350525064b6567da9b6e127a156595a.webp",
+    "coins": 700
+  },
+  {
+    "id": 14381,
+    "name": "Colorful Wings",
+    "image": "https://cdn.dps.vc/iblock/593/5938b11997214a64739723e9174b49e8/709883ca23d4d67ec574c6bea94e577a.webp",
+    "coins": 700
+  },
+  {
+    "id": 6342,
+    "name": "Cotton Candy",
+    "image": "https://cdn.dps.vc/iblock/055/055fa18023d775b51bb1870b87e056c7/38ea1abfcc8ab3a8b5d3c8e359062a85.webp",
+    "coins": 700
+  },
+  {
+    "id": 7265,
+    "name": "Cotton Candy",
+    "image": "https://cdn.dps.vc/iblock/51f/51f64a93c515f4a45169f24a52179f2f/730beb9631b1af4edfaf714d7686df04.webp",
+    "coins": 700
+  },
+  {
+    "id": 7498,
+    "name": "Candy Cane Gun",
+    "image": "https://cdn.dps.vc/iblock/33b/33b4befdf8b54eb73626a10b73442071/9b7ed1f51f59eb3e0ac12e2e449b6ce9.webp",
+    "coins": 799
+  },
+  {
+    "id": 8745,
+    "name": "Mocha the Monkey",
+    "image": "https://cdn.dps.vc/iblock/d28/d288dbb886ff2ef41f20d8cc91650ef5/082a082999aff8b1176bb6a84963c929.webp",
+    "coins": 799
+  },
+  {
+    "id": 5835,
+    "name": "Sunset in Bali",
+    "image": "https://cdn.dps.vc/iblock/970/97081f479a0fa7bfbd37eab0ce7109c1/9e17c532a2f217b1cd2f01e21783a3db.png",
+    "coins": 799
+  },
+  {
+    "id": 11498,
+    "name": "The Van Cat",
+    "image": "https://cdn.dps.vc/iblock/a91/a91115e253add8697858412afc87335a/420aab91b7912852cfcce25b6da149ce.webp",
+    "coins": 799
+  },
+  {
+    "id": 9550,
+    "name": "Claw machine",
+    "image": "https://cdn.dps.vc/iblock/d2b/d2b197cd0f9dee63b596fe50e44d17f0/9ceb89946a1def364058a370d835f1ad.webp",
+    "coins": 800
+  },
+  {
+    "id": 10274,
+    "name": "Easter Tiny Diny",
+    "image": "https://cdn.dps.vc/iblock/b62/b623e84cf456d928b3ce2b74b39a639e/7aa233eae48bd258f774f3e3eee8e984.webp",
+    "coins": 800
+  },
+  {
+    "id": 5664,
+    "name": "Pearl",
+    "image": "https://cdn.dps.vc/iblock/d42/d4241b9de546fb190964c12adeecabca/d03fe09dd3400422c55953555066487e.png",
+    "coins": 800
+  },
+  {
+    "id": 9788,
+    "name": "Penguin",
+    "image": "https://cdn.dps.vc/iblock/dd0/dd01e6181758a9e2519522ede65ede03/08c00a75eb157258fc4d99905d51eda1.webp",
+    "coins": 800
+  },
+  {
+    "id": 6839,
+    "name": "Tango",
+    "image": "https://cdn.dps.vc/iblock/1f2/1f217b7841a9b0368a9f336ff3dcfb1d/176de9f80fe6fb969a420e6858c7d3e4.webp",
+    "coins": 800
+  },
+  {
+    "id": 6132,
+    "name": "Beach Date",
+    "image": "https://cdn.dps.vc/iblock/504/504a5dfef033a7e90e4f07987b0c0f28/70ec484fc4c798d3e09a7fbcae83ee95.png",
+    "coins": 899
+  },
+  {
+    "id": 14127,
+    "name": "Crescent Lanterns",
+    "image": "https://cdn.dps.vc/iblock/17b/17b421365352f727607877c264234b5b/ae3f0c82a996ccd72501ec05cbd14063.webp",
+    "coins": 899
+  },
+  {
+    "id": 7838,
+    "name": "LOVE U",
+    "image": "https://cdn.dps.vc/iblock/fc7/fc77b43b2d7f99668867140564548a5a/adf7e38fa69b0db71be6ce238585518a.webp",
+    "coins": 899
+  },
+  {
+    "id": 14307,
+    "name": "Ramadan Blessings",
+    "image": "https://cdn.dps.vc/iblock/5d0/5d0f54851c5f0793bbe40de83c0fa950/c777d78f5b13f6bd785e427c51539629.webp",
+    "coins": 899
+  },
+  {
+    "id": 5978,
+    "name": "Train",
+    "image": "https://cdn.dps.vc/iblock/17d/17dfaee8b85e1b972f86b080729b4126/73c36a574fa91b8b44e1ff63ba130e93.png",
+    "coins": 899
+  },
+  {
+    "id": 13603,
+    "name": "Superstar",
+    "image": "https://cdn.dps.vc/iblock/a60/a60a75840a89cdb3340e16a48a9f22b5/f078c7d14c4ac46cce3d8681210ca91b.webp",
+    "coins": 900
+  },
+  {
+    "id": 11806,
+    "name": "Enchanted Guitar",
+    "image": "https://cdn.dps.vc/iblock/629/6294c21b9986a5c12390917b4d907ab4/add794ce7dc389930a7add94960b2cbd.webp",
+    "coins": 999
+  },
+  {
+    "id": 5976,
+    "name": "Hot Air Balloon",
+    "image": "https://cdn.dps.vc/iblock/33a/33a5eb58a8dd71677072c9482aad209a/61be5fe5d3d639e3729edbf003a536c7.png",
+    "coins": 999
+  },
+  {
+    "id": 13654,
+    "name": "Kuromi Stage",
+    "image": "https://cdn.dps.vc/iblock/dc3/dc363bba6f30ddb07e7e71a96a5d2111/761353f1d1522dfb585c19769ff38328.webp",
+    "coins": 999
+  },
+  {
+    "id": 9717,
+    "name": "Lucky Airdrop Box",
+    "image": "https://cdn.dps.vc/iblock/031/03145525ff14867e60aebdec9ec63bfa/3fe22149d9c681c42fde2756faf06cbc.webp",
+    "coins": 999
+  },
+  {
+    "id": 8078,
+    "name": "Lucky Leprechaun",
+    "image": "https://cdn.dps.vc/iblock/93c/93cf6d5f5c371f8dafa549e358105ea2/06cc17b3d1a6cca60bbfc85f5faac7a2.webp",
+    "coins": 999
+  },
+  {
+    "id": 8769,
+    "name": "Raining gifts",
+    "image": "https://cdn.dps.vc/iblock/916/91661303a8dc3660acaf2f4e47a94f75/221a1f185676496ebcdbaf55f90aeb70.webp",
+    "coins": 999
+  },
+  {
+    "id": 6233,
+    "name": "Travel with You",
+    "image": "https://cdn.dps.vc/iblock/5f1/5f15bb4166a3be380c71682d27b1e38f/ad2519381f60bb3e2c6b603ed4baff24.png",
+    "coins": 999
+  },
+  {
+    "id": 9138,
+    "name": "Trending Figure",
+    "image": "https://cdn.dps.vc/iblock/c9c/c9c6f85439e2444e6bc6f6942566c92d/31b8a9af2c8d74149dfe23240f4dca7a.webp",
+    "coins": 999
+  },
+  {
+    "id": 5461,
+    "name": "Batik Clothes",
+    "image": "https://cdn.dps.vc/iblock/46d/46d0f497391a934d27d9b993f444d8b2/121af719b172eed61d8a75c1b1341c9d.png",
+    "coins": 1000
+  },
+  {
+    "id": 9498,
+    "name": "Blooming Ribbons",
+    "image": "https://cdn.dps.vc/iblock/08d/08dbdec4d49bccd59e265179bf3f400e/1560d8eaa0b88b74eb20973fe7c4b922.webp",
+    "coins": 1000
+  },
+  {
+    "id": 8606,
+    "name": "Dinosaur",
+    "image": "https://cdn.dps.vc/iblock/b58/b58e509966e828ae4b5720270c8a2485/35c48a72e4d330359399f426603e76ce.webp",
+    "coins": 1000
+  },
+  {
+    "id": 5680,
+    "name": "Disco ball",
+    "image": "https://cdn.dps.vc/iblock/cdd/cdd759a0d8715e70c1d888c785259620/864a0df77a777eb522157c4d8eb393a3.png",
+    "coins": 1000
+  },
+  {
+    "id": 5540,
+    "name": "Disco Ball",
+    "image": "https://cdn.dps.vc/iblock/3e5/3e5e6d701c936bef5b85a0315b841184/e46e6c47d88c9bb81d27eb700456137a.webp",
+    "coins": 1000
+  },
+  {
+    "id": 7871,
+    "name": "Drums",
+    "image": "https://cdn.dps.vc/iblock/a58/a5857e8b9b9e3f3aa2edae77096353e4/abe2690117b248d9a31f670363459b08.webp",
+    "coins": 1000
+  },
+  {
+    "id": 7882,
+    "name": "Drums",
+    "image": "https://cdn.dps.vc/iblock/449/449c40e5064f776737e24fd6460195a1/477a014b033108643c2d674b2cce2d0a.webp",
+    "coins": 1000
+  },
+  {
+    "id": 6830,
+    "name": "Dynamic Duo",
+    "image": "https://cdn.dps.vc/iblock/7d7/7d7e602571e3db7b23e49311600fb65e/9dfc2ba81f397e8b82a16d61a444ba06.webp",
+    "coins": 1000
+  },
+  {
+    "id": 6199,
+    "name": "Email Message",
+    "image": "https://cdn.dps.vc/iblock/dc2/dc21bd6120598b10e5146c713249059e/4eb90329ca1344ccc1f88105ff0dafcf.png",
+    "coins": 1000
+  },
+  {
+    "id": 9522,
+    "name": "Exclusive Spark",
+    "image": "https://cdn.dps.vc/iblock/808/8088d42ff402150934315dc194918be9/26afadde7124d66edb4128a0fbbe5984.webp",
+    "coins": 1000
+  },
+  {
+    "id": 14397,
+    "name": "Fairy Wings",
+    "image": "https://cdn.dps.vc/iblock/b93/b93de03e26c1f054298ec675ff13d414/5706af6a284665d42b8950ae6d709464.webp",
+    "coins": 1000
+  },
+  {
+    "id": 6996,
+    "name": "Feather Flock",
+    "image": "https://cdn.dps.vc/iblock/78d/78d1dcd441cfa59fde6d038097bcf3a3/9fadf764cdf13f2631ceff89cc7cd066.webp",
+    "coins": 1000
+  },
+  {
+    "id": 13171,
+    "name": "Feather Flock",
+    "image": "https://cdn.dps.vc/iblock/4bd/4bd61c10856b14ae18c1b688f9518190/431a8f764525a7c8ac0fc1ff61702517.webp",
+    "coins": 1000
+  },
+  {
+    "id": 14399,
+    "name": "Flamingo Groove",
+    "image": "https://cdn.dps.vc/iblock/e3f/e3f9926d9ded1c00558fe5457c04f86b/8df847f70ce4144cb562f69b148eabe0.webp",
+    "coins": 1000
+  },
+  {
+    "id": 5886,
+    "name": "Galaxy",
+    "image": "https://cdn.dps.vc/iblock/33e/33ec65ba07bdcde7975c9f271eed8161/80ea5438ec2ca8fe00ef38dd4d7b3b4b.png",
+    "coins": 1000
+  },
+  {
+    "id": 6364,
+    "name": "Galaxy",
+    "image": "https://cdn.dps.vc/iblock/9d1/9d1742b92898becc7ff9f929a3f8bde9/f29791e5e0c00152a2440adfe6cb05b3.webp",
+    "coins": 1000
+  },
+  {
+    "id": 11046,
+    "name": "Galaxy",
+    "image": "https://cdn.dps.vc/iblock/337/3371d8a96eaf18267fbadd9531bbb65c/93c8a808ace34b05bde5cbabc51065aa.webp",
+    "coins": 1000
+  },
+  {
+    "id": 6842,
+    "name": "Gerry the Giraffe",
+    "image": "https://cdn.dps.vc/iblock/792/792ef3f53d86b5cb066d5c0bb5b00a87/91aa5cf7f51a533841bea8617419c54d.webp",
+    "coins": 1000
+  },
+  {
+    "id": 8972,
+    "name": "Glowing Jellyfish",
+    "image": "https://cdn.dps.vc/iblock/793/793d36e68582d349b690b9cad4101b80/2517b152382a494da39ab197263972ff.webp",
+    "coins": 1000
+  },
+  {
+    "id": 8978,
+    "name": "Glowing Jellyfish",
+    "image": "https://cdn.dps.vc/iblock/e65/e65b1f71b4fe5709b454299439cb2674/36471857a2ba78694be934a54a0fa8d2.webp",
+    "coins": 1000
+  },
+  {
+    "id": 5587,
+    "name": "Gold Mine",
+    "image": "https://cdn.dps.vc/iblock/d76/d766ebb3d04903c05a2f2d5883fd1cd7/7c99a5f7fed51db01ce85151e55e313e.png",
+    "coins": 1000
+  },
+  {
+    "id": 7571,
+    "name": "Match Drum",
+    "image": "https://cdn.dps.vc/iblock/d93/d935823bbe5d5e0ebffd931f21372700/06e884ea0d6bbe6d4415188fa6128a92.webp",
+    "coins": 1000
+  },
+  {
+    "id": 6200,
+    "name": "Mirror Bloom",
+    "image": "https://cdn.dps.vc/iblock/a68/a681c2ef079138e0e51cac719a2ec2b6/40f50e2272250dd118389987d09ab80b.png",
+    "coins": 1000
+  },
+  {
+    "id": 6847,
+    "name": "Picnic Basket",
+    "image": "https://cdn.dps.vc/iblock/33c/33c6de8f86a7d57c1692c8b6358f6ae3/76aaa7fe1989074b499596ccb67441fa.webp",
+    "coins": 1000
+  },
+  {
+    "id": 7123,
+    "name": "Shiny air balloon",
+    "image": "https://cdn.dps.vc/iblock/bbf/bbf19d5a1bc2851cf5d7fea1b9fb0609/b636bdafd709c81fa041f72ffdf56645.webp",
+    "coins": 1000
+  },
+  {
+    "id": 5596,
+    "name": "Silver Sports Car",
+    "image": "https://cdn.dps.vc/iblock/8b5/8b5f5642bfb977428531a332da5e4f3c/f1924ed9a683b476bfec562456f2a1fb.png",
+    "coins": 1000
+  },
+  {
+    "id": 13302,
+    "name": "Sparkle Dance",
+    "image": "https://cdn.dps.vc/iblock/923/9231ad5505905aa7b2c22543678b8775/103d0d38f0c249acb648f390299fd146.webp",
+    "coins": 1000
+  },
+  {
+    "id": 7161,
+    "name": "The Magic Lamp",
+    "image": "https://cdn.dps.vc/iblock/e0d/e0d45fccd69220f321531383d97f51fc/4296cc4b886f31bb5b2cf106ebf640ab.webp",
+    "coins": 1000
+  },
+  {
+    "id": 6781,
+    "name": "Watermelon Love",
+    "image": "https://cdn.dps.vc/iblock/44a/44a62f73bbaa2b0a6bd0a39d62f73033/e8775b631b23ed6756b9cdb4132ee85e.webp",
+    "coins": 1000
+  },
+  {
+    "id": 7963,
+    "name": "Diamond Tree",
+    "image": "https://cdn.dps.vc/iblock/47a/47afc3c8563cacbff2ce13f2310a2fc4/84761a2a3e0431bda3bf3d2cc9d02b3f.webp",
+    "coins": 1088
+  },
+  {
+    "id": 6090,
+    "name": "Fireworks",
+    "image": "https://cdn.dps.vc/iblock/eeb/eebfef5c217a749cf9a997d187a17d67/e1e443ee1532c9f04922acf770f04edb.png",
+    "coins": 1088
+  },
+  {
+    "id": 5781,
+    "name": "Diamond",
+    "image": "https://cdn.dps.vc/iblock/a5d/a5d03d9eab0e85027a77224ef5d3613b/9fda88bace88c7c690b19eaaabc2c64b.png",
+    "coins": 1099
+  },
+  {
+    "id": 6245,
+    "name": "Golden Stars",
+    "image": "https://cdn.dps.vc/iblock/f98/f98cf5c34311ab8b48c70755ad41d02c/5d78a40d9eb1380e0b5ee35bd645aeed.png",
+    "coins": 1099
+  },
+  {
+    "id": 14057,
+    "name": "Golden Stars",
+    "image": "https://cdn.dps.vc/iblock/79a/79a07e0ade2e82ec3089f66cdc4fd31d/6ffc027166ec1cc147c77674e517cb84.webp",
+    "coins": 1099
+  },
+  {
+    "id": 5876,
+    "name": "Arcade Game",
+    "image": "https://cdn.dps.vc/iblock/d5a/d5aaa3c8ef3d271c2f93709c3ff51e67/721d870d5a5d9d82d726ff5a9ba3aa5e.png",
+    "coins": 1200
+  },
+  {
+    "id": 7041,
+    "name": "Arcade Game",
+    "image": "https://cdn.dps.vc/iblock/fd0/fd0785612b024900444a0a69083400ff/3181d6af50b05dd65a7ba75902bb5b94.webp",
+    "coins": 1200
+  },
+  {
+    "id": 7984,
+    "name": "Counting Sheep",
+    "image": "https://cdn.dps.vc/iblock/f32/f32291f6832c1eb265820aede5db65b2/006d4bd8018d5da1addb803dabd2b64b.webp",
+    "coins": 1200
+  },
+  {
+    "id": 8887,
+    "name": "Fountain",
+    "image": "https://cdn.dps.vc/iblock/07d/07d678346c7eb588bc3cbddf343ab791/8f8f50f5350e4b1c0b151aff333e43a4.webp",
+    "coins": 1200
+  },
+  {
+    "id": 6031,
+    "name": "Gaming Chair",
+    "image": "https://cdn.dps.vc/iblock/bd1/bd14b9754a264a2b1fca22c7171d79ac/448d467dd4d3e6a8945981c52017b11a.png",
+    "coins": 1200
+  },
+  {
+    "id": 8287,
+    "name": "Gaming Chair",
+    "image": "https://cdn.dps.vc/iblock/f22/f2211a8d420f889bf6c52c97b1e0007f/0038258d0bbae0c178c978ef676185c7.webp",
+    "coins": 1200
+  },
+  {
+    "id": 8964,
+    "name": "Gaming Chair",
+    "image": "https://cdn.dps.vc/iblock/2c1/2c1c0251bfb4ad4d213b3a2a95024f9e/439b2448355d10dd22682a9242801ccd.webp",
+    "coins": 1200
+  },
+  {
+    "id": 7624,
+    "name": "Take a Drive",
+    "image": "https://cdn.dps.vc/iblock/fb5/fb50bcd0bb83c3a338d7d5196a7e987c/aa0e7affca4b6d34877244af7f5b611c.webp",
+    "coins": 1200
+  },
+  {
+    "id": 7631,
+    "name": "Take a Drive",
+    "image": "https://cdn.dps.vc/iblock/c5b/c5b1ae3782864918bcb70d9e92046b87/8f3b4f952004f1aaef4bccfd69b19568.webp",
+    "coins": 1200
+  },
+  {
+    "id": 8042,
+    "name": "Travel in the US",
+    "image": "https://cdn.dps.vc/iblock/064/06421e2d8863a2e0fbb8be9c04495afe/7799ec5452a296a9774b4236c2f5af06.webp",
+    "coins": 1200
+  },
+  {
+    "id": 13263,
+    "name": "Umbrella of Love",
+    "image": "https://cdn.dps.vc/iblock/5a2/5a21b30618e078875e71cceb385e03f3/24f8af6e9e0508c33300fc202355ea40.webp",
+    "coins": 1200
+  },
+  {
+    "id": 5996,
+    "name": "Bumper Cars",
+    "image": "https://cdn.dps.vc/iblock/53b/53b569311552b729d1b347268370e576/8f236deca90a65e7046f7576d69976af.png",
+    "coins": 1288
+  },
+  {
+    "id": 7752,
+    "name": "Paimon Surprise",
+    "image": "https://cdn.dps.vc/iblock/b18/b18d8229a971bf64e938c8debba536eb/7c60520ecb5828f2ea21343d9c627472.webp",
+    "coins": 1299
+  },
+  {
+    "id": 8299,
+    "name": "Paimon Surprise",
+    "image": "https://cdn.dps.vc/iblock/ffc/ffc784ca54363f5d1d0c195419a3c19b/27096967caade6f066ce748bf5327244.webp",
+    "coins": 1299
+  },
+  {
+    "id": 9588,
+    "name": "Moonlight flower",
+    "image": "https://cdn.dps.vc/iblock/080/0809fb358fa95377a691ca8e577dae34/e500d79379f810c78bc1bee1de02a05a.webp",
+    "coins": 1400
+  },
+  {
+    "id": 8370,
+    "name": "Streamer’s Setup",
+    "image": "https://cdn.dps.vc/iblock/4d5/4d52c5019fa1ca01e94351a5c82dcad3/bd98b4eb8d8e27ede078691798e35f4f.webp",
+    "coins": 1400
+  },
+  {
+    "id": 14398,
+    "name": "Vibrant Stage",
+    "image": "https://cdn.dps.vc/iblock/c09/c0900130872f154436fddc021be411d4/d60e6fb67da00be26ce3f32ed69ad548.webp",
+    "coins": 1400
+  },
+  {
+    "id": 6286,
+    "name": "Wedding",
+    "image": "https://cdn.dps.vc/iblock/7be/7beeb7f1098cf5f784739a0be38a06f8/0678483823c912e4dea96fa19a2f0d86.png",
+    "coins": 1400
+  },
+  {
+    "id": 5561,
+    "name": "Diamond Crown",
+    "image": "https://cdn.dps.vc/iblock/831/8311ff6e37c5a79099e87466a1c3b736/c7aceb6a224a7b11c3360fd88680bd00.png",
+    "coins": 1499
+  },
+  {
+    "id": 5604,
+    "name": "Diamond Crown",
+    "image": "https://cdn.dps.vc/iblock/3b5/3b56c2352a02829ac4445094a3f76b51/738ad17c91919a940ee2001f9f262a95.png",
+    "coins": 1499
+  },
+  {
+    "id": 6488,
+    "name": "Breakthrough Celebration",
+    "image": "https://cdn.dps.vc/iblock/d9a/d9a9007979ec59990361a4b6e083f77d/00d0b77798a26f2d61e6eaeff8e638d6.webp",
+    "coins": 1500
+  },
+  {
+    "id": 5955,
+    "name": "Champion",
+    "image": "https://cdn.dps.vc/iblock/3c9/3c95aee9d94798b88b7132c0f1f006e3/60a55983aa3cf0b2c30de3b30aedcbea.png",
+    "coins": 1500
+  },
+  {
+    "id": 7467,
+    "name": "Chasing the Dream",
+    "image": "https://cdn.dps.vc/iblock/63a/63a21b726641e8bb50715bfe2e147d93/613bfe9574775d0c5b9be197cd96a745.webp",
+    "coins": 1500
+  },
+  {
+    "id": 5337,
+    "name": "Diamond King",
+    "image": "https://cdn.dps.vc/iblock/d7a/d7a7a3a0933ddead34a48a03d965f77a/bb50ca99cdfbdc705cacff9af43a1b20.png",
+    "coins": 1500
+  },
+  {
+    "id": 7367,
+    "name": "Diamond Ring",
+    "image": "https://cdn.dps.vc/iblock/31d/31db4a4c7058c4678c113459f6666f59/572f9e9d8fa61bee659551cfa1fa873d.webp",
+    "coins": 1500
+  },
+  {
+    "id": 9912,
+    "name": "Dreamy Card",
+    "image": "https://cdn.dps.vc/iblock/7c3/7c3a6271b12d93642e45c89cc5e38db0/6f2d1a8e8139351f6e799385edaa3104.webp",
+    "coins": 1500
+  },
+  {
+    "id": 11109,
+    "name": "EWC Trophy",
+    "image": "https://cdn.dps.vc/iblock/69f/69f81030fe021dadb44d5314963d9716/a8dd508493a8ccd621efbb08fa9bc015.webp",
+    "coins": 1500
+  },
+  {
+    "id": 5788,
+    "name": "Floral Bloom",
+    "image": "https://cdn.dps.vc/iblock/858/85827a8e5266c8d4c697d9aa930fead6/149392b39b041febde90bc4ea80ce1a5.png",
+    "coins": 1500
+  },
+  {
+    "id": 10668,
+    "name": "Future Encounter",
+    "image": "https://cdn.dps.vc/iblock/378/378cf15a01591c0603bfdd8f733391fe/8eaf6d307c5accc09482685c9bfeded8.webp",
+    "coins": 1500
+  },
+  {
+    "id": 5651,
+    "name": "Garland",
+    "image": "https://cdn.dps.vc/iblock/2b7/2b715453ba05fa402edba017ac0c11a0/b31ad3573f6b4fe41e89e16f2615606d.png",
+    "coins": 1500
+  },
+  {
+    "id": 9909,
+    "name": "Greeting Card",
+    "image": "https://cdn.dps.vc/iblock/afc/afc7aa738b652251f8586032c1d2d187/7e83c33a5f89a8516cb7b9b5fc6ded65.webp",
+    "coins": 1500
+  },
+  {
+    "id": 12852,
+    "name": "Level Ship",
+    "image": "https://cdn.dps.vc/iblock/b0e/b0e09f993b877b8aff5e77674505de03/3116f325bf299e9097c02d4285aeee4a.webp",
+    "coins": 1500
+  },
+  {
+    "id": 9824,
+    "name": "Lover’s Lock",
+    "image": "https://cdn.dps.vc/iblock/4dc/4dcdcc3367ae5a88f1957a4eeaa8f521/5c1ca22c6752204c1eddfc4308e11e91.webp",
+    "coins": 1500
+  },
+  {
+    "id": 9043,
+    "name": "Pim Bear",
+    "image": "https://cdn.dps.vc/iblock/204/2043f85b8f2e2ee638ff3a1799eda329/2319b052e0e64799842751d9fee4d438.webp",
+    "coins": 1500
+  },
+  {
+    "id": 10886,
+    "name": "Potato eating spaghetti",
+    "image": "https://cdn.dps.vc/iblock/f43/f43cf524ded1dc9c26ffc752d1d86f94/299a0d8d48f83fc45311de6626c5f026.webp",
+    "coins": 1500
+  },
+  {
+    "id": 14306,
+    "name": "Raya Gift Card",
+    "image": "https://cdn.dps.vc/iblock/2f5/2f5798137a3fe3426fe5823dc026ae86/532d7fa93bb8b2d40692faf1f6f50e08.webp",
+    "coins": 1500
+  },
+  {
+    "id": 11584,
+    "name": "Under Control",
+    "image": "https://cdn.dps.vc/iblock/68e/68e2512655a6b57d72c0d77507e36f39/f0de4073fe1a6da3e759cab4f34fe2de.webp",
+    "coins": 1500
+  },
+  {
+    "id": 5753,
+    "name": "Shooting Stars",
+    "image": "https://cdn.dps.vc/iblock/b36/b36bb8c332ade25b2e591cd3ed164a99/a06c10f4dc562c24f4f5b6812b9fa01f.png",
+    "coins": 1580
+  },
+  {
+    "id": 6989,
+    "name": "ASMR Starter Kit",
+    "image": "https://cdn.dps.vc/iblock/aac/aaca1409a8bf92c36a59ca74056759b9/9de21ac068622fb0e9c8b8a44bd29469.webp",
+    "coins": 1599
+  },
+  {
+    "id": 9457,
+    "name": "ASMR Starter Kit",
+    "image": "https://cdn.dps.vc/iblock/d74/d746c3b3a4036a2c3c715aae722f3636/bd2a5b11a7a00121a384fa2788857093.webp",
+    "coins": 1599
+  },
+  {
+    "id": 6084,
+    "name": "Whale diving",
+    "image": "https://cdn.dps.vc/iblock/5b2/5b27c388fe0d4dbe0a5f0a44ba7a8410/602a5a7cf538240f48ccf47c13237aa2.png",
+    "coins": 1750
+  },
+  {
+    "id": 7879,
+    "name": "Center Stage",
+    "image": "https://cdn.dps.vc/iblock/f98/f98f3a270c59ee6b1c7ce1ca4d4cdb6d/46cdf56fbdb0e25155535de03da71404.webp",
+    "coins": 1799
+  },
+  {
+    "id": 8245,
+    "name": "Here We Go",
+    "image": "https://cdn.dps.vc/iblock/eb4/eb455b32af55203ea8eca269775cbe9e/9c39ed829f6bb4730b9fadc0d7dff5d3.webp",
+    "coins": 1799
+  },
+  {
+    "id": 9403,
+    "name": "Berlin Bear",
+    "image": "https://cdn.dps.vc/iblock/2d0/2d05837c5bbd4838cfa5452bafc058a4/983d9b6753dedd1d38010795e54bca55.webp",
+    "coins": 1800
+  },
+  {
+    "id": 8277,
+    "name": "Love Drop",
+    "image": "https://cdn.dps.vc/iblock/896/896832589053f394e9b14cac7992a0d1/df08b30c59ff13f1eec030d1e27a2a35.webp",
+    "coins": 1800
+  },
+  {
+    "id": 5763,
+    "name": "Speedboat",
+    "image": "https://cdn.dps.vc/iblock/55f/55f832ac0d4e25f2527b2cf87ae8af08/ec99908e1787ae32c1387a20db7ca5ac.png",
+    "coins": 1888
+  },
+  {
+    "id": 6327,
+    "name": "Airship",
+    "image": "https://cdn.dps.vc/iblock/85e/85e8a2811f78d9e6df7d00419394b88c/da5e075e4040fd8a3b60d4f28a2fb5db.webp",
+    "coins": 1999
+  },
+  {
+    "id": 6862,
+    "name": "Cooper Flies Home",
+    "image": "https://cdn.dps.vc/iblock/778/7784f4e4b22c7acb8c90b9ccf4cfd71c/e3bb5fd549bc047912dda450fb714f84.webp",
+    "coins": 1999
+  },
+  {
+    "id": 5903,
+    "name": "Fall Candle",
+    "image": "https://cdn.dps.vc/iblock/dd8/dd8c34b0f17b0f2e859ad9ac4ed02c4e/409338ce2892d9ac2bab3b20990f7b13.png",
+    "coins": 1999
+  },
+  {
+    "id": 6834,
+    "name": "Gift Box",
+    "image": "https://cdn.dps.vc/iblock/daa/daa30e32902238fe45acd7ad97d93e67/f76b6dc0d74fa3dd7a0a3e7c703fae13.webp",
+    "coins": 1999
+  },
+  {
+    "id": 6288,
+    "name": "Goal!",
+    "image": "https://cdn.dps.vc/iblock/34b/34bf5a0c4ca4061fc9fca868fb721a48/0a9877e8c0cab256a369e9ef12edd215.png",
+    "coins": 1999
+  },
+  {
+    "id": 7483,
+    "name": "Holiday Gift",
+    "image": "https://cdn.dps.vc/iblock/1dd/1ddef16aceefbbcb34735e33528d72c9/e7a40932bf26363a668725a8f32fe6d8.webp",
+    "coins": 1999
+  },
+  {
+    "id": 7196,
+    "name": "Let Us Dance",
+    "image": "https://cdn.dps.vc/iblock/cae/caeaf097812661e65ff761aa60d5300a/444a1217ff8fbdeaf8e4682405871c7a.webp",
+    "coins": 1999
+  },
+  {
+    "id": 6033,
+    "name": "Make-up Box",
+    "image": "https://cdn.dps.vc/iblock/006/006d256121db1824975ae0f9f8a0fd1d/775b702c6935f6b7fc82fca6221d65b0.png",
+    "coins": 1999
+  },
+  {
+    "id": 7529,
+    "name": "Mystery Firework",
+    "image": "https://cdn.dps.vc/iblock/a53/a53a028b290673abcdaa7858e5753a99/666cd8c2e66d6fb004ca64c8112af989.webp",
+    "coins": 1999
+  },
+  {
+    "id": 6348,
+    "name": "Rabbit",
+    "image": "https://cdn.dps.vc/iblock/151/151aef30aabf8be77064d93b4c947876/1a732f3990c54ac993ebe0d9a0316ac6.png",
+    "coins": 1999
+  },
+  {
+    "id": 14128,
+    "name": "Ramadan Blessing Box",
+    "image": "https://cdn.dps.vc/iblock/d19/d19863c7ec5bee3a955855805f5f4bb9/9ae22d1688500c38d7fb35a45cceb865.webp",
+    "coins": 1999
+  },
+  {
+    "id": 14292,
+    "name": "Ramadan Gift Box",
+    "image": "https://cdn.dps.vc/iblock/3da/3da8db748b3c1d8cc80260b31dc484cd/8e79aea0573605ef72ee3d7bae08d6b1.webp",
+    "coins": 1999
+  },
+  {
+    "id": 14144,
+    "name": "Ramadan Lantern",
+    "image": "https://cdn.dps.vc/iblock/479/47997927ce2b0ccd7c54e7cc1398590c/37fc42e89bf4625ab4838141ac99d240.webp",
+    "coins": 1999
+  },
+  {
+    "id": 14419,
+    "name": "Ramadan Lantern",
+    "image": "https://cdn.dps.vc/iblock/cfb/cfbf59b64826e60c23c0fbf92cf6b716/2040814666bc3236bfd4dcd354383a31.webp",
+    "coins": 1999
+  },
+  {
+    "id": 6320,
+    "name": "Star Adventures",
+    "image": "https://cdn.dps.vc/iblock/411/4116197948fd486fa5543b87eae4e89e/e6895f7490ccd06c913917ab3e0f1884.png",
+    "coins": 1999
+  },
+  {
+    "id": 6789,
+    "name": "Star of Red Carpet",
+    "image": "https://cdn.dps.vc/iblock/bf1/bf11d2786cbcce31a9ba2f95982921be/4229588ababc215c9fab76e953647c89.webp",
+    "coins": 1999
+  },
+  {
+    "id": 6797,
+    "name": "Super Cake",
+    "image": "https://cdn.dps.vc/iblock/34f/34f1b053a3657b7113e287e31bcb68b9/ba9debb65391244c8f6645438f6bc261.webp",
+    "coins": 1999
+  },
+  {
+    "id": 6417,
+    "name": "Club",
+    "image": "https://cdn.dps.vc/iblock/49b/49be18ae5914346ffcaf15a519ba9c1c/41326cb23d22010f0c4a8edf5bd27615.webp",
+    "coins": 2000
+  },
+  {
+    "id": 8812,
+    "name": "Panda skydiving",
+    "image": "https://cdn.dps.vc/iblock/a29/a29903a975ce45f7b9939b510412fcee/051afc0510a7349a9ebfcde9e0fdec24.webp",
+    "coins": 2000
+  },
+  {
+    "id": 7630,
+    "name": "Train to 2023",
+    "image": "https://cdn.dps.vc/iblock/bfb/bfbb3170c74b5c080ae3c3d78f80c1c3/00468bf1fa15cc40b53200ee4ec792af.webp",
+    "coins": 2023
+  },
+  {
+    "id": 9641,
+    "name": "2024 Countdown",
+    "image": "https://cdn.dps.vc/iblock/201/2019e417dbde6f38184f2b25a35da8be/8c21e0875cda16881d237ce77e5ce303.webp",
+    "coins": 2024
+  },
+  {
+    "id": 9644,
+    "name": "Sparkling Countdown",
+    "image": "https://cdn.dps.vc/iblock/8b3/8b3944c4a7afc27855b4f6e310124ce5/66a35e0eedbd03c8cc4b39dca51d2ee8.webp",
+    "coins": 2024
+  },
+  {
+    "id": 13384,
+    "name": "Celebrate 2025",
+    "image": "https://cdn.dps.vc/iblock/90b/90b66b1e43cffa487d6841ed3fe479d6/fb045626a91a2de293f4d552c606416f.webp",
+    "coins": 2025
+  },
+  {
+    "id": 6380,
+    "name": "Red Telephone Box",
+    "image": "https://cdn.dps.vc/iblock/83b/83ba921db28199fe519e4146a21b39b1/ae55f8752621b07c9377dfe13f936742.png",
+    "coins": 2100
+  },
+  {
+    "id": 6381,
+    "name": "Telephone Box",
+    "image": "https://cdn.dps.vc/iblock/a2e/a2ee002433a7295464359db46c025adf/5f026787f952abbffd3d7fc1b4cbe1c2.webp",
+    "coins": 2100
+  },
+  {
+    "id": 9510,
+    "name": "LIVE Fest Show",
+    "image": "https://cdn.dps.vc/iblock/36e/36e13f2eda4b9acb47b03dd851b67c5c/0d0f761643c1bd3bc4784b3b5db38c9f.webp",
+    "coins": 2150
+  },
+  {
+    "id": 6820,
+    "name": "Whale Diving",
+    "image": "https://cdn.dps.vc/iblock/db2/db286be21ff2672b6e825a883c8c3e8f/ab9021773e219665f526cee02252f936.webp",
+    "coins": 2150
+  },
+  {
+    "id": 5774,
+    "name": "Jetski",
+    "image": "https://cdn.dps.vc/iblock/b38/b38473c5d43c224d986556d4134342c2/db8aa2a8f093a3475ff18116e54dd5c7.png",
+    "coins": 2199
+  },
+  {
+    "id": 8761,
+    "name": "Lemonade",
+    "image": "https://cdn.dps.vc/iblock/43e/43e9305de357c116b2f0a39b7300f33b/a8a2fba6271f52140eb50cfd15f2ed25.webp",
+    "coins": 2199
+  },
+  {
+    "id": 9789,
+    "name": "Bear skiing",
+    "image": "https://cdn.dps.vc/iblock/44d/44d072909cd136c6fe47c03bc878cdba/5bcfaeeb74794042c5037b7c5bdc4909.webp",
+    "coins": 2200
+  },
+  {
+    "id": 8806,
+    "name": "Dancing Capybaras",
+    "image": "https://cdn.dps.vc/iblock/ac2/ac2606f1dc2504c9a1b7974f40074c87/c243031480e8f2e4bbd8e7a43228ff1f.webp",
+    "coins": 2200
+  },
+  {
+    "id": 8759,
+    "name": "Happybaras",
+    "image": "https://cdn.dps.vc/iblock/9c2/9c23667be778a3440de0981b0be7ed98/3c523e9edcd782ec3dd4b4d58bbc472b.webp",
+    "coins": 2200
+  },
+  {
+    "id": 8175,
+    "name": "Hu Tao",
+    "image": "https://cdn.dps.vc/iblock/fb7/fb77bf0af96bf8d2b6a69d63258dea98/742705ac6b21774ec2539ddc664225d8.webp",
+    "coins": 2200
+  },
+  {
+    "id": 8296,
+    "name": "Hu Tao",
+    "image": "https://cdn.dps.vc/iblock/25e/25e24d93b16981f1d34b8bd20637e0b5/8e0600fed566c49a2da368a1337d547d.webp",
+    "coins": 2200
+  },
+  {
+    "id": 8741,
+    "name": "Lamb",
+    "image": "https://cdn.dps.vc/iblock/e4c/e4c3840ad622272c9a032f606508a22d/df1d1a0180b1c646bdd7d9744111d689.webp",
+    "coins": 2200
+  },
+  {
+    "id": 5964,
+    "name": "Music Box",
+    "image": "https://cdn.dps.vc/iblock/f01/f01f2da5e18be863eb7e3a1375bb6206/499e06f8f76e5e90964184c25365cdec.png",
+    "coins": 2399
+  },
+  {
+    "id": 6499,
+    "name": "Unicorn",
+    "image": "https://cdn.dps.vc/iblock/afa/afa6a97ca9037eb25f4ac8da22f35ff4/b6e0aa1ab9899643400639037394e659.webp",
+    "coins": 2499
+  },
+  {
+    "id": 11811,
+    "name": "Animal Band",
+    "image": "https://cdn.dps.vc/iblock/776/7760689bbdec4be08c3e3fb0a0d00c43/33827fd1d1a08b365769ae29805a8604.webp",
+    "coins": 2500
+  },
+  {
+    "id": 5345,
+    "name": "Elephant",
+    "image": "https://cdn.dps.vc/iblock/c22/c22bef1332ad2e053f085cea2c25f4a4/1efe4028ceda4558d1115c3649febfef.png",
+    "coins": 2500
+  },
+  {
+    "id": 6263,
+    "name": "Magic Stage",
+    "image": "https://cdn.dps.vc/iblock/399/399df717aefef9de9259e8256221076f/dfa2835c35b2177701ee65139bdfc59a.png",
+    "coins": 2599
+  },
+  {
+    "id": 7881,
+    "name": "Magic Stage",
+    "image": "https://cdn.dps.vc/iblock/6ef/6ef3c6660522545bf8da9858bcc553c6/c68b28842956bf9e8ad3fa2bfe32b1b9.webp",
+    "coins": 2599
+  },
+  {
+    "id": 6858,
+    "name": "Concert",
+    "image": "https://cdn.dps.vc/iblock/505/505c63218eee384282bba98b32341cb2/2bc35fd0b554b8596767849aa9f3722d.webp",
+    "coins": 2888
+  },
+  {
+    "id": 7880,
+    "name": "Concert",
+    "image": "https://cdn.dps.vc/iblock/0a5/0a59a6ed630ba5aa03392675e6a25654/9ea2257ab244985b43ee801d0889a626.webp",
+    "coins": 2888
+  },
+  {
+    "id": 5236,
+    "name": "Cupid",
+    "image": "https://cdn.dps.vc/iblock/94f/94f6f0d4bfb3294395007ba45db34a54/e141809d2278e1ca80a5107bce4a16f6.png",
+    "coins": 2888
+  },
+  {
+    "id": 8038,
+    "name": "Double trouble",
+    "image": "https://cdn.dps.vc/iblock/a23/a23f89b59cebf6d82ba64437e0ce52c9/d13464a899047febd2bd3db61835cb1b.webp",
+    "coins": 2988
+  },
+  {
+    "id": 8513,
+    "name": "Mermaid",
+    "image": "https://cdn.dps.vc/iblock/de2/de259ffb7bb0f29800a10ca7f9f7a971/839ccfca2a1aceb1817b7168703f9879.webp",
+    "coins": 2988
+  },
+  {
+    "id": 5765,
+    "name": "Motorcycle",
+    "image": "https://cdn.dps.vc/iblock/322/3226dd779addd06444ec9326eb25eb7c/0c6f14d291823969c916aa782c842d9a.png",
+    "coins": 2988
+  },
+  {
+    "id": 14056,
+    "name": "Pink Dream",
+    "image": "https://cdn.dps.vc/iblock/d70/d70cb1a2d40b18f63d5612200b882ee1/190479d3b92ac4ab8fec2c1f7d20634a.webp",
+    "coins": 2988
+  },
+  {
+    "id": 6431,
+    "name": "Beach Day",
+    "image": "https://cdn.dps.vc/iblock/c2d/c2df4a57f2ab16e641630b7077b40900/ba3cf6fd32d224f0014bd395b011f7a0.webp",
+    "coins": 2999
+  },
+  {
+    "id": 10430,
+    "name": "Bull",
+    "image": "https://cdn.dps.vc/iblock/8c9/8c91c19ae79b57a11dbd2bddce2c9d2b/7af02be52a5754f79680a8935145130e.webp",
+    "coins": 2999
+  },
+  {
+    "id": 12679,
+    "name": "Level-up Spotlight",
+    "image": "https://cdn.dps.vc/iblock/b68/b68148e09fc7eeacb2dad1a5796efd1f/549d4e99125d9b8b507295e30432facf.webp",
+    "coins": 2999
+  },
+  {
+    "id": 13655,
+    "name": "Lovely Surprise",
+    "image": "https://cdn.dps.vc/iblock/f97/f97468939ccfafb8c2d76d63e3abe0e5/3720dc01192e81aec5cdfe864fd19123.webp",
+    "coins": 2999
+  },
+  {
+    "id": 5863,
+    "name": "Old Famous Car",
+    "image": "https://cdn.dps.vc/iblock/63f/63f6c4460e95ccf70ce2849d52c56bbf/01cbfff54e08a1e1ae8d0f24764986b1.png",
+    "coins": 2999
+  },
+  {
+    "id": 9468,
+    "name": "Rhythmic Bear",
+    "image": "https://cdn.dps.vc/iblock/ed0/ed038eeb12e2641b7d322f3ba40cf362/fc4d10b48e908faa44aec38b157b46a8.webp",
+    "coins": 2999
+  },
+  {
+    "id": 7188,
+    "name": "Banquet",
+    "image": "https://cdn.dps.vc/iblock/511/511a6fbc12f4bcc9f4f9602a6eb8e07d/ab78145b13f9ef900ffae360096d7345.webp",
+    "coins": 3000
+  },
+  {
+    "id": 9147,
+    "name": "Bigfoot",
+    "image": "https://cdn.dps.vc/iblock/f95/f95a4fcfa57150610fa50542db5b0990/ecb879cd751e580d3fe92770788c1735.webp",
+    "coins": 3000
+  },
+  {
+    "id": 8086,
+    "name": "Car Drifting",
+    "image": "https://cdn.dps.vc/iblock/4e5/4e537a5c27bc6be1887f40eb2995d38e/62635a8973c01d0a0330f778e5ba5872.webp",
+    "coins": 3000
+  },
+  {
+    "id": 8188,
+    "name": "Dancing Bears",
+    "image": "https://cdn.dps.vc/iblock/750/75026646d18ce879627c1688d3030aea/584e1dee044c0c11126d2f031ec86a5f.webp",
+    "coins": 3000
+  },
+  {
+    "id": 5652,
+    "name": "Ferris Wheel",
+    "image": "https://cdn.dps.vc/iblock/210/21071962989420fb8d118a8d84684707/837718d3a337816f89652d44ef970a90.png",
+    "coins": 3000
+  },
+  {
+    "id": 9499,
+    "name": "Golden Party",
+    "image": "https://cdn.dps.vc/iblock/e0a/e0a0d4678adff6b4e6a30970eb582500/8991bc64dee899dff2e7f9373e4eb7cd.webp",
+    "coins": 3000
+  },
+  {
+    "id": 6563,
+    "name": "Meteor Shower",
+    "image": "https://cdn.dps.vc/iblock/484/484359bdcbb83121575fcbce75e6d9c0/5d501b2acc4a12ca9fe685b0cf6fcaba.png",
+    "coins": 3000
+  },
+  {
+    "id": 7373,
+    "name": "Potluck",
+    "image": "https://cdn.dps.vc/iblock/5ad/5ad526282c0509606a84714d369e54af/3a5849925d099411cf1f503d05c52cf3.webp",
+    "coins": 3000
+  },
+  {
+    "id": 8252,
+    "name": "Happy Easter",
+    "image": "https://cdn.dps.vc/iblock/a43/a43befcce53d24a564a896f1fc20d432/0e99ce3e610cce896eb82f3f4751fc4f.webp",
+    "coins": 3500
+  },
+  {
+    "id": 6345,
+    "name": "Cat",
+    "image": "https://cdn.dps.vc/iblock/dfe/dfefcaf9c4bc67e2ee681ba16c646224/6a33ae8b701c16dc57ff97fac4d16eca.png",
+    "coins": 3999
+  },
+  {
+    "id": 6863,
+    "name": "Cooper Swims Home",
+    "image": "https://cdn.dps.vc/iblock/493/4930e92e37637187f38ca100fa52b242/413beebb2e2c1a6f4640d73d3b6000d8.webp",
+    "coins": 3999
+  },
+  {
+    "id": 8499,
+    "name": "Giant",
+    "image": "https://cdn.dps.vc/iblock/cb0/cb06a8b9ad90f49e01a89b6165514a85/1cac976519b0a47ee38480fa56be73ec.webp",
+    "coins": 3999
+  },
+  {
+    "id": 9149,
+    "name": "Giant",
+    "image": "https://cdn.dps.vc/iblock/990/99093308d3ad2c3833d230f9aae7f702/36f073ad050bd79d7d1ba6d781e7ef11.webp",
+    "coins": 3999
+  },
+  {
+    "id": 6835,
+    "name": "Gift Box",
+    "image": "https://cdn.dps.vc/iblock/fe3/fe3ea09799010f4185e3f862431db84b/951f010f281aea5b15e90d74b7e6306c.webp",
+    "coins": 3999
+  },
+  {
+    "id": 6244,
+    "name": "Sakura Train",
+    "image": "https://cdn.dps.vc/iblock/a8e/a8e50d5c5d0eaa42bd71dbeca3b1b95a/204910c857958e7e9efd0178d30a2fbe.png",
+    "coins": 3999
+  },
+  {
+    "id": 6907,
+    "name": "Show Time",
+    "image": "https://cdn.dps.vc/iblock/d72/d722e6d78821a169ff9a6d128127c696/f457c04596d723f9033842f3417b6a72.webp",
+    "coins": 3999
+  },
+  {
+    "id": 8152,
+    "name": "Spring train",
+    "image": "https://cdn.dps.vc/iblock/035/035862dc0952468fc95f02995cec0f22/eeb69650806ea4c2e22558ef4b5e2b47.webp",
+    "coins": 3999
+  },
+  {
+    "id": 6555,
+    "name": "Summer Band",
+    "image": "https://cdn.dps.vc/iblock/43b/43b88814d979720d80a6e17258ab3bd8/b1abf3d90ae212317d6ae339ed5f5be7.png",
+    "coins": 3999
+  },
+  {
+    "id": 6148,
+    "name": "Flower Overflow",
+    "image": "https://cdn.dps.vc/iblock/891/891bc5302f00b006c23975bc80357be2/3b1bfc1ba027d7839fe822a7e51d2833.png",
+    "coins": 4000
+  },
+  {
+    "id": 9148,
+    "name": "Forest Fairy",
+    "image": "https://cdn.dps.vc/iblock/078/07801fde04dd77b439384738e630e59f/e50ece2683001006eae00866d6df7b63.webp",
+    "coins": 4000
+  },
+  {
+    "id": 10396,
+    "name": "Gaming Keyboard",
+    "image": "https://cdn.dps.vc/iblock/dbb/dbb5534c87dc44894f083a9d9c3e2fbd/4a9fe83995666c4d573aef151a9c60da.webp",
+    "coins": 4000
+  },
+  {
+    "id": 6506,
+    "name": "Island of Love",
+    "image": "https://cdn.dps.vc/iblock/b4d/b4d960acabcbf7b72400d8711174e6f6/e31b32b8e14e7790fcde6f3e8dea975d.png",
+    "coins": 4000
+  },
+  {
+    "id": 7619,
+    "name": "Island of Love",
+    "image": "https://cdn.dps.vc/iblock/dd4/dd4c1de941135095b4c9ccb1e1af4f4f/8843e914aa77ed12f100f556eebd3a44.webp",
+    "coins": 4000
+  },
+  {
+    "id": 7789,
+    "name": "Mike",
+    "image": "https://cdn.dps.vc/iblock/de0/de0da7b6ce6ba19125b1c4eb2fd2966a/6804a72c00714de05f9239be7bd5b515.webp",
+    "coins": 4000
+  },
+  {
+    "id": 6204,
+    "name": "Restaurants",
+    "image": "https://cdn.dps.vc/iblock/433/433c446cf17e43ca62dab39f8e402493/e13d90cd77d8d089fc9efae8ed0f5dbe.png",
+    "coins": 4000
+  },
+  {
+    "id": 6869,
+    "name": "TikTok Volcano",
+    "image": "https://cdn.dps.vc/iblock/e6d/e6d4c0d014c552ec6e8eccb804a7659f/9678f5e24b6e9b069b43c4f84a536d9f.webp",
+    "coins": 4000
+  },
+  {
+    "id": 7849,
+    "name": "UFO Landing",
+    "image": "https://cdn.dps.vc/iblock/d40/d402d611f2fce03b4b9af30c6bb80967/0007ec1b44b78d2e2d83c0bdefd24a49.webp",
+    "coins": 4000
+  },
+  {
+    "id": 9384,
+    "name": "Breakthrough Superstar",
+    "image": "https://cdn.dps.vc/iblock/1ae/1aed749d2c1e45bd2e9f2cd0a27bfac4/e9291e808cdc885dfb74a3efb16a15a6.webp",
+    "coins": 4088
+  },
+  {
+    "id": 8671,
+    "name": "Knight",
+    "image": "https://cdn.dps.vc/iblock/c7f/c7f1211190aa6c0303282ffa35dede1d/ed1af9a9b4aca9534bf92eb29742de47.webp",
+    "coins": 4088
+  },
+  {
+    "id": 7298,
+    "name": "Shine Bright",
+    "image": "https://cdn.dps.vc/iblock/a95/a951fea6e39b0fe1f86e455c8b20689c/daa12be7a0d21a3b5ea318fd5441dcfc.webp",
+    "coins": 4088
+  },
+  {
+    "id": 8771,
+    "name": "Superstar",
+    "image": "https://cdn.dps.vc/iblock/580/580a18f627b3442cdbfc6edea8d4d04f/25dd5f2350a46faf9134b7b385b235c8.webp",
+    "coins": 4088
+  },
+  {
+    "id": 8564,
+    "name": "Tractor",
+    "image": "https://cdn.dps.vc/iblock/b41/b41427d47cec2cbba5bf50c776fdebbb/9f14da1bd0e8324a042a4e74a3b2fdb7.webp",
+    "coins": 4099
+  },
+  {
+    "id": 11810,
+    "name": "Your Concert",
+    "image": "https://cdn.dps.vc/iblock/889/88944d0aba775529be181ba542e62ed5/b647cbdb09b5f8302a0d7ec11cfd24a2.webp",
+    "coins": 4500
+  },
+  {
+    "id": 13604,
+    "name": "Fiery Dragon",
+    "image": "https://cdn.dps.vc/iblock/386/38677b7f8f5a6b2088b6368d7700fc94/0ca4e0a8648c2ad81008b7171e562523.webp",
+    "coins": 4888
+  },
+  {
+    "id": 6646,
+    "name": "Leon the Kitten",
+    "image": "https://cdn.dps.vc/iblock/6db/6dbac11d1406b04bd70ef473fac91fb6/42a0a84bd8a818dbe2c98d84233f12fb.png",
+    "coins": 4888
+  },
+  {
+    "id": 5767,
+    "name": "Private Jet",
+    "image": "https://cdn.dps.vc/iblock/a24/a246b6f08242ef1084e43708fcd4f4df/8bbe338da8052146506e3a802a3cd0d8.png",
+    "coins": 4888
+  },
+  {
+    "id": 7124,
+    "name": "Signature Jet",
+    "image": "https://cdn.dps.vc/iblock/681/6816084aca12a2bb0da2cf05174322f5/928ee6f6bfe12d363c1bbc7f8b03e7e0.webp",
+    "coins": 4888
+  },
+  {
+    "id": 8415,
+    "name": "Knockout",
+    "image": "https://cdn.dps.vc/iblock/1a5/1a56926523c34ab3b553180c42f7bc55/7a6076446639aade9d5498df45ba7f9b.webp",
+    "coins": 4999
+  },
+  {
+    "id": 5938,
+    "name": "Pool Party",
+    "image": "https://cdn.dps.vc/iblock/a27/a27e6730390e890198ebc0f3a2a6d68b/df71cae96fb8a3e616931c7c48a2574c.png",
+    "coins": 4999
+  },
+  {
+    "id": 13308,
+    "name": "Tom's Love",
+    "image": "https://cdn.dps.vc/iblock/10a/10a89d997cb6d90855c11b85bcda3529/bb6e94db1aef05a222c4f1fed992862b.webp",
+    "coins": 4999
+  },
+  {
+    "id": 10175,
+    "name": "1st Anniversary",
+    "image": "https://cdn.dps.vc/iblock/cb0/cb0be518776bbf58fc37603021f94d02/53113deba23cba638444b05d2b04ab1f.webp",
+    "coins": 5000
+  },
+  {
+    "id": 6719,
+    "name": "Beach Hut",
+    "image": "https://cdn.dps.vc/iblock/227/22716035cef6112f66035eca2b60fa31/ffce7cd46aaa6c2b27ccba610cf35a39.webp",
+    "coins": 5000
+  },
+  {
+    "id": 8344,
+    "name": "Bird Whisperer",
+    "image": "https://cdn.dps.vc/iblock/079/079bf5895816fb04293d01375eaf23a5/672128ca0f65deb0e75e2a9a690a79f0.webp",
+    "coins": 5000
+  },
+  {
+    "id": 7468,
+    "name": "Dancing Adam",
+    "image": "https://cdn.dps.vc/iblock/f5c/f5cda80a1f9853c49226a450faf26e8f/6318d17d7a2526f521123402d19a4c3e.webp",
+    "coins": 5000
+  },
+  {
+    "id": 11497,
+    "name": "Diamond Gun",
+    "image": "https://cdn.dps.vc/iblock/916/9160e6724b266528bcdb414f854759ea/2767a6f2c207fd14f9a9851ea27e420b.webp",
+    "coins": 5000
+  },
+  {
+    "id": 8988,
+    "name": "DJ Alien",
+    "image": "https://cdn.dps.vc/iblock/67c/67cd7b9372f25b4f3558eacdfb83dc8b/059b6bf7b8c268d525fd9295fac0eb61.webp",
+    "coins": 5000
+  },
+  {
+    "id": 8432,
+    "name": "Draco",
+    "image": "https://cdn.dps.vc/iblock/4de/4defa8b1da29091207d2b69054133c59/f6135824a982ccb72f556e054ab5780f.webp",
+    "coins": 5000
+  },
+  {
+    "id": 8613,
+    "name": "Draco",
+    "image": "https://cdn.dps.vc/iblock/48f/48f1a8d280e271929718525560ad42a8/3021d84608e0c5da388f1f6534011a6f.webp",
+    "coins": 5000
+  },
+  {
+    "id": 6845,
+    "name": "Ellie the Elephant",
+    "image": "https://cdn.dps.vc/iblock/1eb/1eb7a0716b0ec3ff586858afa730f79d/29db993db1482973b7f53801dab25365.webp",
+    "coins": 5000
+  },
+  {
+    "id": 6922,
+    "name": "Ellie the Elephant",
+    "image": "https://cdn.dps.vc/iblock/a50/a5066168880bb6ef8031214e748e7d2d/57bc2767a0041a594dcbb6321c0c8679.webp",
+    "coins": 5000
+  },
+  {
+    "id": 9523,
+    "name": "Exclusive Jet",
+    "image": "https://cdn.dps.vc/iblock/6fc/6fc230c575a7c83af835419d99a64150/ca77926884b1a9fe8cda639f054bf839.webp",
+    "coins": 5000
+  },
+  {
+    "id": 7482,
+    "name": "Flying Jets",
+    "image": "https://cdn.dps.vc/iblock/5a4/5a4f3c7adc31f60326e3adf1a3a20bf9/bc96de02ceba4b91c1f9c996293974b4.webp",
+    "coins": 5000
+  },
+  {
+    "id": 7720,
+    "name": "Flying Jets",
+    "image": "https://cdn.dps.vc/iblock/738/73887ee5dc4a63709a10a2e3eff67b7c/1588215b603e2495582288471573cd57.webp",
+    "coins": 5000
+  },
+  {
+    "id": 9500,
+    "name": "Flying Jets",
+    "image": "https://cdn.dps.vc/iblock/a42/a42a9a9a2d55bd2ca3cb384439597f71/9d237feb2dcfea62e4aea9d51acc2883.webp",
+    "coins": 5000
+  },
+  {
+    "id": 9508,
+    "name": "LIVE Fest Finale",
+    "image": "https://cdn.dps.vc/iblock/d58/d58a83273f8d9d53bdf9581cde9de76b/63a378023bd6bfb16484d13272e49d5d.webp",
+    "coins": 5000
+  },
+  {
+    "id": 9949,
+    "name": "Motorcycle Together",
+    "image": "https://cdn.dps.vc/iblock/3d4/3d48f87b5da42b436d4e221655c0ed50/75e71f4983bde5654421db8e7fadf794.webp",
+    "coins": 5000
+  },
+  {
+    "id": 14147,
+    "name": "Ramadan Vibes",
+    "image": "https://cdn.dps.vc/iblock/6cc/6ccdaff0420e257dcb67e41bab77ffda/6852d86d020910aad6f42565eb7d0745.webp",
+    "coins": 5000
+  },
+  {
+    "id": 8433,
+    "name": "Silver Sports Car",
+    "image": "https://cdn.dps.vc/iblock/132/132eb0981780e3e268f844106037b277/a1afff85fc6c53482fccbea21709d36b.webp",
+    "coins": 5000
+  },
+  {
+    "id": 5338,
+    "name": "Unicorn Fantasy",
+    "image": "https://cdn.dps.vc/iblock/f1e/f1ef72264d52ca4a27797a7e0dc07679/cd6ceadfd461b15be27e15986029f96b.png",
+    "coins": 5000
+  },
+  {
+    "id": 5348,
+    "name": "Unicorn Fantasy",
+    "image": "https://cdn.dps.vc/iblock/b48/b48d26ae9b05bcaa4d1cd8336df1bcfd/5e1712d8a9e08ee68603a509e2841719.png",
+    "coins": 5000
+  },
+  {
+    "id": 5475,
+    "name": "Unicorn Fantasy",
+    "image": "https://cdn.dps.vc/iblock/b12/b129b116380a326df64aedb5a269b670/b1409c04e4d7490645dd39e76a078ae3.webp",
+    "coins": 5000
+  },
+  {
+    "id": 5483,
+    "name": "Unicorn Fantasy",
+    "image": "https://cdn.dps.vc/iblock/127/12778ef1e111b6342b11f778833bb346/ac4f70c4095012c8579e9cabef98e848.webp",
+    "coins": 5000
+  },
+  {
+    "id": 6942,
+    "name": "Unicorn Fantasy",
+    "image": "https://cdn.dps.vc/iblock/1a8/1a8effc4ee1636c510bea9ed4d6069cc/eaeeea5e8d81e7d2356d0265a14be614.webp",
+    "coins": 5000
+  },
+  {
+    "id": 7237,
+    "name": "Unicorn Fantasy",
+    "image": "https://cdn.dps.vc/iblock/136/136dc4c068ddc7a89b10df8d9f4800d8/3b4f386e75506f3ad5519e4330888427.webp",
+    "coins": 5000
+  },
+  {
+    "id": 8778,
+    "name": "Wolf",
+    "image": "https://cdn.dps.vc/iblock/70f/70fa80dd2d07f44f28db148328735a6b/68c7215817c6143ac33036933fcf777d.webp",
+    "coins": 5500
+  },
+  {
+    "id": 6864,
+    "name": "Cooper's Home",
+    "image": "https://cdn.dps.vc/iblock/2b4/2b405c6cee3848dbf54629bd25725246/b289cd0ec91e4658bd31e48b4e69674e.webp",
+    "coins": 5999
+  },
+  {
+    "id": 7626,
+    "name": "Truck",
+    "image": "https://cdn.dps.vc/iblock/a02/a02b8584328940188461d86d788bcbfe/0f3730dd59fc23e73f59a5d2bc9247be.webp",
+    "coins": 5999
+  },
+  {
+    "id": 6556,
+    "name": "Valley Festival",
+    "image": "https://cdn.dps.vc/iblock/44e/44ee2643bf3ffd9d9495318ed83104f5/951295ed57e54cdf27cfeecb1555bd9d.png",
+    "coins": 5999
+  },
+  {
+    "id": 6884,
+    "name": "Aqua Car",
+    "image": "https://cdn.dps.vc/iblock/3c4/3c4349499a5e8686051a20856f1faaaf/b413c0c84d2e29af6bfcd29c1ef6952d.webp",
+    "coins": 6000
+  },
+  {
+    "id": 10669,
+    "name": "Future City",
+    "image": "https://cdn.dps.vc/iblock/395/3951709240c5c760a6b0f0f9dfd34893/f97fba8953a1292b59e68ae175a74c4f.webp",
+    "coins": 6000
+  },
+  {
+    "id": 7572,
+    "name": "Magic Forest",
+    "image": "https://cdn.dps.vc/iblock/f8a/f8a0a8fdcb093a48d0d592938d7b1eb1/2792ef6d5fe516cb5d523df8b25c7208.webp",
+    "coins": 6000
+  },
+  {
+    "id": 5627,
+    "name": "Romantic Carriage",
+    "image": "https://cdn.dps.vc/iblock/681/68132980826d9ddb208928c54a798f7f/e4f143cb38a0687729539972b2132ac1.png",
+    "coins": 6000
+  },
+  {
+    "id": 8604,
+    "name": "Starfish Bay",
+    "image": "https://cdn.dps.vc/iblock/f5b/f5b206d2040b1a7bd6dd0438577e5183/e89a53efdae52e710d437defd69b56ef.webp",
+    "coins": 6000
+  },
+  {
+    "id": 7841,
+    "name": "With you",
+    "image": "https://cdn.dps.vc/iblock/409/40940d2d6a48b33b4e4bfc461bd3578e/e248ec399eaa1391f47a82a1b55f585a.webp",
+    "coins": 6000
+  },
+  {
+    "id": 11585,
+    "name": "Work Hard Play Harder",
+    "image": "https://cdn.dps.vc/iblock/59b/59baa47caa3fed5e1b6cc51b6bbfbc62/4eeb75daced0c20715b70f9814001664.webp",
+    "coins": 6000
+  },
+  {
+    "id": 8263,
+    "name": "Yellow Bus",
+    "image": "https://cdn.dps.vc/iblock/88d/88df4387d65bcc77b691098fd649bd59/ad401a92ddba9aae15bb777f9f38638d.webp",
+    "coins": 6000
+  },
+  {
+    "id": 9467,
+    "name": "Lili the Leopard",
+    "image": "https://cdn.dps.vc/iblock/642/6429e9c323ca0ce22309aaa44749e13d/4e6289faebf09f07c2700b32cff2bb38.webp",
+    "coins": 6599
+  },
+  {
+    "id": 6542,
+    "name": "TikTok Red Carpet",
+    "image": "https://cdn.dps.vc/iblock/93b/93b6d520b6bd02d4aca9a00584556659/836888ffd7ad053712db5c26beeca7e9.png",
+    "coins": 6600
+  },
+  {
+    "id": 8500,
+    "name": "Beauty",
+    "image": "https://cdn.dps.vc/iblock/0ba/0bab0453cd6eb214662bd598075315d6/31d4fbfb84e41bf065a7b6c5fff12523.webp",
+    "coins": 6999
+  },
+  {
+    "id": 6787,
+    "name": "Birthday Party",
+    "image": "https://cdn.dps.vc/iblock/135/135b2ac0877de059f56e510b0ac70d08/07285ba7471fb98743bfe308d0b58ce2.webp",
+    "coins": 6999
+  },
+  {
+    "id": 9095,
+    "name": "Birthday Party",
+    "image": "https://cdn.dps.vc/iblock/d0d/d0d1164a9ed81239b70cb25b93927023/d0dba293643c67dc33c1f4dda04e5b50.webp",
+    "coins": 6999
+  },
+  {
+    "id": 6790,
+    "name": "Celebration Time",
+    "image": "https://cdn.dps.vc/iblock/25e/25eb996989f2c9f66c3edcdfc6674049/42a32ced64d47b5bf8e7f57dd5b7a57f.webp",
+    "coins": 6999
+  },
+  {
+    "id": 8247,
+    "name": "Happy Party",
+    "image": "https://cdn.dps.vc/iblock/0f0/0f0bbac0fe85be28013b327a2e8c46e4/c1d7cbc8ea8493709416759f049b03be.webp",
+    "coins": 6999
+  },
+  {
+    "id": 14293,
+    "name": "Ramadan Night",
+    "image": "https://cdn.dps.vc/iblock/449/449b2a2fff2762010eb2e1932b3b36e8/66565e7eb1d9ecbea9f7c45c1bc3afc9.webp",
+    "coins": 6999
+  },
+  {
+    "id": 7242,
+    "name": "The Observatory",
+    "image": "https://cdn.dps.vc/iblock/9bf/9bf6b43f9ebb0c53128f43e04c6c0374/0370dfda3d9b6aab0b4c11c77c6cc3e9.webp",
+    "coins": 6999
+  },
+  {
+    "id": 10176,
+    "name": "2nd Anniversary",
+    "image": "https://cdn.dps.vc/iblock/8f6/8f6187529973e932031b58fcfda2de4d/a8bacb620ba0d33f98c3fb853e68c4ea.webp",
+    "coins": 7000
+  },
+  {
+    "id": 10230,
+    "name": "Creator of the week",
+    "image": "https://cdn.dps.vc/iblock/cee/cee033cd7a20662b15d86e4e8c955e3a/0e64307348e53319f101ebafe238b336.webp",
+    "coins": 7000
+  },
+  {
+    "id": 6741,
+    "name": "Gorgeous Trophy",
+    "image": "https://cdn.dps.vc/iblock/fb6/fb6b9177c80ed21a2d0ac3ac0fd094b9/87a106e76d61c8f68c07ef0973b8355e.webp",
+    "coins": 7000
+  },
+  {
+    "id": 7133,
+    "name": "Gorgeous Trophy",
+    "image": "https://cdn.dps.vc/iblock/b8f/b8f8916d6d4ec3fa6d0ef02ec02e1904/268d401f52578688243435bc3fef0a8d.webp",
+    "coins": 7000
+  },
+  {
+    "id": 7632,
+    "name": "Party Bus",
+    "image": "https://cdn.dps.vc/iblock/cac/cacff10aa2f5b54f39a62da181f960df/3d26d7fb0e308a465871402755241c08.webp",
+    "coins": 7000
+  },
+  {
+    "id": 6089,
+    "name": "Sports Car",
+    "image": "https://cdn.dps.vc/iblock/b61/b610a9669c8a833dfcc1d24c6ffef32a/a4fdb6b0c3a2efc75e09a0923976dd77.png",
+    "coins": 7000
+  },
+  {
+    "id": 11599,
+    "name": "Dubai",
+    "image": "https://cdn.dps.vc/iblock/f1f/f1ff87ce19ad96ee5bbad3b769a74f2b/3a1a368363191847c6fc36e71b3a3e33.webp",
+    "coins": 7499
+  },
+  {
+    "id": 13733,
+    "name": "Love from Dubai",
+    "image": "https://cdn.dps.vc/iblock/aee/aeeb8c8b9dc421158de5598d7031c7ad/a6239dd375d36a9ce58968684897b506.webp",
+    "coins": 7499
+  },
+  {
+    "id": 6111,
+    "name": "Ocean Bridge",
+    "image": "https://cdn.dps.vc/iblock/02c/02c1d4fe6ade87d85b24beadce08ad1d/5401de7c45c3628b38ce02678f0f54d8.png",
+    "coins": 7499
+  },
+  {
+    "id": 7042,
+    "name": "Golden Gate Bridge",
+    "image": "https://cdn.dps.vc/iblock/917/9171e812dd240d17bbae32eb52e10eac/3f77a94131e9b4085e09db66ce2dd417.webp",
+    "coins": 7999
+  },
+  {
+    "id": 8104,
+    "name": "Monster Truck",
+    "image": "https://cdn.dps.vc/iblock/65e/65ef72be838f6a2d425eb3871490fb49/679fa1e8a32c9379751642775a7673e6.webp",
+    "coins": 7999
+  },
+  {
+    "id": 7764,
+    "name": "Star Throne",
+    "image": "https://cdn.dps.vc/iblock/af5/af5b1fac4d7a0b540057460e0ab0730a/864a37b3f4a8ad6d2e174bfa6e2e4f32.webp",
+    "coins": 7999
+  },
+  {
+    "id": 8420,
+    "name": "Star Throne",
+    "image": "https://cdn.dps.vc/iblock/cb8/cb8068130463628181f0b84a4408e871/2495b97f5f4868e9e71612120c4eded5.webp",
+    "coins": 7999
+  },
+  {
+    "id": 7078,
+    "name": "Match Cup",
+    "image": "https://cdn.dps.vc/iblock/945/945afaaab0dbfbfdcc96d13dc957e4a7/313d9f6e7343eeb6cce5707cdd82c7ec.webp",
+    "coins": 8000
+  },
+  {
+    "id": 9486,
+    "name": "Saxophone",
+    "image": "https://cdn.dps.vc/iblock/5dd/5ddcfd7a3be8593de630ac18aa02bdb9/dcdd90ade516ca48183acd21afbde225.webp",
+    "coins": 9000
+  },
+  {
+    "id": 9913,
+    "name": "Desert Adventure",
+    "image": "https://cdn.dps.vc/iblock/6bb/6bb6e47ab41a7ce82711e7c657bfd18f/693eb92884dab3190a5c8db83b443e6f.webp",
+    "coins": 9699
+  },
+  {
+    "id": 8916,
+    "name": "Leon and Lili",
+    "image": "https://cdn.dps.vc/iblock/00e/00e32385d86e71d5126a0f7de0d102a5/e50f83ab840e595bb5c7175f91d0e071.webp",
+    "coins": 9699
+  },
+  {
+    "id": 9910,
+    "name": "Leon and Lili",
+    "image": "https://cdn.dps.vc/iblock/c2f/c2f16ae57963648aef86f9ea0a210318/3618946818c3db99df292900257f9b23.webp",
+    "coins": 9699
+  },
+  {
+    "id": 6103,
+    "name": "Yacht",
+    "image": "https://cdn.dps.vc/iblock/b6c/b6c9d3c6df6733cc85149897764d2c6b/023d358a3d7a7a330ed006eb07117582.png",
+    "coins": 9888
+  },
+  {
+    "id": 5803,
+    "name": "Beach House",
+    "image": "https://cdn.dps.vc/iblock/a92/a927384b7cd171837b82f9deed97395e/d6b06bfc5ee124544576120b8234b1a0.png",
+    "coins": 9999
+  },
+  {
+    "id": 7614,
+    "name": "Capricorn",
+    "image": "https://cdn.dps.vc/iblock/b5c/b5cc2038d7910b737c6a9902aecc7650/fca9f1ca0728bc1809946cfb18814289.webp",
+    "coins": 9999
+  },
+  {
+    "id": 6952,
+    "name": "Roller Coaster",
+    "image": "https://cdn.dps.vc/iblock/18a/18ab405a17a78b2b4178a5c5c7d9e34c/981aaee154858e56c22bc57100dd1a2a.webp",
+    "coins": 9999
+  },
+  {
+    "id": 7159,
+    "name": "Scorpio Star Sign",
+    "image": "https://cdn.dps.vc/iblock/c91/c91f3a3685b5c54d9e96d5f9443c4fda/50c48574ff60f328b7a50b80cd9aa4b8.webp",
+    "coins": 9999
+  },
+  {
+    "id": 6517,
+    "name": "Farm",
+    "image": "https://cdn.dps.vc/iblock/081/081813427ba5acc52f68e48cd15c1f0b/fe34286e2fc64a689149a6ee5d3ddf61.webp",
+    "coins": 10000
+  },
+  {
+    "id": 6149,
+    "name": "Interstellar",
+    "image": "https://cdn.dps.vc/iblock/4e3/4e341b08230703a6f09ba3234c3fe717/3854ed8e881ebbe5208882602b30cf88.png",
+    "coins": 10000
+  },
+  {
+    "id": 13307,
+    "name": "Luxury Yacht",
+    "image": "https://cdn.dps.vc/iblock/751/75143dab99e1dcb6374a55c09b9045c4/2a80a59b3f83cc3a845379228d2e7ffc.webp",
+    "coins": 10000
+  },
+  {
+    "id": 8596,
+    "name": "Music festival",
+    "image": "https://cdn.dps.vc/iblock/6a9/6a97333741dc9dc5900d8a3309b337fa/566525e018f0df4a14aaea2d79b706f4.webp",
+    "coins": 10000
+  },
+  {
+    "id": 8417,
+    "name": "Octopus",
+    "image": "https://cdn.dps.vc/iblock/419/4197c396a3fcdd28f0477d9af50cd964/1196ad0f243ca976832319a46c7935ed.webp",
+    "coins": 10000
+  },
+  {
+    "id": 6203,
+    "name": "Sunset Speedway",
+    "image": "https://cdn.dps.vc/iblock/088/088e035c1766dc6d511735c97288eb74/855c619602420fe4f34eefe1ec809de6.png",
+    "coins": 10000
+  },
+  {
+    "id": 5789,
+    "name": "Falcon",
+    "image": "https://cdn.dps.vc/iblock/38a/38ae64e3d46f5557a65c6dd4a2f0b5ec/15362775bd490a78d01cc16f44366e71.png",
+    "coins": 10999
+  },
+  {
+    "id": 6271,
+    "name": "Falcon",
+    "image": "https://cdn.dps.vc/iblock/702/702e6d0287a1e868c69fbe2f6b3635a6/7a7a82b571ba63ccd3ca514c887b3130.png",
+    "coins": 10999
+  },
+  {
+    "id": 6367,
+    "name": "Falcon",
+    "image": "https://cdn.dps.vc/iblock/f88/f886e7678bef35f8c762a323386e6d23/7249e0af64c78d1d569a8d7a86ab58cd.png",
+    "coins": 10999
+  },
+  {
+    "id": 7627,
+    "name": "Falcon",
+    "image": "https://cdn.dps.vc/iblock/7ac/7ac1622e924d7dfe1b1e3fcea47b879b/d34f8e04a5b173fddadb26f97c140b40.webp",
+    "coins": 10999
+  },
+  {
+    "id": 9740,
+    "name": "LIVE Fest Grand Finale",
+    "image": "https://cdn.dps.vc/iblock/fa8/fa8ffd2e4abde27d255c07a90378e81a/667ab8e4b1bea9a1246b9d3e4dbf187c.webp",
+    "coins": 10999
+  },
+  {
+    "id": 10177,
+    "name": "3rd Anniversary",
+    "image": "https://cdn.dps.vc/iblock/719/719127b84321cc5db3b658dec166c9b5/c015d32388bf752556f326ec3f2d760e.webp",
+    "coins": 12000
+  },
+  {
+    "id": 8599,
+    "name": "Convertible Car",
+    "image": "https://cdn.dps.vc/iblock/2cf/2cfc5af50894de318b81438a7e137710/060001e901992f5462c841b987876eeb.webp",
+    "coins": 12000
+  },
+  {
+    "id": 7730,
+    "name": "Frog Prince",
+    "image": "https://cdn.dps.vc/iblock/b7f/b7fbe7755df4e9a9a403fb4f309011c4/e6d35853c31cfe26bfa586f4008d99b7.webp",
+    "coins": 12000
+  },
+  {
+    "id": 8075,
+    "name": "Frog Prince",
+    "image": "https://cdn.dps.vc/iblock/611/611a99dccd67384b4c3d936f64112c26/eb56d05e7f4ea64662d440d91d6e6922.webp",
+    "coins": 12000
+  },
+  {
+    "id": 6892,
+    "name": "Race Car",
+    "image": "https://cdn.dps.vc/iblock/c1d/c1dd91d0cb97495c4d69a389b3a5a1ae/ee71e32f9e7bfa24a1d0e0a6dc28add1.webp",
+    "coins": 12000
+  },
+  {
+    "id": 8419,
+    "name": "Red Lightning",
+    "image": "https://cdn.dps.vc/iblock/12a/12ac7db3c837f029beee318c45e3ad88/da93190dd1082f876b4461ec0924e453.webp",
+    "coins": 12000
+  },
+  {
+    "id": 9645,
+    "name": "New Year Journey",
+    "image": "https://cdn.dps.vc/iblock/f87/f87306e780d6208df4f51afb1446d711/4fadaf22ecdcb7297bcc65b398f31075.webp",
+    "coins": 12024
+  },
+  {
+    "id": 9642,
+    "name": "Train to 2024",
+    "image": "https://cdn.dps.vc/iblock/300/300f116282e5846703c2f80954a114d7/6a8e9bf909e83372d78b00549f328f08.webp",
+    "coins": 12024
+  },
+  {
+    "id": 12680,
+    "name": "Level-up Spectacle",
+    "image": "https://cdn.dps.vc/iblock/1ec/1ecdcd587ebe4b77579d225281066b6c/40cfe7a72a86f6b9566e8409b550f335.webp",
+    "coins": 12999
+  },
+  {
+    "id": 13656,
+    "name": "Anniversary Cake",
+    "image": "https://cdn.dps.vc/iblock/84e/84e1e06244513c79299697c96da84bcd/0a8d159afce634a7d7a2595bbd934507.webp",
+    "coins": 13999
+  },
+  {
+    "id": 6520,
+    "name": "Camping Night",
+    "image": "https://cdn.dps.vc/iblock/be3/be3c39c622d80d029c5e752134ac6978/c95701f2e894403ca47de971f2ced0d8.png",
+    "coins": 13999
+  },
+  {
+    "id": 7959,
+    "name": "Carnival Wagon",
+    "image": "https://cdn.dps.vc/iblock/71c/71cb093f6cfdd3918da92869b334a762/dfd970a710b7b984e1378668cdc681d7.webp",
+    "coins": 13999
+  },
+  {
+    "id": 6588,
+    "name": "Spaceship",
+    "image": "https://cdn.dps.vc/iblock/fb1/fb1096568dcc97c2575dec7441d0d651/245c4c7ce9bf5d5378586eb3a2478b42.webp",
+    "coins": 13999
+  },
+  {
+    "id": 13790,
+    "name": "Invincible Hammer",
+    "image": "https://cdn.dps.vc/iblock/311/31153e81baae61ffce1b574a5ab1e180/f95a2d1f8059b4fe500ccc938a9ee654.webp",
+    "coins": 14999
+  },
+  {
+    "id": 14310,
+    "name": "Tidecaller Trident",
+    "image": "https://cdn.dps.vc/iblock/285/285c9c2dcb56e7adb456ab9cc069242b/8410f990a0063ad39844e0ad9180da3f.webp",
+    "coins": 14999
+  },
+  {
+    "id": 9758,
+    "name": "Berlin",
+    "image": "https://cdn.dps.vc/iblock/32b/32b47354a89a73f25ddb73f4fb9ec7f0/8633ef3b90842796a808ee8d2c4e4c19.webp",
+    "coins": 15000
+  },
+  {
+    "id": 12803,
+    "name": "Boo's Town",
+    "image": "https://cdn.dps.vc/iblock/982/98295b54aab1b56b5d2c7ae12a92417a/8d3f073459215c8c88584fa8ba1aae47.webp",
+    "coins": 15000
+  },
+  {
+    "id": 6662,
+    "name": "Castle Skyline",
+    "image": "https://cdn.dps.vc/iblock/fd6/fd6ef04918c4050d61339be0633de5c6/6fb5067ff9f62e09cadfaef00b73aa75.webp",
+    "coins": 15000
+  },
+  {
+    "id": 10670,
+    "name": "Future Journey",
+    "image": "https://cdn.dps.vc/iblock/66f/66fb169bd8991dd62e7e049495c33c31/4e4306dcd14ed7bf7562c5c113c95c52.webp",
+    "coins": 15000
+  },
+  {
+    "id": 7817,
+    "name": "Happy Train",
+    "image": "https://cdn.dps.vc/iblock/d9e/d9e12adbbe5b4e21a48f3fbb8ac507b4/9ae0d87b28728c0f58b622d5a9158ade.webp",
+    "coins": 15000
+  },
+  {
+    "id": 7978,
+    "name": "Leopard",
+    "image": "https://cdn.dps.vc/iblock/eb4/eb4d116b15c03c2974b86fa400fa6a07/9a34b020e29f2d25f434387ae01b6386.webp",
+    "coins": 15000
+  },
+  {
+    "id": 8603,
+    "name": "Leopard",
+    "image": "https://cdn.dps.vc/iblock/392/392c6e61627e8792016352249d3de74c/41b5c6402beceba6a915e8c245c8f615.webp",
+    "coins": 15000
+  },
+  {
+    "id": 9950,
+    "name": "Look! Meteor Shower",
+    "image": "https://cdn.dps.vc/iblock/555/5551c7f1bd01cfe8a8cf0cf1c93c43ac/c02318716c3d7ff6f56105c69b20ff75.webp",
+    "coins": 15000
+  },
+  {
+    "id": 7911,
+    "name": "Mammoth",
+    "image": "https://cdn.dps.vc/iblock/a12/a12a1b23f1f6a19d728de84e1f43e21d/ff288346e9855a9bb6deb4450491028f.webp",
+    "coins": 15000
+  },
+  {
+    "id": 9086,
+    "name": "Man V Seagull",
+    "image": "https://cdn.dps.vc/iblock/e5d/e5d95d519ee0ed7922de14f224a9504d/e80d8e840dd44cdf20de4c572c25e0f4.webp",
+    "coins": 15000
+  },
+  {
+    "id": 11586,
+    "name": "Party On&On",
+    "image": "https://cdn.dps.vc/iblock/60a/60a11f013d89dfea4278868564e04c24/4d6ca3bc9c7b9df0a83b3fd964445164.webp",
+    "coins": 15000
+  },
+  {
+    "id": 8387,
+    "name": "peacock",
+    "image": "https://cdn.dps.vc/iblock/f9f/f9f23f00af57e8fb8a421a2a7f24aacc/a5eb745418085f1be7692f577ff04b9c.webp",
+    "coins": 15000
+  },
+  {
+    "id": 7598,
+    "name": "Pirate’s Ship",
+    "image": "https://cdn.dps.vc/iblock/475/4753e54cae562b34edbf1a157cd60b21/722409ec69cfaf707d611b0987799296.webp",
+    "coins": 15000
+  },
+  {
+    "id": 5954,
+    "name": "Planet",
+    "image": "https://cdn.dps.vc/iblock/dc5/dc50bbe9b153d9f714919d386325a223/b296c2101cb24bc65e8abd2977d6c123.png",
+    "coins": 15000
+  },
+  {
+    "id": 8416,
+    "name": "Pyramids",
+    "image": "https://cdn.dps.vc/iblock/988/988ffe82e8f3b235bd91dac1e31e708d/ad0365d14ba0480e5d6d60f6eb798608.webp",
+    "coins": 15000
+  },
+  {
+    "id": 8435,
+    "name": "Pyramids",
+    "image": "https://cdn.dps.vc/iblock/bfc/bfcf491b940e478b6410047bc047af1b/abbbdd13015a9f31be1b905268873d73.webp",
+    "coins": 15000
+  },
+  {
+    "id": 13930,
+    "name": "Romance the World",
+    "image": "https://cdn.dps.vc/iblock/6a0/6a0b93854a179b0c0d73e77bfeb402e5/70c8beb328f72f6744e5f0a6950e2e34.webp",
+    "coins": 15000
+  },
+  {
+    "id": 8912,
+    "name": "Rosa Nebula",
+    "image": "https://cdn.dps.vc/iblock/2d7/2d7dca6dc709e54b38336bedbd9eb06f/96de9ba917cf3f96bc15cb0f255b50c4.webp",
+    "coins": 15000
+  },
+  {
+    "id": 8418,
+    "name": "Speedster",
+    "image": "https://cdn.dps.vc/iblock/96a/96a5a249a1701c3c03e0b2427bad3b2f/63fb5582c89c17f275fc99505505b719.webp",
+    "coins": 15000
+  },
+  {
+    "id": 8737,
+    "name": "Speedster",
+    "image": "https://cdn.dps.vc/iblock/80d/80db5582e1e4977ef219dcd8df3da7d1/dc0972e80623d3d33881994b4d8726e9.webp",
+    "coins": 15000
+  },
+  {
+    "id": 12822,
+    "name": "Swedish Moose",
+    "image": "https://cdn.dps.vc/iblock/d90/d909a4d680e301f7b52b5d0817bfb8be/828d531aa4987b98cb74da5c47be795c.webp",
+    "coins": 15000
+  },
+  {
+    "id": 10250,
+    "name": "Sweetopia",
+    "image": "https://cdn.dps.vc/iblock/dd9/dd96da6865ca56a8b62ff310b6635157/7d60dcc871c7ecbd06ed393ee12dbb7e.webp",
+    "coins": 15000
+  },
+  {
+    "id": 6452,
+    "name": "Jakarta Roundabout",
+    "image": "https://cdn.dps.vc/iblock/8c6/8c681f6cf5af38e873694a2bf485a095/553f6bca6cd6fe0aba21cea9a5e0ce2c.png",
+    "coins": 16999
+  },
+  {
+    "id": 9466,
+    "name": "Amusement Park",
+    "image": "https://cdn.dps.vc/iblock/1ee/1ee4ae0e6eecd9c8e0abc774ea959155/4aedb7a7ed2e8dd0559c496b2506933d.webp",
+    "coins": 17000
+  },
+  {
+    "id": 8707,
+    "name": "Diamond flight",
+    "image": "https://cdn.dps.vc/iblock/883/88318a4bbb00dd6486cb4be8f6d6d33d/1e0517cff3cc18adb43c17115b17e26d.webp",
+    "coins": 18000
+  },
+  {
+    "id": 8708,
+    "name": "Diamond flight",
+    "image": "https://cdn.dps.vc/iblock/9d9/9d98414239d52199798785a570b71c17/c7bd9bc5a2b1b8fd398566c278e0c100.webp",
+    "coins": 18000
+  },
+  {
+    "id": 7740,
+    "name": "American Eagle",
+    "image": "https://cdn.dps.vc/iblock/8db/8dbcaeb69c65b88fbaef7a9f9fddce00/ed4411fea92730b41ae21e5f78676e97.webp",
+    "coins": 19999
+  },
+  {
+    "id": 8248,
+    "name": "Fly Love",
+    "image": "https://cdn.dps.vc/iblock/729/729736d11c9014d99d088fa77da2bcea/d461d23ae2f3c5d2014f78a34c0b8956.webp",
+    "coins": 19999
+  },
+  {
+    "id": 8691,
+    "name": "Party Boat",
+    "image": "https://cdn.dps.vc/iblock/599/5998ea3c54927842bf0d8c296df0c745/75e9b4f53698bcb5644128de509e69a0.webp",
+    "coins": 19999
+  },
+  {
+    "id": 14129,
+    "name": "Ramadan Celebration",
+    "image": "https://cdn.dps.vc/iblock/4bb/4bbf4b7aacaffad46240088730822304/dc16c43984e6e3f6165d00f6562ae737.webp",
+    "coins": 19999
+  },
+  {
+    "id": 14132,
+    "name": "Ramadan Celebration",
+    "image": "https://cdn.dps.vc/iblock/0bd/0bdf2783f776512f5cfd98fc33db74e7/1b789149ea29f48ee34db6f1e0658f63.webp",
+    "coins": 19999
+  },
+  {
+    "id": 9839,
+    "name": "Carnival",
+    "image": "https://cdn.dps.vc/iblock/01c/01cb2fc832c9212e7da09f499f70513f/8ad5b45f372caa9ccf9c06f8468febe8.webp",
+    "coins": 20000
+  },
+  {
+    "id": 5340,
+    "name": "Castle Fantasy",
+    "image": "https://cdn.dps.vc/iblock/627/6274dd0d88e316ff29400fba7f909b65/804bfbbd710eb8eea87fc7ebd5c07edc.png",
+    "coins": 20000
+  },
+  {
+    "id": 5349,
+    "name": "Castle Fantasy",
+    "image": "https://cdn.dps.vc/iblock/94d/94d42968be0d5db522342f420af49109/6439f2357983e47abb0c7165a00b5278.png",
+    "coins": 20000
+  },
+  {
+    "id": 5478,
+    "name": "Castle Fantasy",
+    "image": "https://cdn.dps.vc/iblock/270/270a87b201ff12b668ee876e167f0711/d49702e94f92d4583a928aac7f3741b0.png",
+    "coins": 20000
+  },
+  {
+    "id": 6833,
+    "name": "Castle Fantasy",
+    "image": "https://cdn.dps.vc/iblock/a08/a088a2975c7d4a68b8146a4c6b5c97c1/2729c82ccd54828bd950675e7491d71c.webp",
+    "coins": 20000
+  },
+  {
+    "id": 9240,
+    "name": "Dancing queens",
+    "image": "https://cdn.dps.vc/iblock/c79/c793af446369ecef5238e73312c84ccd/464a76f3e6eaee9afc771f45a4bba9df.webp",
+    "coins": 20000
+  },
+  {
+    "id": 10345,
+    "name": "Enchanted Dolphin",
+    "image": "https://cdn.dps.vc/iblock/45e/45e013ff7b28aabdefde01a30f755593/28a31ddfb16ec8c682b23bec2a64f0dd.webp",
+    "coins": 20000
+  },
+  {
+    "id": 9524,
+    "name": "Exclusive Yacht",
+    "image": "https://cdn.dps.vc/iblock/33a/33a156638d7a13393975bf581e9cf7a5/f8e5bd9978fe2444631cbfa7e6f2fc67.webp",
+    "coins": 20000
+  },
+  {
+    "id": 9803,
+    "name": "Ice Kingdom",
+    "image": "https://cdn.dps.vc/iblock/859/859b2cf5dd61c7341f6a24b84a6579a0/109375fdd81f024c5cdc2ac9e50f3293.webp",
+    "coins": 20000
+  },
+  {
+    "id": 7125,
+    "name": "Premium Shuttle",
+    "image": "https://cdn.dps.vc/iblock/fc0/fc0bb0d7097635a7a91dd643f42a5258/cea9087fc79225ba647a6fa6bc60863c.webp",
+    "coins": 20000
+  },
+  {
+    "id": 5930,
+    "name": "Rocket",
+    "image": "https://cdn.dps.vc/iblock/342/3424264a3bd5e38705631de1c508878a/76dca02d1be3598d806cea9dfc7f70c0.png",
+    "coins": 20000
+  },
+  {
+    "id": 10398,
+    "name": "Spark",
+    "image": "https://cdn.dps.vc/iblock/309/3091dbb50890e52d9685f3ddf7063f07/8d4cbb5af2f084b3e55383c3cf7e6f01.webp",
+    "coins": 20000
+  },
+  {
+    "id": 6751,
+    "name": "TikTok Shuttle",
+    "image": "https://cdn.dps.vc/iblock/88e/88e4853bd66a5e7dfb92ff4889ba8c52/179f7f3a339166b1f3369bb9d829905d.webp",
+    "coins": 20000
+  },
+  {
+    "id": 9501,
+    "name": "Yacht",
+    "image": "https://cdn.dps.vc/iblock/7e8/7e811f991c76b9352f4d066862a9c46f/ae9153e1591cc5b7ce1b969e98689bc9.webp",
+    "coins": 20000
+  },
+  {
+    "id": 12853,
+    "name": "Level Ship",
+    "image": "https://cdn.dps.vc/iblock/d20/d2071cd1f51fa6027f1bb3ccba1ed36a/df4697d8de4982f18fa144f948952e72.webp",
+    "coins": 21000
+  },
+  {
+    "id": 9911,
+    "name": "Rose Carriage",
+    "image": "https://cdn.dps.vc/iblock/ae6/ae67825fcbae46875b93ccd17cb70cf6/b9183f4713f60fb48765c843f0b2b207.webp",
+    "coins": 25000
+  },
+  {
+    "id": 9914,
+    "name": "Starry Night Tourism",
+    "image": "https://cdn.dps.vc/iblock/659/659ef8de0a8e9516041a2774a4537387/a89240fe5cfd51856a90855d4165f6b2.webp",
+    "coins": 25000
+  },
+  {
+    "id": 7400,
+    "name": "Adam’s Dream",
+    "image": "https://cdn.dps.vc/iblock/d10/d10e9c17cf198b2da7ae2ad13ffa6541/33b7de1f4f63e68ce8fa6d5693770042.webp",
+    "coins": 25999
+  },
+  {
+    "id": 9525,
+    "name": "Big Dino",
+    "image": "https://cdn.dps.vc/iblock/70b/70b266b596be072aa256abb57e7eaaf6/c8161a6fb9ba37244b9563b3db8ee8e8.webp",
+    "coins": 25999
+  },
+  {
+    "id": 13791,
+    "name": "Chasing Glory",
+    "image": "https://cdn.dps.vc/iblock/76e/76e1bd0d2fb8900b0d10a3a7294918b9/7391d5aea611a40bc9682404d462ada8.webp",
+    "coins": 25999
+  },
+  {
+    "id": 7987,
+    "name": "Griffin",
+    "image": "https://cdn.dps.vc/iblock/609/6092240118fdb3ad46036c0533dd23c8/0f700fd4e875174d01ad04a8db2ae94e.webp",
+    "coins": 25999
+  },
+  {
+    "id": 8354,
+    "name": "Griffin",
+    "image": "https://cdn.dps.vc/iblock/40c/40c7b1e1e0c77cf91655420c25af18d2/663b1ba41588d812e1c0966b2613e3f1.webp",
+    "coins": 25999
+  },
+  {
+    "id": 7319,
+    "name": "Phoenix",
+    "image": "https://cdn.dps.vc/iblock/7d2/7d238b81518ab1e340e06adeb88c7c1c/ca9c644b2653d8315db71237b6b955eb.webp",
+    "coins": 25999
+  },
+  {
+    "id": 14311,
+    "name": "Undersea Kingdom",
+    "image": "https://cdn.dps.vc/iblock/aa5/aa5386839d14bc32bc11fba2efffa142/8c5a3b4535b15b86f2ffa37b4ca13043.webp",
+    "coins": 25999
+  },
+  {
+    "id": 7610,
+    "name": "Dragon Flame",
+    "image": "https://cdn.dps.vc/iblock/544/544a04d819ce2c2a51624bd4cd01e70d/489f08c5dc7c27d0c1fc2a97d2f79b1d.webp",
+    "coins": 26999
+  },
+  {
+    "id": 6003,
+    "name": "Carriage",
+    "image": "https://cdn.dps.vc/iblock/8a2/8a2c4aa4d83a6827456c1eb674b11488/0e78f24e1f4196d960c931e107b97f43.png",
+    "coins": 28888
+  },
+  {
+    "id": 6625,
+    "name": "Towards the future",
+    "image": "https://cdn.dps.vc/iblock/b2f/b2f6915948e5eabce83a39c525eebe6f/005804958a7917fd06a09ddeb3f41a0e.png",
+    "coins": 28888
+  },
+  {
+    "id": 9741,
+    "name": "Around the World",
+    "image": "https://cdn.dps.vc/iblock/4d1/4d11c00769dbb434c3620bdacc3bfd29/908665a5b995c2b1db409c9c76ff6e9c.webp",
+    "coins": 29999
+  },
+  {
+    "id": 5287,
+    "name": "Golden sports car",
+    "image": "https://cdn.dps.vc/iblock/4c1/4c1fa9bee06971f242e06b4578492c3a/2460543c6afe7d35854e3147811fcc1f.png",
+    "coins": 29999
+  },
+  {
+    "id": 6368,
+    "name": "Golden sports car",
+    "image": "https://cdn.dps.vc/iblock/6ee/6ee4d6001fca27632dd5b05ca315d207/ba36be6ce5f96ba71aad033c668bfd85.webp",
+    "coins": 29999
+  },
+  {
+    "id": 7311,
+    "name": "Knee Sliding",
+    "image": "https://cdn.dps.vc/iblock/1e6/1e6d8627c2195a4d27a759f7110f614a/7bf64b67a1a6136c049d173d10e8ffcd.webp",
+    "coins": 29999
+  },
+  {
+    "id": 6369,
+    "name": "Lion",
+    "image": "https://cdn.dps.vc/iblock/0c4/0c446fb276fafbb0f0d5e3abfedf2510/f4bbea9d03b1453bd37d571282334f1b.png",
+    "coins": 29999
+  },
+  {
+    "id": 7505,
+    "name": "Winter Lion",
+    "image": "https://cdn.dps.vc/iblock/273/273b516e1aa77b5b8a3b586f3d3b4a80/b360c178fcbe079b1a732e56636b9d92.webp",
+    "coins": 29999
+  },
+  {
+    "id": 8602,
+    "name": "Gorilla",
+    "image": "https://cdn.dps.vc/iblock/1e2/1e29b9d1a0263f1487498dc556cdcbc1/bec227242f8c9b258855071aa050ac17.webp",
+    "coins": 30000
+  },
+  {
+    "id": 8391,
+    "name": "Sam the Whale",
+    "image": "https://cdn.dps.vc/iblock/3e6/3e6b7b154146a376da3ec918eace0bf6/682a9a304ddd18ad08702f15236f4293.webp",
+    "coins": 30000
+  },
+  {
+    "id": 8814,
+    "name": "Superhero fight",
+    "image": "https://cdn.dps.vc/iblock/d6b/d6b1c955153c8f8c5048d6c8f0d1b418/97d04b889e64328e9ab07224f6072b5f.webp",
+    "coins": 30000
+  },
+  {
+    "id": 12260,
+    "name": "TikTok Houses Glory",
+    "image": "https://cdn.dps.vc/iblock/b14/b141e01aaf21ace28a8dd0d8dd7f3f16/a99b547e591369500f59557e0f213233.webp",
+    "coins": 30000
+  },
+  {
+    "id": 7823,
+    "name": "Leon and Lion",
+    "image": "https://cdn.dps.vc/iblock/a28/a28a82c70a624e448a96d3bebbfad3ea/833c0071d92604b5a544bf8f0ad72b68.webp",
+    "coins": 34000
+  },
+  {
+    "id": 8456,
+    "name": "Zeus",
+    "image": "https://cdn.dps.vc/iblock/f4e/f4e74e07fff3d3b48143a5c56af7fec4/8b15ef2f342dcd2066bcdcf82e5f07e9.webp",
+    "coins": 34000
+  },
+  {
+    "id": 8457,
+    "name": "Zeus",
+    "image": "https://cdn.dps.vc/iblock/fff/ffff57559cbd0d73b6b877e99fb9d803/b5127bbee5491c0aa32f764b679b087d.webp",
+    "coins": 34000
+  },
+  {
+    "id": 8624,
+    "name": "Zeus",
+    "image": "https://cdn.dps.vc/iblock/2c2/2c28e48dc08d3948917a4e3f82aea517/f32ad2d6caf5315b7137e144ef244582.webp",
+    "coins": 34000
+  },
+  {
+    "id": 8381,
+    "name": "Seal and Whale",
+    "image": "https://cdn.dps.vc/iblock/7ea/7eaaad60ec567af6679b633b13d45d67/a4efc1be2a75340110072f2b6bba554b.webp",
+    "coins": 34500
+  },
+  {
+    "id": 7310,
+    "name": "Soccer Universe",
+    "image": "https://cdn.dps.vc/iblock/ced/ced45919be15fcba05fdec96802af07c/d9d89f92c8fb8606a80510aaf6e0b663.webp",
+    "coins": 34999
+  },
+  {
+    "id": 6038,
+    "name": "TikTok Universe",
+    "image": "https://cdn.dps.vc/iblock/a79/a79204e0fab55cdc35ca0bdfa019face/8f06121e1c15be8566b3fc02982a2027.png",
+    "coins": 34999
+  },
+  {
+    "id": 6039,
+    "name": "TikTok Universe",
+    "image": "https://cdn.dps.vc/iblock/49d/49d934dc15cf5efc3ebef902a5974d56/04799e79cb4bd04a20d77d2f3fa9922d.png",
+    "coins": 34999
+  },
+  {
+    "id": 6041,
+    "name": "TikTok Universe",
+    "image": "https://cdn.dps.vc/iblock/374/374cf4298ba2c9817bc87dc2aa48d385/f04c43000c1c33765615c7ef7cacc58d.png",
+    "coins": 34999
+  },
+  {
+    "id": 7312,
+    "name": "TikTok Universe+",
+    "image": "https://cdn.dps.vc/iblock/f23/f23b0f26a9b1cb931243bacfa5a3b7e4/17263e949df9e7e2f173e6eae68fd198.webp",
+    "coins": 34999
+  },
+  {
+    "id": 8651,
+    "name": "Thunder Falcon",
+    "image": "https://cdn.dps.vc/iblock/b5d/b5dd904138691d16f6378e1f215fbc00/80a7b0ef77670cf6b7eb31fcae76fe80.webp",
+    "coins": 39999
+  },
+  {
+    "id": 8582,
+    "name": "TikTok Stars",
+    "image": "https://cdn.dps.vc/iblock/fb3/fb3c04af9d06b0cdf3df3da61f0c5705/b0f3fd913d2443626d8026eacef37a51.webp",
+    "coins": 39999
+  },
+  {
+    "id": 9092,
+    "name": "Fire Phoenix",
+    "image": "https://cdn.dps.vc/iblock/13b/13bd6d3510e802831552d711c688c958/ffedd22a99c1eb2ac888974816c979cb.webp",
+    "coins": 41999
+  },
+  {
+    "id": 7531,
+    "name": "Holiday Universe",
+    "image": "https://cdn.dps.vc/iblock/8ba/8ba4470ee15e963d8fea8e16cac810c6/58be109591032e7a77300ac126e4e137.webp",
+    "coins": 41999
+  },
+  {
+    "id": 7603,
+    "name": "Holiday Universe",
+    "image": "https://cdn.dps.vc/iblock/39e/39e5e90439296df8af7b9191af4f7178/2039127ef3c445c44f52b1d01346ff0f.webp",
+    "coins": 41999
+  },
+  {
+    "id": 13792,
+    "name": "Julius the Champion",
+    "image": "https://cdn.dps.vc/iblock/0d3/0d32dbb6a4dbd8969c596362c0bd5009/d358d6a0710c291e248fae3f13b7f231.webp",
+    "coins": 42999
+  },
+  {
+    "id": 14312,
+    "name": "Lord Marcellus",
+    "image": "https://cdn.dps.vc/iblock/084/0849e4f1290ca6744eac7cbe293d951b/d8bff37d5173073d90ffe43c283c8c3e.webp",
+    "coins": 42999
+  },
+  {
+    "id": 9427,
+    "name": "Pegasus",
+    "image": "https://cdn.dps.vc/iblock/708/708f4ef2e51e49de7dec821e36e73215/715b9f83aef044b819e9d203f8b50682.webp",
+    "coins": 42999
+  },
+  {
+    "id": 9072,
+    "name": "TikTok Universe",
+    "image": "https://cdn.dps.vc/iblock/cb8/cb81dd4932de73d6c5874c05e93c511b/abb83322d4cb67b8ae6fc7ec15d4d426.webp",
+    "coins": 44999
+  },
+  {
+    "id": 9101,
+    "name": "TikTok Universe",
+    "image": "https://cdn.dps.vc/iblock/838/8382b52d2fa295f9ecd012ba7d2b1c5b/c827f8e9a8a743b6ccb840c100989ed4.webp",
+    "coins": 44999
+  }
+];
+
+// Экспорт для браузера и Node.js
+if (typeof window !== 'undefined') {
+    window.TIKTOK_GIFTS = TIKTOK_GIFTS;
+    window.tiktokGifts = TIKTOK_GIFTS; // Alias для совместимости
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = TIKTOK_GIFTS;
+}
+

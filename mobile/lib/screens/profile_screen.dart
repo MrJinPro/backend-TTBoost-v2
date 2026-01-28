@@ -7,6 +7,7 @@ import 'package:in_app_purchase/in_app_purchase.dart';
 import '../theme/app_theme.dart';
 import '../providers/auth_provider.dart';
 import '../providers/billing_provider.dart';
+import '../providers/spotify_provider.dart';
 import '../providers/ws_provider.dart';
 import '../providers/theme_provider.dart';
 import '../services/api_service.dart';
@@ -685,6 +686,136 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 borderSide: const BorderSide(color: AppColors.accentPurple),
               ),
             ),
+          ),
+          const SizedBox(height: 16),
+
+          // Spotify integration (playback + separate Spotify volume)
+          Consumer<SpotifyProvider>(
+            builder: (context, sp, _) {
+              final connected = sp.connected;
+              final track = (sp.track ?? '').trim();
+              final artist = (sp.artist ?? '').trim();
+              final vol = sp.volume;
+              final err = (sp.error ?? '').trim();
+
+              return Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.03),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: AppColors.cardBorder),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.music_note, color: AppColors.accentGreen, size: 20),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Spotify',
+                          style: AppTextStyles.subtitle.copyWith(color: AppColors.primaryText),
+                        ),
+                        const Spacer(),
+                        if (!sp.configured)
+                          const HelpIcon(
+                            title: 'Spotify',
+                            message:
+                                'Интеграция Spotify скоро будет доступна. Сейчас подключение временно недоступно.',
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      !sp.configured
+                          ? 'Скоро будет доступно'
+                          : (connected ? 'Подключено' : 'Не подключено'),
+                      style: AppTextStyles.bodySmall.copyWith(color: AppColors.secondaryText),
+                    ),
+                    if (connected && (track.isNotEmpty || artist.isNotEmpty)) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        track.isNotEmpty ? track : '—',
+                        style: AppTextStyles.bodyMedium.copyWith(color: AppColors.primaryText),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      if (artist.isNotEmpty)
+                        Text(
+                          artist,
+                          style: AppTextStyles.bodySmall.copyWith(color: AppColors.secondaryText),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      if (vol != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 6),
+                          child: Text(
+                            'Громкость Spotify: $vol%',
+                            style: AppTextStyles.bodySmall.copyWith(color: AppColors.secondaryText),
+                          ),
+                        ),
+                    ],
+                    if (err.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        err,
+                        style: AppTextStyles.bodySmall.copyWith(color: AppColors.accentRed),
+                      ),
+                    ],
+                    const SizedBox(height: 10),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: _loading
+                            ? null
+                            : () async {
+                                if (!sp.configured) return;
+                                if (connected) {
+                                  await sp.disconnect();
+                                } else {
+                                  await sp.connect();
+                                }
+                              },
+                        icon: Icon(connected ? Icons.link_off : Icons.link),
+                        label: Text(
+                          !sp.configured
+                              ? 'Скоро'
+                              : (connected ? 'Отключить Spotify' : 'Подключить Spotify'),
+                        ),
+                      ),
+                    ),
+                    if (connected) ...[
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: _loading ? null : () => sp.previous(),
+                              child: const Text('Prev'),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: _loading ? null : () => sp.togglePlayPause(),
+                              child: Text(sp.playing ? 'Pause' : 'Play'),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: _loading ? null : () => sp.next(),
+                              child: const Text('Next'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
+              );
+            },
           ),
           const SizedBox(height: 16),
           
