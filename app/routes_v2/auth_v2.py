@@ -648,3 +648,19 @@ def me(request: Request, user: models.User = Depends(get_current_user), db: Sess
         tts_volume=settings.tts_volume if settings else 100,
         gifts_volume=settings.gifts_volume if settings else 100,
     )
+
+
+@router.get("/auth/me", response_model=AuthResponse)
+def get_profile(user: models.User = Depends(get_current_user)):
+    return {
+        "access_token": create_access_token(user.id),
+        "token_type": "bearer",
+        "username": user.username,
+        "email": user.email,
+        "tiktok_username": user.tiktok_username,
+        "avatar_url": user.avatar_filename,
+        "plan": user.role,
+        "tariff_name": "Premium" if user.role == "premium" else "Free",
+        "license_expires_at": None,
+        "max_tiktok_accounts": 5,
+    }

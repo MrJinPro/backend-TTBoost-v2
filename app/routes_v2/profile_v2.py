@@ -13,7 +13,7 @@ from sqlalchemy import func
 
 from app.db.database import SessionLocal
 from app.db import models
-from app.routes_v2.auth_v2 import get_current_user
+from app.routes_v2.auth_v2 import get_current_user, _normalize_email
 from app.services.security import hash_password, verify_password
 
 
@@ -110,7 +110,7 @@ def update_profile(
 ):
     # `user` comes from auth_v2 DB session; merge into this request session.
     user = db.merge(user)
-    email = (req.email or "").strip().lower() or None
+    email = _normalize_email(req.email) if (req.email or "").strip() else None
     if email is not None:
         if len(email) > 256 or not _EMAIL_RE.match(email):
             raise HTTPException(status_code=400, detail="invalid email")
