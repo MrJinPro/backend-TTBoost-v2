@@ -6,8 +6,25 @@ from sqlalchemy.orm import sessionmaker, declarative_base
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./ttboost.db")
 
+# Optional schema support (useful for Supabase when `public` contains other apps).
+# For Postgres we set `search_path` so unqualified table names go to this schema.
+DB_SCHEMA = (os.getenv("DB_SCHEMA") or "public").strip() or "public"
+
+# Optional: force a specific network address for Postgres (e.g. IPv4) while keeping
+# the hostname in DATABASE_URL intact.
+# Useful when DNS returns IPv6 first and the network/provider has issues with it.
+DB_HOSTADDR = (os.getenv("DB_HOSTADDR") or "").strip()
+
 # For SQLite need check_same_thread=False
-connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
+connect_args: dict = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
+
+# For Postgres: allow forcing host address (e.g. IPv4) to avoid flaky IPv6.
+if not DATABASE_URL.startswith("sqlite") and DB_HOSTADDR:
+    connect_args = {**connect_args, "hostaddr": DB_HOSTADDR}
+
+# For Postgres: set search_path (works with psycopg3 via libpq "options").
+if not DATABASE_URL.startswith("sqlite") and DB_SCHEMA and DB_SCHEMA != "public":
+    connect_args = {**connect_args, "options": f"-c search_path={DB_SCHEMA},public"}
 
 engine = create_engine(DATABASE_URL, echo=False, future=True, connect_args=connect_args)
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, future=True)

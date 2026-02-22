@@ -16,7 +16,7 @@ def migrate_triggers_add_fields():
         # Проверяем наличие столбца trigger_name
         result = db.execute(text(
             "SELECT column_name FROM information_schema.columns "
-            "WHERE table_name='triggers' AND column_name='trigger_name'"
+            "WHERE table_schema = current_schema() AND table_name='triggers' AND column_name='trigger_name'"
         ))
         if not result.fetchone():
             logger.info("Добавляем столбец trigger_name в таблицу triggers...")
@@ -27,7 +27,7 @@ def migrate_triggers_add_fields():
         # Проверяем наличие столбца combo_count
         result = db.execute(text(
             "SELECT column_name FROM information_schema.columns "
-            "WHERE table_name='triggers' AND column_name='combo_count'"
+            "WHERE table_schema = current_schema() AND table_name='triggers' AND column_name='combo_count'"
         ))
         if not result.fetchone():
             logger.info("Добавляем столбец combo_count в таблицу triggers...")
@@ -49,7 +49,7 @@ def migrate_user_settings_remove_gift_tts_alongside():
         # Проверяем наличие столбца
         result = db.execute(text(
             "SELECT column_name FROM information_schema.columns "
-            "WHERE table_name='user_settings' AND column_name='gift_tts_alongside'"
+            "WHERE table_schema = current_schema() AND table_name='user_settings' AND column_name='gift_tts_alongside'"
         ))
         if result.fetchone():
             logger.info("Удаляем столбец gift_tts_alongside из таблицы user_settings...")

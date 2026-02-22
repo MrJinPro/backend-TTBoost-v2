@@ -233,12 +233,12 @@ init_db()
 # Простая попытка авто-ALTER для добавления новых полей.
 # Важно: выполняем шаги независимо — ошибка в одном не должна ломать остальные.
 from sqlalchemy import inspect, text as sql_text
-from app.db.database import engine
+from app.db.database import engine, DB_SCHEMA
 
 
 def _has_column(insp, table: str, column: str) -> bool:
     try:
-        return any(c.get("name") == column for c in insp.get_columns(table))
+        return any(c.get("name") == column for c in insp.get_columns(table, schema=DB_SCHEMA))
     except Exception:
         return False
 
@@ -414,7 +414,7 @@ if not _has_column(insp, "users", "last_device"):
 
 # 4) store_purchases table
 try:
-    tables = set(insp.get_table_names())
+    tables = set(insp.get_table_names(schema=DB_SCHEMA))
 except Exception:  # pragma: no cover
     tables = set()
 
@@ -443,7 +443,7 @@ if "store_purchases" not in tables:
 # 5) gift stats tables
 insp = _refresh_insp()
 try:
-    tables = set(insp.get_table_names())
+    tables = set(insp.get_table_names(schema=DB_SCHEMA))
 except Exception:  # pragma: no cover
     tables = set()
 
@@ -476,7 +476,7 @@ if "gift_events" not in tables:
 
 insp = _refresh_insp()
 try:
-    tables = set(insp.get_table_names())
+    tables = set(insp.get_table_names(schema=DB_SCHEMA))
 except Exception:  # pragma: no cover
     tables = set()
 
@@ -508,7 +508,7 @@ if "gift_events_tt" not in tables:
 
 insp = _refresh_insp()
 try:
-    tables = set(insp.get_table_names())
+    tables = set(insp.get_table_names(schema=DB_SCHEMA))
 except Exception:  # pragma: no cover
     tables = set()
 
@@ -543,7 +543,7 @@ if "donor_stats" not in tables:
 
 insp = _refresh_insp()
 try:
-    tables = set(insp.get_table_names())
+    tables = set(insp.get_table_names(schema=DB_SCHEMA))
 except Exception:  # pragma: no cover
     tables = set()
 
@@ -577,7 +577,7 @@ if "donor_stats_tt" not in tables:
 
 insp = _refresh_insp()
 try:
-    tables = set(insp.get_table_names())
+    tables = set(insp.get_table_names(schema=DB_SCHEMA))
 except Exception:  # pragma: no cover
     tables = set()
 
@@ -611,7 +611,7 @@ if "streamer_stats" not in tables:
 
 insp = _refresh_insp()
 try:
-    tables = set(insp.get_table_names())
+    tables = set(insp.get_table_names(schema=DB_SCHEMA))
 except Exception:  # pragma: no cover
     tables = set()
 
