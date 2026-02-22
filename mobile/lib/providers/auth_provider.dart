@@ -1,12 +1,19 @@
 ﻿import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:async';
 import '../services/api_service.dart';
 import '../utils/constants.dart';
 
 class AuthProvider extends ChangeNotifier {
   final ApiService apiService;
   final storage = const FlutterSecureStorage();
+
+  static const String _kJwtKey = 'jwt_token';
+  static const String _kJwtKeyFallback = 'jwt_token_fallback';
+
+  StreamSubscription<dynamic>? _supabaseAuthSub;
   
   String? _username;
   String? _tiktokUsername;
@@ -44,25 +51,133 @@ class AuthProvider extends ChangeNotifier {
   bool get supabaseEnabled => kSupabaseUrl.isNotEmpty && kSupabaseAnonKey.isNotEmpty;
 
   SupabaseClient? get _sb => supabaseEnabled ? Supabase.instance.client : null;
-  
-  Future<void> initialize() async {
-    // Prefer Supabase session if configured.
-    if (supabaseEnabled) {
-      final session = _sb?.auth.currentSession;
-      final accessToken = session?.accessToken;
-      if (accessToken != null && accessToken.isNotEmpty) {
-        final jwt = await apiService.exchangeSupabaseToken(supabaseAccessToken: accessToken);
-        if (jwt != null && jwt.isNotEmpty) {
-          await storage.write(key: 'jwt_token', value: jwt);
-          await _loadProfile();
+
+  @override
+  void dispose() {
+    try {
+      _supabaseAuthSub?.cancel();
+    } catch (_) {}
+    _supabaseAuthSub = null;
+    super.dispose();
+  }
+
+  Future<void> _writeJwtToken(String token) async {
+    final t = token.trim();
+    if (t.isEmpty) return;
+    try {
+      await storage.write(key: _kJwtKey, value: t);
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString(_kJwtKeyFallback, t);
+      } catch (_) {}
+      return;
+    } catch (_) {
+      // Fallback for devices/environments where secure storage is unavailable.
+    }
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_kJwtKeyFallback, t);
+    } catch (_) {}
+  }
+
+  Future<String?> _readJwtToken() async {
+    try {
+      final t = await storage.read(key: _kJwtKey);
+      if (t != null && t.trim().isNotEmpty) return t.trim();
+    } catch (_) {
+      // ignore
+    }
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final t = prefs.getString(_kJwtKeyFallback);
+      if (t != null && t.trim().isNotEmpty) return t.trim();
+    } catch (_) {
+      // ignore
+    }
+    return null;
+  }
+
+  Future<void> _deleteJwtToken() async {
+    try {
+      await storage.delete(key: _kJwtKey);
+    } catch (_) {}
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_kJwtKeyFallback);
+    } catch (_) {}
+  }
+
+  void _ensureSupabaseAuthListener() {
+    if (!supabaseEnabled) return;
+    if (_supabaseAuthSub != null) return;
+    final sb = _sb;
+    if (sb == null) return;
+
+    // Keep backend JWT in sync with Supabase session.
+    _supabaseAuthSub = sb.auth.onAuthStateChange.listen((data) async {
+      try {
+        final session = (data as dynamic).session as Session?;
+        final event = (data as dynamic).event;
+
+        if (event == AuthChangeEvent.signedOut) {
+          await _deleteJwtToken();
+          apiService.setToken('');
+          _username = null;
+          _tiktokUsername = null;
+          _email = null;
+          _avatarUrl = null;
+          _plan = null;
+          _tariffName = null;
+          _subscriptionExpiresAt = null;
+          _maxTikTokAccounts = null;
           notifyListeners();
           return;
         }
+
+        final accessToken = session?.accessToken;
+        if (accessToken != null && accessToken.isNotEmpty) {
+          final jwt = await apiService.exchangeSupabaseToken(supabaseAccessToken: accessToken);
+          if (jwt != null && jwt.isNotEmpty) {
+            await _writeJwtToken(jwt);
+            await _loadProfile();
+            notifyListeners();
+          }
+        }
+      } catch (_) {
+        // Listener should never crash app.
+      }
+    });
+  }
+  
+  Future<void> initialize() async {
+    _ensureSupabaseAuthListener();
+
+    // Prefer Supabase session if configured.
+    if (supabaseEnabled) {
+      try {
+        // Best-effort: refresh session to avoid expired access tokens.
+        try {
+          await _sb?.auth.refreshSession();
+        } catch (_) {}
+
+        final session = _sb?.auth.currentSession;
+        final accessToken = session?.accessToken;
+        if (accessToken != null && accessToken.isNotEmpty) {
+          final jwt = await apiService.exchangeSupabaseToken(supabaseAccessToken: accessToken);
+          if (jwt != null && jwt.isNotEmpty) {
+            await _writeJwtToken(jwt);
+            await _loadProfile();
+            notifyListeners();
+            return;
+          }
+        }
+      } catch (_) {
+        // ignore supabase restore issues
       }
     }
 
     // Fallback to legacy backend JWT.
-    final token = await storage.read(key: 'jwt_token');
+    final token = await _readJwtToken();
     if (token != null && token.isNotEmpty) {
       apiService.setToken(token);
       await _loadProfile();
@@ -95,7 +210,7 @@ class AuthProvider extends ChangeNotifier {
 
         final jwt = await apiService.exchangeSupabaseToken(supabaseAccessToken: session.accessToken);
         if (jwt == null) return apiService.lastError ?? 'Не удалось войти через Supabase';
-        await storage.write(key: 'jwt_token', value: jwt);
+        await _writeJwtToken(jwt);
         await _loadProfile();
         notifyListeners();
         return null;
@@ -112,7 +227,7 @@ class AuthProvider extends ChangeNotifier {
       password: password,
     );
     if (result == null) return apiService.lastError ?? 'Неверные учетные данные';
-    await storage.write(key: 'jwt_token', value: result.token);
+    await _writeJwtToken(result.token);
     _username = result.username;
     await _loadProfile();
     notifyListeners();
@@ -162,7 +277,7 @@ class AuthProvider extends ChangeNotifier {
   }
   
   Future<void> logout() async {
-    await storage.delete(key: 'jwt_token');
+    await _deleteJwtToken();
     apiService.setToken('');
     if (supabaseEnabled) {
       try {

@@ -129,6 +129,11 @@ class WsProvider extends ChangeNotifier {
     _api.setToken(jwtToken ?? '');
 
     if (jwtToken != null && jwtToken.isNotEmpty) {
+      // Sync local state with server-side settings (flags, volumes, voice_id).
+      () async {
+        await refreshSettingsFromServer();
+      }();
+
       // WS ╨┤╨╗╤П ╤Б╨╛╨▒╤Л╤В╨╕╨╣ ╤Б╤В╤А╨╕╨╝╨░
       _ws.connect(jwtToken);
 
@@ -149,9 +154,80 @@ class WsProvider extends ChangeNotifier {
       _liveConnecting = false;
       _liveStatusText = null;
       _liveErrorText = null;
+      _audio.setLiveConnected(false);
       _cancelAutoReconnect();
       _syncOverlayStatus();
       notifyListeners();
+    }
+  }
+
+  Future<void> refreshSettingsFromServer() async {
+    final t = _activeToken;
+    if (t == null || t.trim().isEmpty) return;
+    try {
+      final settings = await _api.getSettings();
+      if (settings == null) return;
+
+      final voiceId = settings['voice_id']?.toString().trim();
+      final ttsEnabled = settings['tts_enabled'];
+      final giftEnabled = settings['gift_sounds_enabled'];
+      final silenceEnabled = settings['silence_enabled'];
+      final ttsVol = (settings['tts_volume'] as num?)?.toDouble();
+      final giftsVol = (settings['gifts_volume'] as num?)?.toDouble();
+      final auto = settings['auto_connect_live'];
+
+      var changed = false;
+
+      if (voiceId != null && voiceId.isNotEmpty && voiceId != _voiceId) {
+        _voiceId = voiceId;
+        changed = true;
+      }
+
+      if (ttsEnabled is bool && ttsEnabled != _ttsEnabled) {
+        _ttsEnabled = ttsEnabled;
+        changed = true;
+      }
+      if (giftEnabled is bool && giftEnabled != _giftSoundsEnabled) {
+        _giftSoundsEnabled = giftEnabled;
+        changed = true;
+      }
+      if (silenceEnabled is bool && silenceEnabled != _silenceEnabled) {
+        _silenceEnabled = silenceEnabled;
+        changed = true;
+      }
+
+      if (ttsVol != null) {
+        final v = ttsVol.clamp(0, 100);
+        if (v != _ttsVolume) {
+          _ttsVolume = v;
+          OverlayBridge.setVolumes(ttsVolume: _ttsVolume);
+          changed = true;
+        }
+      }
+
+      if (giftsVol != null) {
+        final v = giftsVol.clamp(0, 100);
+        if (v != _giftsVolume) {
+          _giftsVolume = v;
+          OverlayBridge.setVolumes(giftsVolume: _giftsVolume);
+          changed = true;
+        }
+      }
+
+      if (auto is bool && auto != _autoConnectLive) {
+        _autoConnectLive = auto;
+        try {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setBool(_kPrefAutoConnectLive, auto);
+        } catch (_) {}
+        changed = true;
+      }
+
+      if (changed) {
+        notifyListeners();
+      }
+    } catch (e) {
+      logDebug('Failed to refresh settings: $e');
     }
   }
 
@@ -373,6 +449,7 @@ class WsProvider extends ChangeNotifier {
       }
 
       _tiktokConnected = connected;
+      _audio.setLiveConnected(connected);
       _liveStatusText = msg;
       _liveErrorText = null;
       _liveConnecting = false;

@@ -4,6 +4,7 @@ import '../theme/app_theme.dart';
 import '../widgets/help_icon.dart';
 import '../services/api_service.dart';
 import '../services/audio_playback_service.dart';
+import '../providers/ws_provider.dart';
 import '../utils/log.dart';
 import 'audio_output_screen.dart';
 
@@ -669,6 +670,7 @@ class _VoiceScreenState extends State<VoiceScreen> {
         icon = Icons.auto_awesome;
         break;
       case 'azure':
+      case 'edge':
         color = AppColors.accentCyan;
         icon = Icons.cloud;
         break;
@@ -701,6 +703,10 @@ class _VoiceScreenState extends State<VoiceScreen> {
       if (mounted) {
         if (success) {
           logDebug('Voice settings saved: $_selectedVoiceId');
+          // Keep WS provider (overlay tests / demo events) in sync.
+          try {
+            await context.read<WsProvider>().refreshSettingsFromServer();
+          } catch (_) {}
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Ошибка сохранения настроек голоса')),
@@ -722,6 +728,9 @@ class _VoiceScreenState extends State<VoiceScreen> {
       if (mounted) {
         if (success) {
           logDebug('Volume settings saved: TTS=$_ttsVolume, Gifts=$_giftVolume');
+          try {
+            await context.read<WsProvider>().refreshSettingsFromServer();
+          } catch (_) {}
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Ошибка сохранения громкости')),
@@ -751,6 +760,10 @@ class _VoiceScreenState extends State<VoiceScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Ошибка сохранения настроек чата')),
         );
+      } else {
+        try {
+          await context.read<WsProvider>().refreshSettingsFromServer();
+        } catch (_) {}
       }
     } catch (e) {
       logDebug('Error saving chat tts filter settings: $e');
