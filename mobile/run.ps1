@@ -17,6 +17,18 @@ if (-not $flutterInstalled) {
 Write-Host "✅ Flutter найден" -ForegroundColor Green
 flutter --version
 
+function Get-DartDefines {
+    $defines = @()
+    if ($env:SUPABASE_URL) { $defines += "--dart-define=SUPABASE_URL=$($env:SUPABASE_URL)" }
+    if ($env:SUPABASE_ANON_KEY) { $defines += "--dart-define=SUPABASE_ANON_KEY=$($env:SUPABASE_ANON_KEY)" }
+    if ($env:API_BASE_URL) { $defines += "--dart-define=API_BASE_URL=$($env:API_BASE_URL)" }
+    if ($env:WS_URL) { $defines += "--dart-define=WS_URL=$($env:WS_URL)" }
+    if ($env:MEDIA_BASE_URL) { $defines += "--dart-define=MEDIA_BASE_URL=$($env:MEDIA_BASE_URL)" }
+    return $defines
+}
+
+$dartDefines = Get-DartDefines
+
 # Установка зависимостей
 Write-Host "`n📦 Установка зависимостей..." -ForegroundColor Cyan
 flutter pub get
@@ -38,15 +50,15 @@ $choice = Read-Host "`nВведите номер (1-3)"
 switch ($choice) {
     "1" {
         Write-Host "`n🪟 Запуск на Windows..." -ForegroundColor Cyan
-        flutter run -d windows
+        flutter run -d windows @dartDefines
     }
     "2" {
         Write-Host "`n📱 Запуск на Android..." -ForegroundColor Cyan
-        flutter run -d android
+        flutter run -d android @dartDefines
     }
     "3" {
         Write-Host "`n🌐 Запуск в Chrome..." -ForegroundColor Cyan
-        flutter run -d chrome --web-renderer html
+        flutter run -d chrome --web-renderer html @dartDefines
     }
     default {
         Write-Host "❌ Неверный выбор" -ForegroundColor Red

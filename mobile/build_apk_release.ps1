@@ -15,7 +15,6 @@ if (-not (Test-Path $pubspecPath)) {
 }
 
 $lines = Get-Content -Path $pubspecPath -Encoding UTF8
-$idx = ($lines | ForEach-Object { $_ }) | Select-Object -Index (0..($lines.Count-1)) -ErrorAction SilentlyContinue | Out-Null
 
 $versionLineIndex = -1
 for ($i = 0; $i -lt $lines.Count; $i++) {
@@ -56,7 +55,14 @@ try {
   flutter pub get
   if ($LASTEXITCODE -ne 0) { throw "flutter pub get failed" }
 
-  flutter build apk --release
+  $defines = @()
+  if ($env:SUPABASE_URL) { $defines += "--dart-define=SUPABASE_URL=$($env:SUPABASE_URL)" }
+  if ($env:SUPABASE_ANON_KEY) { $defines += "--dart-define=SUPABASE_ANON_KEY=$($env:SUPABASE_ANON_KEY)" }
+  if ($env:API_BASE_URL) { $defines += "--dart-define=API_BASE_URL=$($env:API_BASE_URL)" }
+  if ($env:WS_URL) { $defines += "--dart-define=WS_URL=$($env:WS_URL)" }
+  if ($env:MEDIA_BASE_URL) { $defines += "--dart-define=MEDIA_BASE_URL=$($env:MEDIA_BASE_URL)" }
+
+  flutter build apk --release @defines
   if ($LASTEXITCODE -ne 0) { throw "flutter build apk --release failed" }
 
   $apk = Join-Path $PSScriptRoot "build\app\outputs\flutter-apk\app-release.apk"

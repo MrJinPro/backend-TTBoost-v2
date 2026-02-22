@@ -46,3 +46,6 @@ Thumbs.db
 
 # Secrets (do not commit)
 секрет.txt
+
+# Local DB dumps (do not commit)
+ttboost_prod.dump
