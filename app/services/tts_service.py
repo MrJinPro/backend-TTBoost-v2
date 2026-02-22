@@ -67,6 +67,7 @@ class TTSEngine(str, Enum):
     """Доступные TTS движки"""
     GTTS = "gtts"
     EDGE = "edge"
+    AZURE = "azure"
     OPENAI = "openai"
     ELEVEN = "eleven"
 
@@ -181,7 +182,15 @@ async def generate_tts(text: str, voice_id: str = "gtts-ru", user_id: str = None
         if engine == "gtts":
             result = await _generate_gtts(text, voice_info, user_id)
         elif engine == "edge":
-            result = await _generate_edge(text, voice_info, user_id)
+            # edge_tts (Bing consumer endpoint) часто возвращает 403 на VPS.
+            # Если настроен официальный Azure Speech, используем его.
+            if _have_azure_speech():
+                result = await _generate_azure_speech(text, voice_info, user_id)
+                if result:
+                    # Для метаданных считаем, что реально использован Azure.
+                    engine = TTSEngine.AZURE.value
+            if not result:
+                result = await _generate_edge(text, voice_info, user_id)
         elif engine == "openai":
             result = await _generate_openai(text, voice_info, user_id)
         elif engine == "eleven":
@@ -309,6 +318,94 @@ async def _generate_edge(text: str, voice_info: dict, user_id: str = None) -> st
         print(f"❌ Edge TTS ошибка: {e}")
         logger.exception("Ошибка Edge TTS")
         return ""
+
+
+def _have_azure_speech() -> bool:
+    return bool((os.getenv("AZURE_SPEECH_KEY") or "").strip()) and bool((os.getenv("AZURE_SPEECH_REGION") or "").strip())
+
+
+async def _generate_azure_speech(text: str, voice_info: dict, user_id: str = None) -> str:
+    """Официальный Microsoft Azure Speech TTS.
+
+    Требует:
+      - AZURE_SPEECH_KEY
+      - AZURE_SPEECH_REGION (например: westeurope)
+    """
+    key = (os.getenv("AZURE_SPEECH_KEY") or "").strip()
+    region = (os.getenv("AZURE_SPEECH_REGION") or "").strip()
+    if not key or not region:
+        return ""
+
+    media_root = _resolve_media_root()
+    if user_id:
+        tts_dir = os.path.join(media_root, "tts", user_id)
+        url_path = f"static/tts/{user_id}"
+    else:
+        tts_dir = os.path.join(media_root, "tts")
+        url_path = "static/tts"
+    os.makedirs(tts_dir, exist_ok=True)
+
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S_%f')
+    filename = f"tts_{timestamp}.mp3"
+    file_path = os.path.join(tts_dir, filename)
+
+    voice_name = voice_info.get("id")
+    if not voice_name:
+        return ""
+
+    # Azure endpoint
+    endpoint = f"https://{region}.tts.speech.microsoft.com/cognitiveservices/v1"
+    output_format = (os.getenv("AZURE_TTS_OUTPUT_FORMAT") or "audio-16khz-32kbitrate-mono-mp3").strip()
+
+    # Simple SSML
+    lang = (voice_info.get("lang") or "ru-RU").strip()
+    ssml = (
+        f"<speak version='1.0' xml:lang='{lang}'>"
+        f"<voice name='{voice_name}'>"
+        f"{_escape_xml(text)}"
+        f"</voice></speak>"
+    )
+
+    headers = {
+        "Ocp-Apim-Subscription-Key": key,
+        "Content-Type": "application/ssml+xml",
+        "X-Microsoft-OutputFormat": output_format,
+        "User-Agent": "ttboost-backend",
+    }
+
+    timeout_s = float(os.getenv("AZURE_TTS_TIMEOUT_SECONDS", "20") or "20")
+    try:
+        async with httpx.AsyncClient(timeout=timeout_s) as client:
+            resp = await client.post(endpoint, content=ssml.encode("utf-8"), headers=headers)
+        if resp.status_code != 200:
+            logger.warning("Azure TTS failed: status=%s body=%s", resp.status_code, resp.text[:300])
+            return ""
+        audio_bytes = resp.content
+        if not audio_bytes:
+            logger.warning("Azure TTS returned empty audio")
+            return ""
+        with open(file_path, "wb") as f:
+            f.write(audio_bytes)
+
+        base_url = os.getenv("TTS_BASE_URL", "https://media.ttboost.pro")
+        url = f"{base_url.rstrip('/')}/{url_path}/{filename}"
+        logger.info("Azure TTS created: %s (voice=%s)", file_path, voice_name)
+        _post_tts_housekeeping(tts_dir, file_path)
+        return url
+    except Exception:
+        logger.exception("Azure TTS exception")
+        return ""
+
+
+def _escape_xml(text: str) -> str:
+    return (
+        (text or "")
+        .replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace('"', "&quot;")
+        .replace("'", "&apos;")
+    )
 
 
 async def _generate_openai(text: str, voice_info: dict, user_id: str = None) -> str:
