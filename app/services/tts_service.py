@@ -1,6 +1,7 @@
 import os
 import logging
 import asyncio
+from contextvars import ContextVar
 from datetime import datetime, timedelta
 from enum import Enum
 from typing import Optional, Dict
@@ -13,6 +14,21 @@ except Exception:
     OpenAI = None
 
 logger = logging.getLogger(__name__)
+
+
+_tts_meta_var: ContextVar[dict | None] = ContextVar("tts_meta", default=None)
+
+
+def get_last_tts_meta() -> dict | None:
+    """Возвращает метаданные последней генерации TTS в рамках текущего request context."""
+    return _tts_meta_var.get()
+
+
+def _set_tts_meta(meta: dict) -> None:
+    try:
+        _tts_meta_var.set(meta)
+    except Exception:
+        pass
 
 
 def _resolve_media_root() -> str:
@@ -127,6 +143,18 @@ async def generate_tts(text: str, voice_id: str = "gtts-ru", user_id: str = None
     Returns:
         URL до аудиофайла
     """
+    # Метаданные для диагностики (используется в /tts/generate)
+    meta: dict = {
+        "requested_voice_id": voice_id,
+        "requested_engine": None,
+        "used_voice_id": None,
+        "used_engine": None,
+        "fallback_used": False,
+        "primary_error": None,
+        "fallback_error": None,
+        "ok": False,
+    }
+
     # Находим информацию о голосе
     voice_info = None
     for voices in AVAILABLE_VOICES.values():
@@ -137,34 +165,69 @@ async def generate_tts(text: str, voice_id: str = "gtts-ru", user_id: str = None
         if voice_info:
             break
     
-    if not voice_info:
+    if voice_info:
+        meta["requested_engine"] = voice_info.get("engine")
+    else:
         logger.error(f"Голос {voice_id} не найден")
+        meta["primary_error"] = f"voice_not_found:{voice_id}"
+        _set_tts_meta(meta)
         return ""
     
     engine = voice_info["engine"]
     
     result = ""
-    if engine == "gtts":
-        result = await _generate_gtts(text, voice_info, user_id)
-    elif engine == "edge":
-        result = await _generate_edge(text, voice_info, user_id)
-    elif engine == "openai":
-        result = await _generate_openai(text, voice_info, user_id)
-    elif engine == "eleven":
-        result = await _generate_elevenlabs(text, voice_info, user_id)
-    else:
-        logger.error(f"Неизвестный движок: {engine}")
+    primary_exc: Exception | None = None
+    try:
+        if engine == "gtts":
+            result = await _generate_gtts(text, voice_info, user_id)
+        elif engine == "edge":
+            result = await _generate_edge(text, voice_info, user_id)
+        elif engine == "openai":
+            result = await _generate_openai(text, voice_info, user_id)
+        elif engine == "eleven":
+            result = await _generate_elevenlabs(text, voice_info, user_id)
+        else:
+            logger.error(f"Неизвестный движок: {engine}")
+            result = ""
+    except Exception as e:
+        primary_exc = e
+        logger.exception("Primary TTS engine failed (engine=%s voice_id=%s)", engine, voice_id)
         result = ""
 
+    if result:
+        meta["used_voice_id"] = voice_id
+        meta["used_engine"] = engine
+        meta["ok"] = True
+        _set_tts_meta(meta)
+        return result
 
-    if not result:
-        try:
-            logger.warning(f"TTS движок '{engine}' не вернул результат, пробуем gTTS (ru)")
-            result = await _generate_gtts(text, {"lang": "ru", "engine": "gtts"}, user_id)
-        except Exception as e:
-            logger.error(f"Фолбэк gTTS не удался: {e}")
-            result = ""
-    return result
+    if primary_exc is not None:
+        meta["primary_error"] = str(primary_exc)
+    else:
+        meta["primary_error"] = f"engine_returned_empty:{engine}"
+
+    # Фолбэк (по умолчанию оставляем, чтобы не ломать текущий UX),
+    # но теперь можно увидеть, что он сработал.
+    fallback_voice = {"lang": "ru", "engine": "gtts"}
+    try:
+        logger.warning("TTS engine '%s' failed, falling back to gTTS (ru). voice_id=%s", engine, voice_id)
+        result = await _generate_gtts(text, fallback_voice, user_id)
+    except Exception as e:
+        logger.exception("gTTS fallback failed")
+        meta["fallback_error"] = str(e)
+        result = ""
+
+    if result:
+        meta["used_voice_id"] = "gtts-ru"
+        meta["used_engine"] = "gtts"
+        meta["fallback_used"] = True
+        meta["ok"] = True
+        _set_tts_meta(meta)
+        return result
+
+    meta["ok"] = False
+    _set_tts_meta(meta)
+    return ""
 
 
 async def _generate_gtts(text: str, voice_info: dict, user_id: str = None) -> str:
@@ -231,7 +294,8 @@ async def _generate_edge(text: str, voice_info: dict, user_id: str = None) -> st
     try:
         voice = voice_info["id"]
         communicate = edge_tts.Communicate(text, voice)
-        await communicate.save(file_path)
+        timeout_s = float(os.getenv("EDGE_TTS_TIMEOUT_SECONDS", "35") or "35")
+        await asyncio.wait_for(communicate.save(file_path), timeout=timeout_s)
         
         base_url = os.getenv("TTS_BASE_URL", "https://media.ttboost.pro")
         url = f"{base_url.rstrip('/')}/{url_path}/{filename}"
@@ -243,7 +307,7 @@ async def _generate_edge(text: str, voice_info: dict, user_id: str = None) -> st
         
     except Exception as e:
         print(f"❌ Edge TTS ошибка: {e}")
-        logger.error(f"Ошибка Edge TTS: {e}")
+        logger.exception("Ошибка Edge TTS")
         return ""
 
 
