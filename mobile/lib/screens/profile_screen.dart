@@ -406,7 +406,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final tariffFeatures = _getTariffFeatures(tariffName);
 
     final tariffLower = tariffName.trim().toLowerCase();
-    final isFreeTariff = tariffLower.isEmpty || tariffLower == 'free';
+    // Backend may send values like "Nova Free"; treat any plan containing "free" as free-tier.
+    final isFreeTariff = tariffLower.isEmpty || tariffLower.contains('free');
     final expiresAt = (subscriptionExpiresAt != null && subscriptionExpiresAt.trim().isNotEmpty)
         ? DateTime.tryParse(subscriptionExpiresAt.trim())
         : null;
