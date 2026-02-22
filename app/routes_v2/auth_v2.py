@@ -16,6 +16,7 @@ from app.services.plans import resolve_tariff
 import secrets
 
 from app.services.email_resend import send_email, ResendError
+from app.services.supabase_jwt import verify_supabase_access_token, SupabaseJwtError
 
 
 router = APIRouter()
@@ -149,6 +150,78 @@ def register(req: RegisterRequest, db: Session = Depends(get_db)):
 class LoginRequest(BaseModel):
     username: str
     password: str
+
+
+class SupabaseExchangeResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+
+
+def _get_bearer_token(authorization: str | None) -> str | None:
+    if not authorization:
+        return None
+    parts = authorization.strip().split(" ", 1)
+    if len(parts) != 2:
+        return None
+    if parts[0].lower() != "bearer":
+        return None
+    token = parts[1].strip()
+    return token or None
+
+
+@router.post("/supabase/exchange", response_model=SupabaseExchangeResponse)
+def supabase_exchange(authorization: str | None = Header(default=None), db: Session = Depends(get_db)):
+    """Exchange Supabase access_token for backend JWT.
+
+    Mobile uses Supabase Auth for email+password+confirmation, then calls this endpoint
+    to obtain our existing backend JWT so the rest of API remains unchanged.
+    """
+
+    token = _get_bearer_token(authorization)
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="missing token")
+
+    try:
+        payload = verify_supabase_access_token(token)
+    except SupabaseJwtError as e:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=f"invalid supabase token: {e}")
+
+    supabase_uid = str(payload.get("sub") or "").strip()
+    email = _normalize_email(payload.get("email") or "")
+    if not supabase_uid:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid supabase token")
+    if not email:
+        # In our ecosystem, email is the primary identifier.
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="supabase token has no email")
+
+    user = db.query(models.User).filter(models.User.supabase_uid == supabase_uid).first()
+    if not user:
+        # Try to link by email (case-insensitive).
+        user = db.query(models.User).filter(func.lower(models.User.email) == email).first()
+        if user:
+            user.supabase_uid = supabase_uid
+            db.add(user)
+            db.commit()
+        else:
+            # Provision new local user record (Supabase is source of credentials).
+            username = _generate_username_from_email(email)
+            user = models.User(
+                username=username,
+                email=email,
+                supabase_uid=supabase_uid,
+                # set an unusable random password hash (legacy field is non-null)
+                password_hash=hash_password(secrets.token_urlsafe(24)),
+            )
+            db.add(user)
+            db.flush()
+            db.add(models.UserSettings(user_id=user.id))
+            db.commit()
+
+    if getattr(user, "is_banned", False):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="user banned")
+
+    backend_jwt = create_access_token(user.id)
+    return SupabaseExchangeResponse(access_token=backend_jwt)
 
 
 @router.post("/login", response_model=AuthResponse)

@@ -14,6 +14,7 @@ def _uuid():
 class User(Base):
     __tablename__ = "users"
     id = Column(String, primary_key=True, default=_uuid)
+    supabase_uid = Column(String(36), nullable=True, index=True, unique=True)
     username = Column(String(64), unique=True, index=True, nullable=False)  # Логин для входа
     tiktok_username = Column(String(64), nullable=True)  # TikTok аккаунт для Live
     email = Column(String(256), nullable=True)

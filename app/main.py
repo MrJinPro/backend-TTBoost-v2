@@ -412,6 +412,17 @@ if not _has_column(insp, "users", "last_device"):
     )
     insp = _refresh_insp()
 
+if not _has_column(insp, "users", "supabase_uid"):
+    _try_exec(
+        "[DB] Added column users.supabase_uid",
+        "ALTER TABLE users ADD COLUMN supabase_uid VARCHAR(36)",
+    )
+    _try_exec(
+        "[DB] Created index ux_users_supabase_uid",
+        "CREATE UNIQUE INDEX IF NOT EXISTS ux_users_supabase_uid ON users(supabase_uid)",
+    )
+    insp = _refresh_insp()
+
 # 4) store_purchases table
 try:
     tables = set(insp.get_table_names(schema=DB_SCHEMA))
