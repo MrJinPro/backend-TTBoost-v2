@@ -1,6 +1,8 @@
 ﻿import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/api_service.dart';
+import '../utils/constants.dart';
 
 class AuthProvider extends ChangeNotifier {
   final ApiService apiService;
@@ -38,12 +40,33 @@ class AuthProvider extends ChangeNotifier {
   };
   
   AuthProvider({required this.apiService});
+
+  bool get supabaseEnabled => kSupabaseUrl.isNotEmpty && kSupabaseAnonKey.isNotEmpty;
+
+  SupabaseClient? get _sb => supabaseEnabled ? Supabase.instance.client : null;
   
   Future<void> initialize() async {
+    // Prefer Supabase session if configured.
+    if (supabaseEnabled) {
+      final session = _sb?.auth.currentSession;
+      final accessToken = session?.accessToken;
+      if (accessToken != null && accessToken.isNotEmpty) {
+        final jwt = await apiService.exchangeSupabaseToken(supabaseAccessToken: accessToken);
+        if (jwt != null && jwt.isNotEmpty) {
+          await storage.write(key: 'jwt_token', value: jwt);
+          await _loadProfile();
+          notifyListeners();
+          return;
+        }
+      }
+    }
+
+    // Fallback to legacy backend JWT.
     final token = await storage.read(key: 'jwt_token');
     if (token != null && token.isNotEmpty) {
       apiService.setToken(token);
       await _loadProfile();
+      notifyListeners();
     }
   }
   
@@ -51,8 +74,41 @@ class AuthProvider extends ChangeNotifier {
     required String username,
     required String password,
   }) async {
+    final ident = username.trim();
+
+    // If user enters email and Supabase is enabled, authenticate via Supabase.
+    if (supabaseEnabled && ident.contains('@')) {
+      try {
+        final res = await _sb!.auth.signInWithPassword(email: ident, password: password);
+        final session = res.session;
+        final user = res.user;
+        if (session == null || session.accessToken.isEmpty) {
+          return 'Не удалось выполнить вход. Подтвердите email и попробуйте ещё раз.';
+        }
+
+        // Best-effort: enforce email confirmation client-side.
+        final confirmedAt = user?.emailConfirmedAt;
+        if (confirmedAt == null || confirmedAt.trim().isEmpty) {
+          await _sb!.auth.signOut();
+          return 'Email не подтверждён. Откройте письмо от Supabase и подтвердите адрес.';
+        }
+
+        final jwt = await apiService.exchangeSupabaseToken(supabaseAccessToken: session.accessToken);
+        if (jwt == null) return apiService.lastError ?? 'Не удалось войти через Supabase';
+        await storage.write(key: 'jwt_token', value: jwt);
+        await _loadProfile();
+        notifyListeners();
+        return null;
+      } on AuthException catch (e) {
+        return e.message;
+      } catch (e) {
+        return 'Ошибка входа через Supabase';
+      }
+    }
+
+    // Legacy login (username OR email via backend).
     final result = await apiService.login(
-      username: username,
+      username: ident,
       password: password,
     );
     if (result == null) return apiService.lastError ?? 'Неверные учетные данные';
@@ -67,16 +123,22 @@ class AuthProvider extends ChangeNotifier {
     required String username,
     required String password,
   }) async {
-    final result = await apiService.register(
-      username: username,
-      password: password,
-    );
-    if (result == null) return apiService.lastError ?? 'Ошибка регистрации';
-    await storage.write(key: 'jwt_token', value: result.token);
-    _username = result.username;
-    await _loadProfile();
-    notifyListeners();
-    return null;
+    final email = username.trim();
+    if (!email.contains('@')) {
+      return 'Для регистрации нужен email';
+    }
+    if (!supabaseEnabled) {
+      return 'Supabase не настроен в приложении';
+    }
+    try {
+      await _sb!.auth.signUp(email: email, password: password);
+      // Обычно с включённым Confirm Email сессии нет до подтверждения.
+      return null;
+    } on AuthException catch (e) {
+      return e.message;
+    } catch (e) {
+      return 'Ошибка регистрации через Supabase';
+    }
   }
   
   Future<void> _loadProfile() async {
@@ -102,6 +164,13 @@ class AuthProvider extends ChangeNotifier {
   Future<void> logout() async {
     await storage.delete(key: 'jwt_token');
     apiService.setToken('');
+    if (supabaseEnabled) {
+      try {
+        await _sb?.auth.signOut();
+      } catch (_) {
+        // ignore
+      }
+    }
     _username = null;
     _tiktokUsername = null;
     _email = null;

@@ -102,6 +102,37 @@ class ApiService {
     }
   }
 
+  Future<String?> exchangeSupabaseToken({required String supabaseAccessToken}) async {
+    try {
+      _setLastError(null);
+      final uri = Uri.parse('$baseUrl/v2/auth/supabase/exchange');
+      final resp = await http.post(
+        uri,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $supabaseAccessToken',
+        },
+        body: jsonEncode({}),
+      );
+      if (resp.statusCode == 200) {
+        final m = jsonDecode(resp.body) as Map<String, dynamic>;
+        final t = (m['access_token'] as String? ?? '').trim();
+        if (t.isEmpty) {
+          _setLastError('Пустой токен от сервера');
+          return null;
+        }
+        _jwtToken = t;
+        return t;
+      }
+      _setLastError(_extractErrorMessage(resp));
+      return null;
+    } catch (e) {
+      _setLastError('Не удалось подключиться к серверу');
+      print('exchangeSupabaseToken error: $e');
+      return null;
+    }
+  }
+
   Future<Map<String, dynamic>?> getProfile() async {
     try {
       _setLastError(null);

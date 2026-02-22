@@ -15,9 +15,19 @@ import 'screens/tutorial_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'widgets/permissions_gate.dart';
 import 'theme/app_theme.dart';
+import 'utils/constants.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Supabase Auth (email+password). Safe to skip if not configured.
+  if (kSupabaseUrl.isNotEmpty && kSupabaseAnonKey.isNotEmpty) {
+    await Supabase.initialize(
+      url: kSupabaseUrl,
+      anonKey: kSupabaseAnonKey,
+    );
+  }
 
   // Best-effort: collect device/os info for admin visibility.
   await ClientInfo.init();

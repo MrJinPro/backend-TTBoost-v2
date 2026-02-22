@@ -13,6 +13,18 @@ const String kWebSocketUrl = String.fromEnvironment(
 	defaultValue: 'wss://api.ttboost.pro/v2/ws',
 );
 
+// Supabase (Auth + Postgres).
+// Configure via: flutter run --dart-define=SUPABASE_URL=... --dart-define=SUPABASE_ANON_KEY=...
+const String kSupabaseUrl = String.fromEnvironment(
+	'SUPABASE_URL',
+	defaultValue: '',
+);
+
+const String kSupabaseAnonKey = String.fromEnvironment(
+	'SUPABASE_ANON_KEY',
+	defaultValue: '',
+);
+
 // In-app subscriptions product IDs (configure per build).
 // Legacy naming: monthly/yearly. Defaults map to current product ids.
 const String kAndroidProductMonthly = String.fromEnvironment(

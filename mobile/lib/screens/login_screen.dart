@@ -20,6 +20,7 @@ class _LoginScreenState extends State<LoginScreen> {
   int _mode = 0; // 0=login, 1=register
   bool _loading = false;
   String? _error;
+  String? _info;
   bool _obscurePassword = true;
 
   @override
@@ -33,6 +34,7 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() {
       _loading = true;
       _error = null;
+      _info = null;
     });
     final auth = context.read<AuthProvider>();
     String? error;
@@ -46,6 +48,9 @@ class _LoginScreenState extends State<LoginScreen> {
         username: _userCtrl.text.trim(),
         password: _passCtrl.text,
       );
+      if (error == null) {
+        _info = 'Письмо отправлено. Подтвердите email, затем выполните вход.';
+      }
     }
     if (mounted) {
       setState(() {
@@ -145,6 +150,20 @@ class _LoginScreenState extends State<LoginScreen> {
                             style: const TextStyle(color: AppColors.accentRed),
                           ),
                         ),
+                      if (_info != null)
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          margin: const EdgeInsets.only(bottom: 16),
+                          decoration: BoxDecoration(
+                            color: AppColors.accentGreen.withOpacity(0.12),
+                            border: Border.all(color: AppColors.accentGreen),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            _info!,
+                            style: const TextStyle(color: AppColors.accentGreen),
+                          ),
+                        ),
                       if (_mode == 0)
                         Container(
                           padding: const EdgeInsets.all(12),
@@ -155,7 +174,8 @@ class _LoginScreenState extends State<LoginScreen> {
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: const Text(
-                            'Рекомендуем привязать email в «Профиле»: это нужно для восстановления пароля.',
+                            'Если у вас старый аккаунт — можно войти по логину.
+Если вход по email не получается — убедитесь, что email подтверждён.',
                             style: TextStyle(color: AppColors.secondaryText),
                           ),
                         ),
@@ -167,7 +187,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           suffixIcon: const HelpIcon(
                             title: 'Вход / регистрация',
                             message:
-                                'Для входа можно использовать email или старый логин.\n\nДля регистрации используйте email (он понадобится для восстановления пароля).\n\nTikTok-ник указывается отдельно в «Профиле» (без @).',
+                                'Регистрация выполняется через email + пароль и требует подтверждения почты.\n\nДля входа можно использовать email (после подтверждения) или старый логин.\n\nTikTok-ник указывается отдельно в «Профиле» (без @).',
                           ),
                         ),
                         enabled: !_loading,

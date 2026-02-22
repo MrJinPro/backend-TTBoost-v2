@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../providers/auth_provider.dart';
 import '../theme/app_theme.dart';
+import '../utils/constants.dart';
 
 class PasswordResetScreen extends StatefulWidget {
   const PasswordResetScreen({super.key, this.prefillLoginOrEmail});
@@ -27,6 +29,13 @@ class _PasswordResetScreenState extends State<PasswordResetScreen> {
   bool _obscure1 = true;
   bool _obscure2 = true;
 
+  bool get _supabaseEnabled => kSupabaseUrl.isNotEmpty && kSupabaseAnonKey.isNotEmpty;
+
+  bool get _looksLikeEmail {
+    final v = _loginOrEmailCtrl.text.trim();
+    return v.contains('@');
+  }
+
   @override
   void initState() {
     super.initState();
@@ -49,6 +58,34 @@ class _PasswordResetScreenState extends State<PasswordResetScreen> {
       _info = null;
     });
 
+    // Supabase reset (email only): sends a link.
+    if (_supabaseEnabled && _looksLikeEmail) {
+      try {
+        await Supabase.instance.client.auth.resetPasswordForEmail(_loginOrEmailCtrl.text.trim());
+        if (!mounted) return;
+        setState(() {
+          _loading = false;
+          _codeSent = true;
+          _info = 'Письмо отправлено. Откройте ссылку из письма, чтобы сбросить пароль, затем выполните вход.';
+        });
+        return;
+      } on AuthException catch (e) {
+        if (!mounted) return;
+        setState(() {
+          _loading = false;
+          _error = e.message;
+        });
+        return;
+      } catch (e) {
+        if (!mounted) return;
+        setState(() {
+          _loading = false;
+          _error = 'Не удалось отправить письмо';
+        });
+        return;
+      }
+    }
+
     final auth = context.read<AuthProvider>();
     final ok = await auth.apiService.requestPasswordReset(
       loginOrEmail: _loginOrEmailCtrl.text.trim(),
@@ -67,6 +104,10 @@ class _PasswordResetScreenState extends State<PasswordResetScreen> {
   }
 
   Future<void> _confirm() async {
+    // Supabase reset uses email link, no code confirmation here.
+    if (_supabaseEnabled && _looksLikeEmail) {
+      return;
+    }
     final p1 = _newPassCtrl.text;
     final p2 = _newPass2Ctrl.text;
     if (p1 != p2) {
@@ -176,7 +217,7 @@ class _PasswordResetScreenState extends State<PasswordResetScreen> {
                             )
                           : Text(_codeSent ? 'Отправить код ещё раз' : 'Отправить код'),
                     ),
-                    if (_codeSent) ...[
+                    if (_codeSent && !(_supabaseEnabled && _looksLikeEmail)) ...[
                       const SizedBox(height: 16),
                       TextField(
                         controller: _codeCtrl,
