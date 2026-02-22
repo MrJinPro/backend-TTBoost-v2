@@ -4,6 +4,8 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 
+import httpx
+
 from app.db.database import SessionLocal, init_db
 from app.db import models
 from app.services.security import hash_password, verify_password, create_access_token, decode_token
@@ -107,6 +109,11 @@ class UpgradeLicenseResponse(BaseModel):
 @router.post("/register", response_model=AuthResponse)
 def register(req: RegisterRequest, db: Session = Depends(get_db)):
     init_db()
+
+    # Optional hard switch: disable legacy registration when migrating to Supabase Auth.
+    # This helps enforce email confirmation (handled by Supabase) for new accounts.
+    if (os.getenv("DISABLE_LEGACY_REGISTER") or "").strip() == "1":
+        raise HTTPException(status_code=status.HTTP_410_GONE, detail="registration is handled by Supabase")
     _validate_password(req.password)
 
     email = _normalize_email(req.email) if req.email is not None else None
@@ -169,6 +176,58 @@ def _get_bearer_token(authorization: str | None) -> str | None:
     return token or None
 
 
+def _is_supabase_email_confirmed(payload: dict, access_token: str) -> bool:
+    """Best-effort check for Supabase email confirmation.
+
+    Prefer JWT claims if present; otherwise call GoTrue `/auth/v1/user`.
+    """
+
+    def _truthy(value: object) -> bool:
+        if value is None:
+            return False
+        if isinstance(value, bool):
+            return value
+        s = str(value).strip()
+        return bool(s) and s.lower() not in {"null", "none", "false", "0"}
+
+    for key in ("email_confirmed_at", "confirmed_at", "email_verified", "email_verified_at"):
+        if key in payload:
+            return _truthy(payload.get(key))
+
+    supabase_url = (os.getenv("SUPABASE_URL") or "").strip().rstrip("/")
+    if not supabase_url:
+        return False
+
+    headers = {"Authorization": f"Bearer {access_token}"}
+    # GoTrue обычно ожидает apikey (anon key подходит).
+    apikey = (os.getenv("SUPABASE_ANON_KEY") or os.getenv("SUPABASE_KEY") or "").strip()
+    if apikey:
+        headers["apikey"] = apikey
+
+    try:
+        timeout_s = float((os.getenv("SUPABASE_USERINFO_TIMEOUT_SECONDS") or "8").strip() or "8")
+        r = httpx.get(f"{supabase_url}/auth/v1/user", headers=headers, timeout=timeout_s)
+    except Exception:
+        return False
+
+    if r.status_code != 200:
+        return False
+
+    try:
+        user = r.json() or {}
+    except Exception:
+        return False
+
+    for key in ("email_confirmed_at", "confirmed_at"):
+        if _truthy(user.get(key)):
+            return True
+
+    if isinstance(user.get("email_confirmed"), bool):
+        return bool(user.get("email_confirmed"))
+
+    return False
+
+
 @router.post("/supabase/exchange", response_model=SupabaseExchangeResponse)
 def supabase_exchange(authorization: str | None = Header(default=None), db: Session = Depends(get_db)):
     """Exchange Supabase access_token for backend JWT.
@@ -185,6 +244,10 @@ def supabase_exchange(authorization: str | None = Header(default=None), db: Sess
         payload = verify_supabase_access_token(token)
     except SupabaseJwtError as e:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=f"invalid supabase token: {e}")
+
+    enforce_confirm = (os.getenv("SUPABASE_ENFORCE_EMAIL_CONFIRMED") or "1").strip() != "0"
+    if enforce_confirm and not _is_supabase_email_confirmed(payload, token):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="email not confirmed")
 
     supabase_uid = str(payload.get("sub") or "").strip()
     email = _normalize_email(payload.get("email") or "")
