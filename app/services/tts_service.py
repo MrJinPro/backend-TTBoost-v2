@@ -1,6 +1,8 @@
 import os
 import logging
 import asyncio
+import shutil
+import subprocess
 from contextvars import ContextVar
 from datetime import datetime, timedelta
 from enum import Enum
@@ -70,6 +72,7 @@ class TTSEngine(str, Enum):
     AZURE = "azure"
     OPENAI = "openai"
     ELEVEN = "eleven"
+    RHVOICE = "rhvoice"
 
 
 
@@ -114,6 +117,90 @@ AVAILABLE_VOICES: Dict[str, list[dict]] = {
 }
 
 
+_RHVOICE_CACHE: dict[str, object] = {"at": None, "voices": []}
+
+
+def _rhvoice_binary() -> str | None:
+    env_bin = (os.getenv("RHVOICE_BIN") or "").strip()
+    if env_bin:
+        return env_bin
+    for candidate in ("RHVoice", "RHVoice-test"):
+        found = shutil.which(candidate)
+        if found:
+            return found
+    return None
+
+
+def _list_rhvoice_voice_names() -> list[str]:
+    now = datetime.utcnow().timestamp()
+    cached_at = _RHVOICE_CACHE.get("at")
+    cached_voices = _RHVOICE_CACHE.get("voices")
+    if isinstance(cached_at, (int, float)) and isinstance(cached_voices, list) and (now - cached_at) < 60:
+        return [str(v) for v in cached_voices]
+
+    binary = _rhvoice_binary()
+    if not binary:
+        _RHVOICE_CACHE["at"] = now
+        _RHVOICE_CACHE["voices"] = []
+        return []
+
+    try:
+        proc = subprocess.run(
+            [binary, "-L"],
+            check=False,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=10,
+        )
+    except Exception:
+        logger.exception("Failed to list RHVoice voices")
+        _RHVOICE_CACHE["at"] = now
+        _RHVOICE_CACHE["voices"] = []
+        return []
+
+    if proc.returncode != 0:
+        logger.warning("RHVoice voice listing failed: code=%s stderr=%s", proc.returncode, (proc.stderr or "")[:300])
+        _RHVOICE_CACHE["at"] = now
+        _RHVOICE_CACHE["voices"] = []
+        return []
+
+    voices: list[str] = []
+    for raw_line in (proc.stdout or "").splitlines():
+        line = raw_line.strip()
+        if not line or line.lower().startswith("list of voices"):
+            continue
+        if line not in voices:
+            voices.append(line)
+
+    _RHVOICE_CACHE["at"] = now
+    _RHVOICE_CACHE["voices"] = voices
+    return voices
+
+
+def get_rhvoice_voices() -> list[dict]:
+    items: list[dict] = []
+    for voice_name in _list_rhvoice_voice_names():
+        items.append(
+            {
+                "id": f"rhvoice:{voice_name}",
+                "name": f"RHVoice {voice_name}",
+                "lang": None,
+                "engine": "rhvoice",
+                "voice": voice_name,
+            }
+        )
+    return items
+
+
+def get_voice_by_id(voice_id: str) -> dict | None:
+    for voice in get_all_voices():
+        if voice.get("id") == voice_id:
+            return voice
+    return None
+
+
 def get_all_voices():
     """Получить список всех доступных голосов.
     Если отсутствует OPENAI_API_KEY или SDK — openai голоса помечаем флагом unavailable.
@@ -129,6 +216,7 @@ def get_all_voices():
             if engine == "eleven" and not have_eleven:
                 v_copy["unavailable"] = True
             all_voices.append(v_copy)
+    all_voices.extend(get_rhvoice_voices())
     return all_voices
 
 
@@ -157,14 +245,7 @@ async def generate_tts(text: str, voice_id: str = "gtts-ru", user_id: str = None
     }
 
     # Находим информацию о голосе
-    voice_info = None
-    for voices in AVAILABLE_VOICES.values():
-        for v in voices:
-            if v["id"] == voice_id:
-                voice_info = v
-                break
-        if voice_info:
-            break
+    voice_info = get_voice_by_id(voice_id)
     
     if voice_info:
         meta["requested_engine"] = voice_info.get("engine")
@@ -195,6 +276,8 @@ async def generate_tts(text: str, voice_id: str = "gtts-ru", user_id: str = None
             result = await _generate_openai(text, voice_info, user_id)
         elif engine == "eleven":
             result = await _generate_elevenlabs(text, voice_info, user_id)
+        elif engine == "rhvoice":
+            result = await _generate_rhvoice(text, voice_info, user_id)
         else:
             logger.error(f"Неизвестный движок: {engine}")
             result = ""
@@ -317,6 +400,63 @@ async def _generate_edge(text: str, voice_info: dict, user_id: str = None) -> st
     except Exception as e:
         print(f"❌ Edge TTS ошибка: {e}")
         logger.exception("Ошибка Edge TTS")
+        return ""
+
+
+async def _generate_rhvoice(text: str, voice_info: dict, user_id: str = None) -> str:
+    """Генерация через RHVoice CLI, установленный на сервере."""
+    binary = _rhvoice_binary()
+    voice_name = (voice_info.get("voice") or "").strip()
+    if not binary or not voice_name:
+        return ""
+
+    media_root = _resolve_media_root()
+    if user_id:
+        tts_dir = os.path.join(media_root, "tts", user_id)
+        url_path = f"static/tts/{user_id}"
+    else:
+        tts_dir = os.path.join(media_root, "tts")
+        url_path = "static/tts"
+
+    os.makedirs(tts_dir, exist_ok=True)
+
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S_%f')
+    filename = f"tts_{timestamp}.wav"
+    file_path = os.path.join(tts_dir, filename)
+
+    def _run() -> bool:
+        proc = subprocess.run(
+            [binary, "-W", voice_name, "-o", file_path],
+            input=text,
+            check=False,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=20,
+        )
+        if proc.returncode != 0:
+            logger.warning(
+                "RHVoice synthesis failed: code=%s voice=%s stderr=%s",
+                proc.returncode,
+                voice_name,
+                (proc.stderr or "")[:300],
+            )
+            return False
+        return os.path.exists(file_path) and os.path.getsize(file_path) > 0
+
+    try:
+        ok = await asyncio.to_thread(_run)
+        if not ok:
+            return ""
+
+        base_url = os.getenv("TTS_BASE_URL", "https://media.ttboost.pro")
+        url = f"{base_url.rstrip('/')}/{url_path}/{filename}"
+        logger.info("RHVoice TTS created: %s (voice=%s)", file_path, voice_name)
+        _post_tts_housekeeping(tts_dir, file_path)
+        return url
+    except Exception:
+        logger.exception("RHVoice synthesis exception")
         return ""
 
 

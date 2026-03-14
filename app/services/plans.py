@@ -25,7 +25,7 @@ TARIFF_FREE = Tariff(
     allowed_platforms={"mobile", "desktop"},
     max_tiktok_accounts=1,
     lock_tiktok_username_after_set=True,
-    allowed_tts_engines={"gtts", "edge"},
+    allowed_tts_engines={"gtts", "edge", "rhvoice"},
 )
 
 TARIFF_ONE_MOBILE = Tariff(
@@ -34,7 +34,7 @@ TARIFF_ONE_MOBILE = Tariff(
     allowed_platforms={"mobile"},
     max_tiktok_accounts=3,
     lock_tiktok_username_after_set=False,
-    allowed_tts_engines={"gtts", "edge", "openai", "eleven"},
+    allowed_tts_engines={"gtts", "edge", "openai", "eleven", "rhvoice"},
 )
 
 TARIFF_ONE_DESKTOP = Tariff(
@@ -43,7 +43,7 @@ TARIFF_ONE_DESKTOP = Tariff(
     allowed_platforms={"desktop"},
     max_tiktok_accounts=3,
     lock_tiktok_username_after_set=False,
-    allowed_tts_engines={"gtts", "edge", "openai", "eleven"},
+    allowed_tts_engines={"gtts", "edge", "openai", "eleven", "rhvoice"},
 )
 
 TARIFF_DUO = Tariff(
@@ -52,7 +52,7 @@ TARIFF_DUO = Tariff(
     allowed_platforms={"mobile", "desktop"},
     max_tiktok_accounts=None,
     lock_tiktok_username_after_set=False,
-    allowed_tts_engines={"gtts", "edge", "openai", "eleven"},
+    allowed_tts_engines={"gtts", "edge", "openai", "eleven", "rhvoice"},
 )
 
 

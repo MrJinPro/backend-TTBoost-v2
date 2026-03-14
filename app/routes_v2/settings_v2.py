@@ -7,7 +7,7 @@ from app.db.database import SessionLocal
 from app.db import models
 from .auth_v2 import get_current_user
 from app.services.plans import resolve_tariff, normalize_platform
-from app.services.tts_service import AVAILABLE_VOICES
+from app.services.tts_service import get_voice_by_id
 
 
 router = APIRouter()
@@ -18,11 +18,8 @@ def _normalize_tiktok_username(raw: str) -> str:
 
 
 def _voice_engine_for_id(voice_id: str) -> str | None:
-    for voices in AVAILABLE_VOICES.values():
-        for v in voices:
-            if v.get("id") == voice_id:
-                return v.get("engine")
-    return None
+    voice = get_voice_by_id(voice_id)
+    return voice.get("engine") if voice else None
 
 
 def get_db():

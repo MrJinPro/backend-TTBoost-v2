@@ -218,6 +218,58 @@ sudo nginx -t && sudo systemctl reload nginx
 
 Функционал:
 - POST /v2/settings/update
+
+---
+## 11. RHVoice на VPS
+
+Если нужен локальный TTS без внешних API, backend теперь умеет работать с RHVoice через установленный CLI.
+
+Минимальная установка на Ubuntu/Debian:
+
+```bash
+sudo apt-get update
+sudo apt-get install -y rhvoice rhvoice-russian
+```
+
+Если пакет `rhvoice` в вашем репозитории недоступен, проверьте альтернативные имена пакетов:
+
+```bash
+apt-cache search rhvoice
+```
+
+Проверка, что CLI доступен и видит голоса:
+
+```bash
+RHVoice -L
+```
+
+Backend автоматически подхватит RHVoice, если бинарь доступен в `PATH`. Если он установлен в нестандартный путь, задайте в `backend/.env`:
+
+```env
+RHVOICE_BIN=/usr/bin/RHVoice
+```
+
+После установки / обновления `.env`:
+
+```bash
+sudo systemctl restart ttboost
+sudo systemctl status ttboost --no-pager
+```
+
+Что будет происходить после этого:
+- `GET /v2/voices` начнёт возвращать все найденные RHVoice-голоса.
+- Mobile-приложение покажет их на экране выбора голоса.
+- Тест озвучки и обычная TTS-генерация будут использовать выбранный RHVoice-голос.
+
+Ручная smoke-проверка:
+
+```bash
+curl -s https://api.ttboost.pro/v2/voices -H "Authorization: Bearer <JWT>"
+curl -s https://api.ttboost.pro/tts/generate \
+        -H "Content-Type: application/json" \
+        -H "Authorization: Bearer <JWT>" \
+        -d '{"text":"Тест RHVoice","voice_id":"rhvoice:Anna"}'
+```
 - POST /v2/sounds/upload / GET /v2/sounds/list
 - POST /v2/triggers/set / GET /v2/triggers/list / POST /v2/triggers/delete
 - WS /v2/ws — события (chat, gift, like, join, follow, subscribe)

@@ -12,7 +12,7 @@ from app.db.database import SessionLocal
 from app.db import models
 from .auth_v2 import get_current_user
 from app.services.security import decode_token
-from app.services.tts_service import generate_tts, AVAILABLE_VOICES
+from app.services.tts_service import generate_tts, get_voice_by_id
 from app.services.tiktok_service import tiktok_service
 from app.services.gift_sounds import get_global_gift_sound_path
 from app.services.plans import TARIFF_FREE, resolve_tariff, normalize_platform
@@ -228,14 +228,8 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
         voice_id = (settings.voice_id if settings and settings.voice_id else "gtts-ru")
 
         # NovaFree: only allow gtts voices
-        engine = None
-        for voices in AVAILABLE_VOICES.values():
-            for v in voices:
-                if v.get("id") == voice_id:
-                    engine = v.get("engine")
-                    break
-            if engine:
-                break
+        voice = get_voice_by_id(voice_id)
+        engine = voice.get("engine") if voice else None
         if engine and engine not in tariff.allowed_tts_engines:
             voice_id = "gtts-ru"
 
