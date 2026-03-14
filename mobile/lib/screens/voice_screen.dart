@@ -30,6 +30,16 @@ class _VoiceScreenState extends State<VoiceScreen> {
   List<Map<String, dynamic>> _voices = [];
   bool _loading = true;
 
+  int _compareVoices(Map<String, dynamic> a, Map<String, dynamic> b) {
+    final engineA = a['engine']?.toString() ?? '';
+    final engineB = b['engine']?.toString() ?? '';
+    final nameA = a['name']?.toString() ?? '';
+    final nameB = b['name']?.toString() ?? '';
+    final engineCompare = engineA.compareTo(engineB);
+    if (engineCompare != 0) return engineCompare;
+    return nameA.compareTo(nameB);
+  }
+
   @override
   void initState() {
     super.initState();
@@ -68,6 +78,7 @@ class _VoiceScreenState extends State<VoiceScreen> {
       }
 
       final voices = await api.getVoices();
+      voices.sort(_compareVoices);
       if (mounted) {
         setState(() {
           _voices = voices;
@@ -244,7 +255,11 @@ class _VoiceScreenState extends State<VoiceScreen> {
                               ),
                             ),
                             Text(
-                              voice['engine'].toString().toUpperCase(),
+                              [
+                                voice['engine'].toString().toUpperCase(),
+                                if ((voice['lang']?.toString() ?? '').trim().isNotEmpty)
+                                  voice['lang'].toString(),
+                              ].join(' • '),
                               style: AppTextStyles.bodySmall.copyWith(
                                 color: AppColors.secondaryText,
                               ),
@@ -677,6 +692,10 @@ class _VoiceScreenState extends State<VoiceScreen> {
       case 'gtts':
         color = AppColors.accentGreen;
         icon = Icons.g_translate;
+        break;
+      case 'rhvoice':
+        color = AppColors.accentGreen;
+        icon = Icons.graphic_eq;
         break;
       default:
         color = AppColors.secondaryText;
