@@ -14,6 +14,25 @@ import { Loader2, Shield, Users } from "lucide-react";
 
 const PAGE_SIZE = 50;
 
+const GOOGLE_PLAY_PLAN_PRESETS = [
+  {
+    productId: "novaboost.mobile.monthly",
+    label: "Google Play: novaboost.mobile.monthly",
+    planId: "nova_streamer_one_mobile",
+    planLabel: "NovaStreamer One (Mobile)",
+    ttlDays: 30,
+  },
+  {
+    productId: "novaboost.mobile.yearly",
+    label: "Google Play: novaboost.mobile.yearly",
+    planId: "nova_streamer_duo",
+    planLabel: "NovaStreamer Duo",
+    ttlDays: 365,
+  },
+] as const;
+
+type GooglePlayPresetId = (typeof GOOGLE_PLAY_PLAN_PRESETS)[number]["productId"];
+
 const isStaffRole = (role?: string): boolean => {
   const r = (role || "user").toLowerCase();
   return r !== "user";
@@ -31,6 +50,7 @@ const Admin = () => {
   const [tariffId, setTariffId] = useState<string>("");
   const [offset, setOffset] = useState(0);
   const [selectedPlanByUserId, setSelectedPlanByUserId] = useState<Record<string, string | null>>({});
+  const [selectedPlayPresetByUserId, setSelectedPlayPresetByUserId] = useState<Record<string, GooglePlayPresetId | "__manual__">>({});
 
   useEffect(() => {
     const token = getToken();
@@ -220,6 +240,11 @@ const Admin = () => {
   const total = usersQuery.data?.total ?? 0;
 
   const paidPlans = plansQuery.data?.items || [];
+
+  const paidPlanOptions = useMemo(
+    () => paidPlans.map((p) => ({ id: p.id, label: `${p.name} (${p.id})` })),
+    [paidPlans]
+  );
 
   const tariffFilterOptions = useMemo(() => {
     const base = [
@@ -529,13 +554,65 @@ const Admin = () => {
                                     </SelectTrigger>
                                     <SelectContent>
                                       <SelectItem value="__free__">free</SelectItem>
-                                      {paidPlans.map((p) => (
+                                      {paidPlanOptions.map((p) => (
                                         <SelectItem key={p.id} value={p.id}>
-                                          {p.id}
+                                          {p.label}
                                         </SelectItem>
                                       ))}
                                     </SelectContent>
                                   </Select>
+                                  <div className="mt-2">
+                                    <Select
+                                      value={selectedPlayPresetByUserId[u.id] || "__manual__"}
+                                      onValueChange={(value) => {
+                                        if (value === "__manual__") {
+                                          setSelectedPlayPresetByUserId((prev) => ({
+                                            ...prev,
+                                            [u.id]: "__manual__",
+                                          }));
+                                          return;
+                                        }
+
+                                        const preset = GOOGLE_PLAY_PLAN_PRESETS.find((item) => item.productId === value);
+                                        if (!preset) return;
+
+                                        setSelectedPlayPresetByUserId((prev) => ({
+                                          ...prev,
+                                          [u.id]: preset.productId,
+                                        }));
+                                        setSelectedPlanByUserId((prev) => ({
+                                          ...prev,
+                                          [u.id]: preset.planId,
+                                        }));
+                                      }}
+                                      disabled={
+                                        plansQuery.isLoading ||
+                                        plansQuery.isError ||
+                                        setLicenseMutation.isPending ||
+                                        extendLicenseMutation.isPending ||
+                                        revokeLicenseMutation.isPending
+                                      }
+                                    >
+                                      <SelectTrigger className="mt-2 w-72">
+                                        <SelectValue placeholder="Пресет Google Play" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="__manual__">Ручной выбор тарифа</SelectItem>
+                                        {GOOGLE_PLAY_PLAN_PRESETS.map((preset) => (
+                                          <SelectItem key={preset.productId} value={preset.productId}>
+                                            {preset.label}
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                  <div className="mt-2 text-xs text-muted-foreground space-y-1">
+                                    {GOOGLE_PLAY_PLAN_PRESETS.map((preset) => (
+                                      <div key={preset.productId}>
+                                        {preset.productId} -&gt; {preset.planLabel} ({preset.ttlDays} дн.)
+                                      </div>
+                                    ))}
+                                  </div>
                                 </TableCell>
                               )}
 
@@ -559,13 +636,19 @@ const Admin = () => {
                                     <Button
                                       variant="outline"
                                       onClick={() => {
+                                        const selectedPresetId = selectedPlayPresetByUserId[u.id];
+                                        const selectedPreset = GOOGLE_PLAY_PLAN_PRESETS.find(
+                                          (preset) => preset.productId === selectedPresetId
+                                        );
                                         const selected =
-                                          selectedPlanByUserId[u.id] !== undefined
+                                          selectedPreset?.planId ??
+                                          (selectedPlanByUserId[u.id] !== undefined
                                             ? selectedPlanByUserId[u.id]
                                             : paidPlans.some((p) => p.id === u.tariff_id)
                                               ? (u.tariff_id as string)
-                                              : null;
-                                        setLicenseMutation.mutate({ userId: u.id, plan: selected ?? null, ttlDays: 30 });
+                                              : null);
+                                        const ttlDays = selectedPreset?.ttlDays ?? 30;
+                                        setLicenseMutation.mutate({ userId: u.id, plan: selected ?? null, ttlDays });
                                       }}
                                       disabled={
                                         setLicenseMutation.isPending ||
@@ -573,7 +656,9 @@ const Admin = () => {
                                         revokeLicenseMutation.isPending
                                       }
                                     >
-                                      Применить 30д
+                                      {selectedPlayPresetByUserId[u.id] && selectedPlayPresetByUserId[u.id] !== "__manual__"
+                                        ? "Выдать по Product ID"
+                                        : "Применить 30д"}
                                     </Button>
                                     <Button
                                       variant="outline"
