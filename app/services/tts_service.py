@@ -3,6 +3,7 @@ import logging
 import asyncio
 import shutil
 import subprocess
+from pathlib import Path
 from contextvars import ContextVar
 from datetime import datetime, timedelta
 from enum import Enum
@@ -120,6 +121,66 @@ AVAILABLE_VOICES: Dict[str, list[dict]] = {
 _RHVOICE_CACHE: dict[str, object] = {"at": None, "voices": []}
 
 
+def _rhvoice_is_test_binary(binary: str) -> bool:
+    name = Path(binary).name.lower()
+    return name == "rhvoice-test"
+
+
+def _rhvoice_data_roots() -> list[Path]:
+    roots: list[Path] = []
+    env_root = (os.getenv("RHVOICE_DATA_DIR") or "").strip()
+    if env_root:
+        roots.append(Path(env_root))
+    roots.extend(
+        [
+            Path("/usr/share/RHVoice"),
+            Path("/usr/local/share/RHVoice"),
+            Path("/var/lib/RHVoice/data/RHVoice"),
+        ]
+    )
+    unique: list[Path] = []
+    seen: set[str] = set()
+    for root in roots:
+        key = str(root)
+        if key not in seen:
+            seen.add(key)
+            unique.append(root)
+    return unique
+
+
+def _read_rhvoice_kv_file(file_path: Path) -> dict[str, str]:
+    result: dict[str, str] = {}
+    try:
+        raw = file_path.read_text(encoding="utf-8", errors="replace")
+    except Exception:
+        return result
+    for line in raw.splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#") or stripped.startswith(";"):
+            continue
+        key, sep, value = stripped.partition("=")
+        if not sep:
+            continue
+        result[key.strip().lower()] = value.strip()
+    return result
+
+
+def _language_label_to_code(value: str | None) -> str | None:
+    v = (value or "").strip().lower()
+    if not v:
+        return None
+    mapping = {
+        "russian": "ru",
+        "english": "en",
+        "ukrainian": "uk",
+        "tatar": "tt",
+        "esperanto": "eo",
+        "brazilian portuguese": "pt-BR",
+        "kyrgyz": "ky",
+    }
+    return mapping.get(v, value)
+
+
 def _rhvoice_binary() -> str | None:
     env_bin = (os.getenv("RHVOICE_BIN") or "").strip()
     if env_bin:
@@ -144,35 +205,40 @@ def _list_rhvoice_voice_names() -> list[str]:
         _RHVOICE_CACHE["voices"] = []
         return []
 
-    try:
-        proc = subprocess.run(
-            [binary, "-L"],
-            check=False,
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-            timeout=10,
-        )
-    except Exception:
-        logger.exception("Failed to list RHVoice voices")
-        _RHVOICE_CACHE["at"] = now
-        _RHVOICE_CACHE["voices"] = []
-        return []
-
-    if proc.returncode != 0:
-        logger.warning("RHVoice voice listing failed: code=%s stderr=%s", proc.returncode, (proc.stderr or "")[:300])
-        _RHVOICE_CACHE["at"] = now
-        _RHVOICE_CACHE["voices"] = []
-        return []
-
     voices: list[str] = []
-    for raw_line in (proc.stdout or "").splitlines():
-        line = raw_line.strip()
-        if not line or line.lower().startswith("list of voices"):
-            continue
-        if line not in voices:
-            voices.append(line)
+    if not _rhvoice_is_test_binary(binary):
+        try:
+            proc = subprocess.run(
+                [binary, "-L"],
+                check=False,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                timeout=10,
+            )
+            if proc.returncode == 0:
+                for raw_line in (proc.stdout or "").splitlines():
+                    line = raw_line.strip()
+                    if not line or line.lower().startswith("list of voices"):
+                        continue
+                    if line not in voices:
+                        voices.append(line)
+        except Exception:
+            logger.exception("Failed to list RHVoice voices via CLI")
+
+    if not voices:
+        for root in _rhvoice_data_roots():
+            voices_dir = root / "voices"
+            if not voices_dir.is_dir():
+                continue
+            for child in sorted(voices_dir.iterdir()):
+                if not child.is_dir():
+                    continue
+                info = _read_rhvoice_kv_file(child / "voice.info")
+                name = (info.get("name") or child.name).strip()
+                if name and name not in voices:
+                    voices.append(name)
 
     _RHVOICE_CACHE["at"] = now
     _RHVOICE_CACHE["voices"] = voices
@@ -181,16 +247,37 @@ def _list_rhvoice_voice_names() -> list[str]:
 
 def get_rhvoice_voices() -> list[dict]:
     items: list[dict] = []
-    for voice_name in _list_rhvoice_voice_names():
-        items.append(
-            {
+    by_name: dict[str, dict] = {}
+    for root in _rhvoice_data_roots():
+        voices_dir = root / "voices"
+        if not voices_dir.is_dir():
+            continue
+        for child in sorted(voices_dir.iterdir()):
+            if not child.is_dir():
+                continue
+            info = _read_rhvoice_kv_file(child / "voice.info")
+            voice_name = (info.get("name") or child.name).strip()
+            if not voice_name:
+                continue
+            by_name[voice_name] = {
+                "id": f"rhvoice:{voice_name}",
+                "name": f"RHVoice {voice_name}",
+                "lang": _language_label_to_code(info.get("language")),
+                "engine": "rhvoice",
+                "voice": voice_name,
+            }
+
+    if not by_name:
+        for voice_name in _list_rhvoice_voice_names():
+            by_name[voice_name] = {
                 "id": f"rhvoice:{voice_name}",
                 "name": f"RHVoice {voice_name}",
                 "lang": None,
                 "engine": "rhvoice",
                 "voice": voice_name,
             }
-        )
+
+    items.extend(by_name[name] for name in sorted(by_name.keys(), key=str.lower))
     return items
 
 
@@ -425,8 +512,13 @@ async def _generate_rhvoice(text: str, voice_info: dict, user_id: str = None) ->
     file_path = os.path.join(tts_dir, filename)
 
     def _run() -> bool:
+        args = [binary, "-o", file_path]
+        if _rhvoice_is_test_binary(binary):
+            args.extend(["-p", voice_name])
+        else:
+            args.extend(["-W", voice_name])
         proc = subprocess.run(
-            [binary, "-W", voice_name, "-o", file_path],
+            args,
             input=text,
             check=False,
             capture_output=True,
