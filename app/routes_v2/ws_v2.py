@@ -1021,6 +1021,10 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
 
             action = str(data.get("action") or "").strip().lower()
 
+            if action == "ping":
+                await _safe_send({"type": "pong", "ts": int(time.time())})
+                continue
+
             if action == "connect_tiktok":
                 username = str(data.get("username") or "").strip().lstrip("@").lower()
                 if not username:

@@ -5,7 +5,7 @@ import json
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
-from sqlalchemy import or_
+from sqlalchemy import or_, select
 
 from app.db.database import SessionLocal
 from app.db import models
@@ -332,9 +332,9 @@ def unread_count(
         .filter(models.Notification.id.in_(ids))
         .filter(
             ~models.Notification.id.in_(
-                db.query(models.NotificationRead.notification_id)
-                .filter(models.NotificationRead.user_id == user.id)
-                .subquery()
+                select(models.NotificationRead.notification_id).where(
+                    models.NotificationRead.user_id == user.id
+                )
             )
         )
         .count()
