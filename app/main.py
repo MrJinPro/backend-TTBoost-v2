@@ -1,5 +1,6 @@
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
 import os
 import asyncio
@@ -14,7 +15,7 @@ load_dotenv()  # Load ENV, SERVER_HOST, TTS_BASE_URL, SIGN_SERVER_URL
 
 from app.routes import auth, tts, ws, voices, sounds, profile, catalog, triggers
 from app.db.database import init_db
-from app.routes_v2 import auth_v2, settings_v2, sounds_v2, triggers_v2, ws_v2, license_v2, voices_v2, gifts_v2, admin_v2, profile_v2, billing_v2, tiktok_v2, notifications_v2, stats_v2, push_v2
+from app.routes_v2 import auth_v2, settings_v2, sounds_v2, triggers_v2, ws_v2, license_v2, voices_v2, gifts_v2, admin_v2, profile_v2, billing_v2, tiktok_v2, notifications_v2, stats_v2, push_v2, spotify_v2
 from app.services import tts_service
 
 from datetime import datetime
@@ -22,6 +23,9 @@ from sqlalchemy import text
 from app.services.tiktok_service import tiktok_service
 
 app = FastAPI(title="TTBoost Backend", version="0.1.0")
+# Большие ответы (например, gifts library) в мобильной сети без gzip могут грузиться
+# очень долго и выглядеть как "вечно крутится". Включаем сжатие для ответов > 1KB.
+app.add_middleware(GZipMiddleware, minimum_size=1024)
 START_TIME = datetime.utcnow()
 
 ALLOWED_ORIGINS_ENV = os.getenv("ALLOWED_ORIGINS")
@@ -663,6 +667,7 @@ app.include_router(gifts_v2.router, prefix="/v2/gifts", tags=["v2-gifts"])
 app.include_router(stats_v2.router, prefix="/v2", tags=["v2-stats"])
 app.include_router(notifications_v2.router, prefix="/v2", tags=["v2-notifications"])
 app.include_router(push_v2.router, prefix="/v2", tags=["v2-push"])
+app.include_router(spotify_v2.router, prefix="/v2/spotify", tags=["v2-spotify"])
 app.include_router(admin_v2.router, prefix="/v2/admin", tags=["v2-admin"])
 app.include_router(profile_v2.router, prefix="/v2/profile", tags=["v2-profile"])
 app.include_router(tiktok_v2.router, prefix="/v2/tiktok", tags=["v2-tiktok"])

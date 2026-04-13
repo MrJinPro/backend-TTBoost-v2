@@ -12,7 +12,7 @@ from app.services.limits import FREE_MAX_TRIGGERS
 router = APIRouter()
 
 
-def _free_allowed_trigger_ids(db: Session, user_id: str) -> set[int]:
+def _free_allowed_trigger_ids(db: Session, user_id: str) -> set[str]:
     rows = (
         db.query(models.Trigger.id)
         .filter(models.Trigger.user_id == user_id)
@@ -20,7 +20,19 @@ def _free_allowed_trigger_ids(db: Session, user_id: str) -> set[int]:
         .limit(FREE_MAX_TRIGGERS)
         .all()
     )
-    return {int(r[0]) for r in rows}
+    return {str(r[0]) for r in rows}
+
+
+def _normalize_condition(condition_key: str | None, condition_value: str | None) -> tuple[str | None, str | None]:
+    key = condition_key.strip().lower() if isinstance(condition_key, str) else condition_key
+    value = condition_value.strip() if isinstance(condition_value, str) else condition_value
+
+    if key == "username" and value:
+        value = value.lstrip("@").lower()
+    elif key == "always":
+        value = value or "*"
+
+    return key, value
 
 
 def get_db():
@@ -50,6 +62,8 @@ class SetTriggerRequest(BaseModel):
 @router.post("/set")
 def set_trigger(req: SetTriggerRequest, user=Depends(get_current_user), db: Session = Depends(get_db)):
     print(f"🔵 set_trigger received: event={req.event_type}, key={req.condition_key}, value={req.condition_value}, action={req.action}, sound={req.sound_filename}, combo={req.combo_count}")
+
+    condition_key, condition_value = _normalize_condition(req.condition_key, req.condition_value)
 
     tariff, _lic = resolve_tariff(db, user.id)
     if tariff.id == TARIFF_FREE.id:
@@ -88,8 +102,8 @@ def set_trigger(req: SetTriggerRequest, user=Depends(get_current_user), db: Sess
     trig = models.Trigger(
         user_id=user.id,
         event_type=req.event_type,
-        condition_key=req.condition_key,
-        condition_value=req.condition_value,
+        condition_key=condition_key,
+        condition_value=condition_value,
         enabled=req.enabled,
         priority=req.priority,
         action=models.TriggerAction(req.action),
@@ -106,7 +120,7 @@ def set_trigger(req: SetTriggerRequest, user=Depends(get_current_user), db: Sess
 @router.get("/list")
 def list_triggers(user=Depends(get_current_user), db: Session = Depends(get_db)):
     tariff, _lic = resolve_tariff(db, user.id)
-    allowed_ids: set[int] | None = None
+    allowed_ids: set[str] | None = None
     if tariff.id == TARIFF_FREE.id:
         allowed_ids = _free_allowed_trigger_ids(db, user.id)
 
@@ -122,7 +136,7 @@ def list_triggers(user=Depends(get_current_user), db: Session = Depends(get_db))
             "event_type": t.event_type,
             "condition_key": t.condition_key,
             "condition_value": t.condition_value,
-            "enabled": (bool(t.enabled) and (allowed_ids is None or int(t.id) in allowed_ids)),
+            "enabled": (bool(t.enabled) and (allowed_ids is None or str(t.id) in allowed_ids)),
             "priority": t.priority,
             "action": t.action.value,
             "action_params": t.action_params,
@@ -169,7 +183,7 @@ def update_trigger_enabled(req: UpdateTriggerEnabledRequest, user=Depends(get_cu
     tariff, _lic = resolve_tariff(db, user.id)
     if req.enabled and tariff.id == TARIFF_FREE.id:
         allowed = _free_allowed_trigger_ids(db, user.id)
-        if int(t.id) not in allowed:
+        if str(t.id) not in allowed:
             raise HTTPException(
                 status_code=403,
                 detail=f"В бесплатном тарифе можно включить только {FREE_MAX_TRIGGERS} триггеров. Перейдите на тариф выше, чтобы использовать больше.",
@@ -204,7 +218,7 @@ def update_trigger(req: UpdateTriggerRequest, user=Depends(get_current_user), db
     tariff, _lic = resolve_tariff(db, user.id)
     if req.enabled is True and tariff.id == TARIFF_FREE.id:
         allowed = _free_allowed_trigger_ids(db, user.id)
-        if int(t.id) not in allowed:
+        if str(t.id) not in allowed:
             raise HTTPException(
                 status_code=403,
                 detail=f"В бесплатном тарифе можно включить только {FREE_MAX_TRIGGERS} триггеров. Перейдите на тариф выше, чтобы использовать больше.",
@@ -218,9 +232,13 @@ def update_trigger(req: UpdateTriggerRequest, user=Depends(get_current_user), db
     if req.priority is not None:
         t.priority = req.priority
     if req.condition_key is not None:
-        t.condition_key = req.condition_key
-    if req.condition_value is not None:
-        t.condition_value = req.condition_value
+        normalized_key, normalized_value = _normalize_condition(req.condition_key, req.condition_value if req.condition_value is not None else t.condition_value)
+        t.condition_key = normalized_key
+        if req.condition_value is not None:
+            t.condition_value = normalized_value
+    elif req.condition_value is not None:
+        _, normalized_value = _normalize_condition(t.condition_key, req.condition_value)
+        t.condition_value = normalized_value
     if req.combo_count is not None:
         t.combo_count = max(0, int(req.combo_count))
 

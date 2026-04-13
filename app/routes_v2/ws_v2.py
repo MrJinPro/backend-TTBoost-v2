@@ -197,12 +197,19 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
         return True
 
     def _matches_always(t: models.Trigger) -> bool:
-        if not t.condition_key or t.condition_key == "always":
+        condition_key = str(t.condition_key or "").strip().lower()
+        if not condition_key or condition_key == "always":
             if not t.condition_value:
                 return True
             v = str(t.condition_value).strip().lower()
             return v in ("true", "1", "yes", "*")
         return False
+
+    def _trigger_condition_key(t: models.Trigger) -> str:
+        return str(t.condition_key or "").strip().lower()
+
+    def _trigger_condition_value(t: models.Trigger) -> str:
+        return str(t.condition_value or "").strip()
 
     def _get_allowed_trigger_ids() -> set[str] | None:
         nonlocal _allowed_trigger_ids_cache, _allowed_trigger_ids_cache_at
@@ -401,7 +408,9 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
         trig = q.all()
         tts_url = None
         for t in trig:
-            if t.condition_key == "message_contains" and t.condition_value and t.condition_value.lower() in text.lower():
+            condition_key = _trigger_condition_key(t)
+            condition_value = _trigger_condition_value(t)
+            if condition_key == "message_contains" and condition_value and condition_value.lower() in text.lower():
                 if t.action == models.TriggerAction.tts and t.action_params:
                     if not _cooldown_allows(t.id, (t.action_params or {}).get("cooldown_seconds"), username=u):
                         continue
@@ -454,8 +463,8 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
                 matched = False
                 if _matches_always(t):
                     matched = True
-                elif t.condition_key == "username" and t.condition_value:
-                    cv = _norm_tiktok_login(t.condition_value)
+                elif _trigger_condition_key(t) == "username" and _trigger_condition_value(t):
+                    cv = _norm_tiktok_login(_trigger_condition_value(t))
                     matched = bool(cv) and (cv == u_key)
 
                 if matched:
@@ -515,9 +524,12 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
                 )
             
             # Проверяем по gift_id (строгое сравнение строк)
-            if t.condition_key == "gift_id" and t.condition_value:
+            condition_key = _trigger_condition_key(t)
+            condition_value = _trigger_condition_value(t)
+
+            if condition_key == "gift_id" and condition_value:
                 # Приводим оба значения к строке для сравнения
-                if str(t.condition_value) == str(gift_id):
+                if str(condition_value) == str(gift_id):
                     # combo_count: 0 = любое количество, иначе требуем count >= combo_count
                     if getattr(t, "combo_count", 0) and int(count) < int(t.combo_count):
                         continue
@@ -535,11 +547,11 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
                         break
                 else:
                     if WS_DEBUG:
-                        logger.debug("on_gift: no match gift_id trigger=%s %r != %r", t.id, t.condition_value, gift_id)
-                    
+                        logger.debug("on_gift: no match gift_id trigger=%s %r != %r", t.id, condition_value, gift_id)
+
             # Проверяем по gift_name (регистронезависимое сравнение)
-            elif t.condition_key == "gift_name" and t.condition_value:
-                if t.condition_value.lower() == gift_name.lower():
+            elif condition_key == "gift_name" and condition_value:
+                if condition_value.lower() == gift_name.lower():
                     if getattr(t, "combo_count", 0) and int(count) < int(t.combo_count):
                         continue
                     fn = t.action_params.get("sound_filename") if t.action_params else None
@@ -556,7 +568,7 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
                         break
                 else:
                     if WS_DEBUG:
-                        logger.debug("on_gift: no match gift_name trigger=%s %r != %r", t.id, t.condition_value, gift_name)
+                        logger.debug("on_gift: no match gift_name trigger=%s %r != %r", t.id, condition_value, gift_name)
 
         # Фолбэк: если нет пользовательского триггера — используем глобальный звук подарка
         if not sound_url and s["gift_sounds_enabled"]:
@@ -667,8 +679,8 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
             matched = False
             if _matches_always(t):
                 matched = True
-            elif t.condition_key == "username" and t.condition_value:
-                cv = str(t.condition_value).strip().lstrip("@").lower()
+            elif _trigger_condition_key(t) == "username" and _trigger_condition_value(t):
+                cv = _trigger_condition_value(t).strip().lstrip("@").lower()
                 matched = (cv == login_norm) or (not login_norm and cv == nick_norm) or (nick_norm and cv == nick_norm)
 
             if matched:
@@ -749,6 +761,7 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
     async def on_follow(u: str):
         s = get_current_settings()
         sound_url = None
+        u_norm = _norm_tiktok_login(u)
 
         allowed_ids = _get_allowed_trigger_ids()
         q = (
@@ -768,8 +781,8 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
             if not t.condition_key or t.condition_key == "always":
                 if not t.condition_value or str(t.condition_value).lower() in ("true", "1", "yes", "*"):
                     matched = True
-            elif t.condition_key == "username" and t.condition_value:
-                matched = (t.condition_value == u)
+            elif _trigger_condition_key(t) == "username" and _trigger_condition_value(t):
+                matched = (_norm_tiktok_login(_trigger_condition_value(t)) == u_norm)
 
             if matched:
                 fn = t.action_params.get("sound_filename") if t.action_params else None
@@ -791,6 +804,7 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
     async def on_subscribe(u: str):
         s = get_current_settings()
         sound_url = None
+        u_norm = _norm_tiktok_login(u)
 
         allowed_ids = _get_allowed_trigger_ids()
         q = (
@@ -810,8 +824,8 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
             if not t.condition_key or t.condition_key == "always":
                 if not t.condition_value or str(t.condition_value).lower() in ("true", "1", "yes", "*"):
                     matched = True
-            elif t.condition_key == "username" and t.condition_value:
-                matched = (t.condition_value == u)
+            elif _trigger_condition_key(t) == "username" and _trigger_condition_value(t):
+                matched = (_norm_tiktok_login(_trigger_condition_value(t)) == u_norm)
 
             if matched:
                 fn = t.action_params.get("sound_filename") if t.action_params else None
