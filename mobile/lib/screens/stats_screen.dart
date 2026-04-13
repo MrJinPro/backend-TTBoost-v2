@@ -63,19 +63,19 @@ class _StatsScreenState extends State<StatsScreen> {
     return Consumer<WsProvider>(
       builder: (context, ws, child) {
         return SafeArea(
-          child: Column(
-            children: [
+          child: CustomScrollView(
+            slivers: [
               // Заголовок с фильтрами
-              _buildHeader(),
+              SliverToBoxAdapter(child: _buildHeader()),
 
               // Исторические донаты (из API)
-              _buildDonationsSection(),
+              SliverToBoxAdapter(child: _buildDonationsSection()),
 
               // Статистика текущего стрима (live)
-              _buildStatsSection(ws),
+              SliverToBoxAdapter(child: _buildStatsSection(ws)),
 
-              // Список событий
-              Expanded(child: _buildEventsList(ws)),
+              // События
+              _buildEventsSliver(ws),
             ],
           ),
         );
@@ -580,20 +580,27 @@ class _StatsScreenState extends State<StatsScreen> {
     );
   }
 
-  Widget _buildEventsList(WsProvider ws) {
+  Widget _buildEventsSliver(WsProvider ws) {
     final filteredEvents = _getFilteredEvents(ws);
-    
+
     if (filteredEvents.isEmpty) {
-      return _buildEmptyState();
+      return SliverFillRemaining(
+        hasScrollBody: false,
+        child: _buildEmptyState(),
+      );
     }
 
-    return ListView.builder(
+    return SliverPadding(
       padding: const EdgeInsets.all(16),
-      itemCount: filteredEvents.length,
-      itemBuilder: (context, index) {
-        final event = filteredEvents[index];
-        return _buildEventCard(event);
-      },
+      sliver: SliverList(
+        delegate: SliverChildBuilderDelegate(
+          (context, index) {
+            final event = filteredEvents[index];
+            return _buildEventCard(event);
+          },
+          childCount: filteredEvents.length,
+        ),
+      ),
     );
   }
 

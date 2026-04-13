@@ -9,6 +9,7 @@ import '../services/overlay_bridge.dart';
 class SpotifyProvider extends ChangeNotifier {
   final SpotifyService _spotify = SpotifyService();
 
+  bool _configured = false;
   bool _connected = false;
   bool _playing = false;
   String? _track;
@@ -19,7 +20,7 @@ class SpotifyProvider extends ChangeNotifier {
   Timer? _pollTimer;
   Timer? _overlayCmdTimer;
 
-  bool get configured => _spotify.isConfigured;
+  bool get configured => _configured;
   bool get connected => _connected;
   bool get playing => _playing;
   String? get track => _track;
@@ -35,8 +36,10 @@ class SpotifyProvider extends ChangeNotifier {
     if (kIsWeb) return;
 
     try {
+      await _spotify.loadConfig();
+      _configured = _spotify.isConfigured;
       final hasRt = await _spotify.hasRefreshToken();
-      _connected = hasRt;
+      _connected = _configured && hasRt;
       await OverlayBridge.setSpotifyStatus(
         connected: _connected,
         isPlaying: false,
@@ -50,7 +53,7 @@ class SpotifyProvider extends ChangeNotifier {
         _startOverlayCommandListener();
       }
     } catch (_) {
-      // ignore
+      _configured = false;
     }
     notifyListeners();
   }
@@ -60,9 +63,20 @@ class SpotifyProvider extends ChangeNotifier {
     notifyListeners();
 
     if (!configured) {
-      _error = 'Нужно задать SPOTIFY_CLIENT_ID (через --dart-define=SPOTIFY_CLIENT_ID=...)';
-      notifyListeners();
-      return;
+      try {
+        await _spotify.loadConfig();
+        _configured = _spotify.isConfigured;
+      } catch (e) {
+        _configured = false;
+        _error = e.toString();
+        notifyListeners();
+        return;
+      }
+      if (!_configured) {
+        _error = 'Spotify не настроен на сервере. Заполните SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET и SPOTIFY_REDIRECT_URI в backend .env.';
+        notifyListeners();
+        return;
+      }
     }
 
     if (kIsWeb) {
@@ -73,6 +87,7 @@ class SpotifyProvider extends ChangeNotifier {
 
     try {
       await _spotify.connect();
+      _configured = _spotify.isConfigured;
       _connected = true;
       await OverlayBridge.setSpotifyStatus(
         connected: true,

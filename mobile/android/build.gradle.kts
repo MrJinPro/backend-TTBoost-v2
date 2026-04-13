@@ -1,3 +1,11 @@
+// Compatibility bridge for plugins that still expect old Groovy-style
+// rootProject.ext.flutter.compileSdkVersion/minSdkVersion/targetSdkVersion.
+extra["flutter"] = mapOf(
+    "compileSdkVersion" to 35,
+    "minSdkVersion" to 21,
+    "targetSdkVersion" to 35,
+)
+
 allprojects {
     repositories {
         google()

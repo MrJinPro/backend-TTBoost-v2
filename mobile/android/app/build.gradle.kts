@@ -59,6 +59,15 @@ android {
         manifestPlaceholders["appAuthRedirectScheme"] = "novaboost"
     }
 
+    // AGP 8.3.x can produce AABs that fail Play 16 KB page-size checks for
+    // uncompressed native libraries. Legacy packaging stores JNI libs compressed,
+    // which is the recommended compatibility workaround until AGP is upgraded.
+    packaging {
+        jniLibs {
+            useLegacyPackaging = true
+        }
+    }
+
     buildTypes {
         release {
             signingConfig = signingConfigs.getByName("release")

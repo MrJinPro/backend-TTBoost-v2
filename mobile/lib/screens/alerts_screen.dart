@@ -111,6 +111,180 @@ class _AlertsScreenState extends State<AlertsScreen> {
     }
   }
 
+  Future<({String filename, String url})?> _showMyInstantsImportDialog(ApiService api) async {
+    final searchCtrl = TextEditingController();
+    bool loading = false;
+    bool importing = false;
+    String? previewingPageUrl;
+    List<Map<String, dynamic>> results = [];
+
+    return showDialog<({String filename, String url})?>(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setStateDialog) {
+            Future<void> runSearch() async {
+              final q = searchCtrl.text.trim();
+              if (q.length < 2) {
+                setStateDialog(() => results = []);
+                return;
+              }
+
+              setStateDialog(() => loading = true);
+              final found = await api.searchMyInstants(q);
+              if (!context.mounted) return;
+              setStateDialog(() {
+                results = found;
+                loading = false;
+              });
+            }
+
+            Future<void> importItem(Map<String, dynamic> item) async {
+              final pageUrl = item['page_url']?.toString().trim() ?? '';
+              final title = item['title']?.toString().trim();
+              if (pageUrl.isEmpty) return;
+
+              setStateDialog(() => importing = true);
+              final imported = await api.importMyInstants(pageUrl: pageUrl, title: title);
+              if (!context.mounted) return;
+              setStateDialog(() => importing = false);
+              if (imported == null) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(api.lastError ?? 'Не удалось импортировать звук')),
+                );
+                return;
+              }
+              Navigator.of(context).pop(imported);
+            }
+
+            Future<void> previewItem(Map<String, dynamic> item) async {
+              final pageUrl = item['page_url']?.toString().trim() ?? '';
+              if (pageUrl.isEmpty) return;
+
+              setStateDialog(() => previewingPageUrl = pageUrl);
+              try {
+                final previewUrl = await api.getMyInstantsPreviewUrl(pageUrl: pageUrl);
+                if (previewUrl == null || previewUrl.isEmpty) {
+                  if (!context.mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(api.lastError ?? 'Не удалось загрузить превью')),
+                  );
+                  return;
+                }
+                await _audio.playGift(url: previewUrl, volume: 1.0);
+              } catch (e) {
+                if (!context.mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Не удалось воспроизвести превью: $e')),
+                );
+              } finally {
+                if (context.mounted) {
+                  setStateDialog(() => previewingPageUrl = null);
+                }
+              }
+            }
+
+            return AlertDialog(
+              backgroundColor: AppColors.cardBackground,
+              title: const Text('Импорт из Myinstants'),
+              content: SizedBox(
+                width: 520,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: searchCtrl,
+                      decoration: InputDecoration(
+                        hintText: 'Поиск по названию звука',
+                        filled: true,
+                        fillColor: AppColors.surfaceColor,
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        suffixIcon: IconButton(
+                          onPressed: (loading || importing) ? null : runSearch,
+                          icon: const Icon(Icons.search),
+                        ),
+                      ),
+                      onSubmitted: (_) {
+                        if (!loading && !importing) runSearch();
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        'Найденный звук будет импортирован в вашу библиотеку и затем доступен в триггерах как обычный файл.',
+                        style: AppTextStyles.bodySmall.copyWith(color: AppColors.secondaryText),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    if (loading)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 12),
+                        child: LinearProgressIndicator(),
+                      )
+                    else
+                      SizedBox(
+                        height: 320,
+                        child: results.isEmpty
+                            ? Center(
+                                child: Text(
+                                  'Введите запрос и нажмите поиск',
+                                  style: AppTextStyles.bodyMedium.copyWith(color: AppColors.secondaryText),
+                                ),
+                              )
+                            : ListView.separated(
+                                itemCount: results.length,
+                                separatorBuilder: (_, __) => const Divider(color: AppColors.cardBorder),
+                                itemBuilder: (context, index) {
+                                  final item = results[index];
+                                  final title = item['title']?.toString() ?? '';
+                                  final pageUrl = item['page_url']?.toString() ?? '';
+                                  return ListTile(
+                                    contentPadding: EdgeInsets.zero,
+                                    title: Text(title, maxLines: 2, overflow: TextOverflow.ellipsis),
+                                    subtitle: Text(pageUrl, maxLines: 1, overflow: TextOverflow.ellipsis),
+                                    trailing: Wrap(
+                                      spacing: 8,
+                                      children: [
+                                        IconButton(
+                                          tooltip: 'Прослушать',
+                                          onPressed: (importing || loading || previewingPageUrl == pageUrl)
+                                              ? null
+                                              : () => previewItem(item),
+                                          icon: previewingPageUrl == pageUrl
+                                              ? const SizedBox(
+                                                  width: 18,
+                                                  height: 18,
+                                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                                )
+                                              : const Icon(Icons.play_arrow),
+                                        ),
+                                        FilledButton(
+                                          onPressed: importing ? null : () => importItem(item),
+                                          child: const Text('Импорт'),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                },
+                              ),
+                      ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: importing ? null : () => Navigator.of(context).pop(),
+                  child: const Text('Закрыть'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -1027,6 +1201,23 @@ class _AlertsScreenState extends State<AlertsScreen> {
                                   },
                             icon: const Icon(Icons.upload_file),
                             label: const Text('Загрузить звук (<= 1MB)'),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+
+                        SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton.icon(
+                            onPressed: saving
+                                ? null
+                                : () async {
+                                    final imported = await _showMyInstantsImportDialog(api);
+                                    if (imported == null) return;
+                                    await loadSounds(setModalState);
+                                    setModalState(() => selectedSound = imported.filename);
+                                  },
+                            icon: const Icon(Icons.library_music),
+                            label: const Text('Выбрать из Myinstants'),
                           ),
                         ),
                         const SizedBox(height: 16),

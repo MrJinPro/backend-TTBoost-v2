@@ -1,7 +1,7 @@
 ﻿name: ttboost_mobile
 description: TTBoost Mobile (MVP)
 publish_to: "none"
-version: 0.1.11
+version: 0.1.11+12
 
 environment:
   sdk: ">=3.3.0 <4.0.0"
@@ -29,7 +29,7 @@ dependencies:
   url_launcher: ^6.3.1
   device_info_plus: ^10.1.2
   flutter_appauth: ^6.0.0
-  supabase_flutter: ^2.8.0
+  supabase_flutter: 2.8.0
 
 dev_dependencies:
   flutter_test:

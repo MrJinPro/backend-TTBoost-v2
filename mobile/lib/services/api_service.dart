@@ -7,6 +7,9 @@ class ApiService {
   final String baseUrl;
   String? _jwtToken;
   String? lastError;
+  String? lastTtsEngineUsed;
+  String? lastTtsVoiceIdUsed;
+  bool lastTtsFallbackUsed = false;
 
   ApiService({String baseUrl = kApiBaseUrl})
       : baseUrl = baseUrl.endsWith('/') ? baseUrl.substring(0, baseUrl.length - 1) : baseUrl;
@@ -15,9 +18,22 @@ class ApiService {
     lastError = message;
   }
 
+  String _bodyUtf8(http.Response resp) {
+    try {
+      return utf8.decode(resp.bodyBytes);
+    } catch (_) {
+      // Fallback: package:http will decode with latin1 by default.
+      return resp.body;
+    }
+  }
+
+  dynamic _jsonDecodeResponse(http.Response resp) {
+    return jsonDecode(_bodyUtf8(resp));
+  }
+
   String _extractErrorMessage(http.Response resp) {
     try {
-      final decoded = jsonDecode(resp.body);
+      final decoded = _jsonDecodeResponse(resp);
       if (decoded is Map<String, dynamic>) {
         final detail = decoded['detail'];
         if (detail is String && detail.trim().isNotEmpty) return detail;
@@ -82,7 +98,7 @@ class ApiService {
       );
 
       if (resp.statusCode == 200) {
-        final m = jsonDecode(resp.body) as Map<String, dynamic>;
+        final m = _jsonDecodeResponse(resp) as Map<String, dynamic>;
         final t = m['access_token'] as String? ?? '';
         _jwtToken = t;
         final profile = await getProfile();
@@ -115,7 +131,7 @@ class ApiService {
         body: jsonEncode({}),
       );
       if (resp.statusCode == 200) {
-        final m = jsonDecode(resp.body) as Map<String, dynamic>;
+        final m = _jsonDecodeResponse(resp) as Map<String, dynamic>;
         final t = (m['access_token'] as String? ?? '').trim();
         if (t.isEmpty) {
           _setLastError('Пустой токен от сервера');
@@ -140,14 +156,14 @@ class ApiService {
       final uriV2 = Uri.parse('$baseUrl/v2/auth/me');
       final respV2 = await http.get(uriV2, headers: _authHeaders());
       if (respV2.statusCode == 200) {
-        return jsonDecode(respV2.body) as Map<String, dynamic>;
+        return _jsonDecodeResponse(respV2) as Map<String, dynamic>;
       }
 
       // fallback на legacy (на случай старого бэкенда)
       final uriLegacy = Uri.parse('$baseUrl/auth/me');
       final respLegacy = await http.get(uriLegacy, headers: _authHeaders());
       if (respLegacy.statusCode == 200) {
-        return jsonDecode(respLegacy.body) as Map<String, dynamic>;
+        return _jsonDecodeResponse(respLegacy) as Map<String, dynamic>;
       }
 
       return null;
@@ -163,7 +179,7 @@ class ApiService {
       final uri = Uri.parse('$baseUrl/v2/notifications/unread_count');
       final resp = await http.get(uri, headers: _authHeaders());
       if (resp.statusCode == 200) {
-        final m = jsonDecode(resp.body) as Map<String, dynamic>;
+        final m = _jsonDecodeResponse(resp) as Map<String, dynamic>;
         final v = m['unread_count'];
         if (v is int) return v;
         if (v is num) return v.toInt();
@@ -185,7 +201,7 @@ class ApiService {
           .replace(queryParameters: {'limit': '$limit', 'offset': '$offset'});
       final resp = await http.get(uri, headers: _authHeaders());
       if (resp.statusCode == 200) {
-        final m = jsonDecode(resp.body) as Map<String, dynamic>;
+        final m = _jsonDecodeResponse(resp) as Map<String, dynamic>;
         final items = m['items'] as List<dynamic>? ?? [];
         return items.cast<Map<String, dynamic>>();
       }
@@ -342,7 +358,7 @@ class ApiService {
       final resp = await http.Response.fromStream(streamed);
 
       if (resp.statusCode == 200) {
-        final m = jsonDecode(resp.body) as Map<String, dynamic>;
+        final m = _jsonDecodeResponse(resp) as Map<String, dynamic>;
         final url = m['avatar_url']?.toString();
         return (url != null && url.isNotEmpty) ? url : null;
       }
@@ -364,7 +380,7 @@ class ApiService {
       final uri = u.isNotEmpty ? base.replace(queryParameters: {'username': u}) : base;
       final resp = await http.get(uri, headers: _authHeaders());
       if (resp.statusCode == 200) {
-        return jsonDecode(resp.body) as Map<String, dynamic>;
+        return _jsonDecodeResponse(resp) as Map<String, dynamic>;
       }
       _setLastError(_extractErrorMessage(resp));
       return null;
@@ -497,7 +513,7 @@ class ApiService {
       final uriV2 = Uri.parse('$baseUrl/v2/settings/get');
       final respV2 = await http.get(uriV2, headers: _authHeaders());
       if (respV2.statusCode == 200) {
-        return jsonDecode(respV2.body) as Map<String, dynamic>;
+        return _jsonDecodeResponse(respV2) as Map<String, dynamic>;
       }
       return null;
     } catch (e) {
@@ -523,7 +539,7 @@ class ApiService {
       final uriV2 = Uri.parse('$baseUrl/v2/triggers/list');
       final respV2 = await http.get(uriV2, headers: _authHeaders());
       if (respV2.statusCode == 200) {
-        final map = jsonDecode(respV2.body) as Map<String, dynamic>;
+        final map = _jsonDecodeResponse(respV2) as Map<String, dynamic>;
         final triggers = map['triggers'] as List<dynamic>? ?? [];
         return triggers.cast<Map<String, dynamic>>();
       }
@@ -532,7 +548,7 @@ class ApiService {
       final uriV2Alias = Uri.parse('$baseUrl/v2/triggers');
       final respV2Alias = await http.get(uriV2Alias, headers: _authHeaders());
       if (respV2Alias.statusCode == 200) {
-        final map = jsonDecode(respV2Alias.body) as Map<String, dynamic>;
+        final map = _jsonDecodeResponse(respV2Alias) as Map<String, dynamic>;
         final triggers = map['triggers'] as List<dynamic>? ?? [];
         return triggers.cast<Map<String, dynamic>>();
       }
@@ -606,7 +622,7 @@ class ApiService {
       final uri = Uri.parse('$baseUrl/v2/voices');
       final resp = await http.get(uri, headers: _authHeaders());
       if (resp.statusCode == 200) {
-        final m = jsonDecode(resp.body) as Map<String, dynamic>;
+        final m = _jsonDecodeResponse(resp) as Map<String, dynamic>;
         final voices = m['voices'] as List<dynamic>? ?? [];
         return voices.cast<Map<String, dynamic>>();
       }
@@ -622,7 +638,7 @@ class ApiService {
       final uri = Uri.parse('$baseUrl/v2/sounds/list');
       final resp = await http.get(uri, headers: _authHeaders());
       if (resp.statusCode == 200) {
-        final m = jsonDecode(resp.body) as Map<String, dynamic>;
+        final m = _jsonDecodeResponse(resp) as Map<String, dynamic>;
         final sounds = m['sounds'] as List<dynamic>? ?? [];
         return sounds.cast<Map<String, dynamic>>();
       }
@@ -636,6 +652,9 @@ class ApiService {
   Future<String?> generateTts({required String text, String? voiceId}) async {
     try {
       _setLastError(null);
+      lastTtsEngineUsed = null;
+      lastTtsVoiceIdUsed = null;
+      lastTtsFallbackUsed = false;
       final uri = Uri.parse('$baseUrl/tts/generate');
       final resp = await http.post(
         uri,
@@ -646,8 +665,21 @@ class ApiService {
         }),
       );
       if (resp.statusCode == 200) {
-        final m = jsonDecode(resp.body) as Map<String, dynamic>;
+        final m = _jsonDecodeResponse(resp) as Map<String, dynamic>;
+        lastTtsEngineUsed = m['engine_used']?.toString();
+        lastTtsVoiceIdUsed = m['voice_id_used']?.toString();
+        lastTtsFallbackUsed = m['fallback_used'] == true;
+        final backendError = m['error']?.toString().trim();
         final url = m['url']?.toString();
+        if (lastTtsFallbackUsed) {
+          final usedVoice = lastTtsVoiceIdUsed ?? 'gtts-ru';
+          final usedEngine = lastTtsEngineUsed ?? 'gtts';
+          _setLastError(
+            (backendError != null && backendError.isNotEmpty)
+                ? 'Выбранный голос недоступен: $backendError. Использован резервный голос $usedVoice ($usedEngine).'
+                : 'Выбранный голос недоступен. Использован резервный голос $usedVoice ($usedEngine).',
+          );
+        }
         if (url != null && url.trim().isNotEmpty) return url.trim();
         _setLastError('Пустой URL озвучки');
         return null;
@@ -664,10 +696,14 @@ class ApiService {
   Future<List<Map<String, dynamic>>> getGiftsLibrary() async {
     try {
       _setLastError(null);
-      final uri = Uri.parse('$baseUrl/v2/gifts/library');
-      final resp = await http.get(uri, headers: _authHeaders());
+      // Большой payload: на мобильных сетях без gzip и таймаута может "висеть".
+      // Просим облегчённый ответ без поля sound (оно не нужно для выбора подарка).
+      final uri = Uri.parse('$baseUrl/v2/gifts/library').replace(
+        queryParameters: {'include_sound': '0'},
+      );
+      final resp = await http.get(uri, headers: _authHeaders()).timeout(const Duration(seconds: 20));
       if (resp.statusCode == 200) {
-        final m = jsonDecode(resp.body) as Map<String, dynamic>;
+        final m = _jsonDecodeResponse(resp) as Map<String, dynamic>;
         final gifts = m['gifts'] as List<dynamic>? ?? [];
         return gifts.cast<Map<String, dynamic>>();
       }
@@ -732,6 +768,85 @@ class ApiService {
     } catch (e) {
       _setLastError('Не удалось загрузить звук');
       print('uploadSound error: $e');
+      return null;
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> searchMyInstants(String query) async {
+    try {
+      _setLastError(null);
+      final q = query.trim();
+      if (q.length < 2) return [];
+
+      final uri = Uri.parse('$baseUrl/v2/sounds/external/myinstants/search').replace(
+        queryParameters: {'q': q},
+      );
+      final resp = await http.get(uri, headers: _authHeaders());
+      if (resp.statusCode == 200) {
+        final m = _jsonDecodeResponse(resp) as Map<String, dynamic>;
+        final items = m['items'] as List<dynamic>? ?? [];
+        return items.cast<Map<String, dynamic>>();
+      }
+      _setLastError(_extractErrorMessage(resp));
+      return [];
+    } catch (e) {
+      _setLastError('Не удалось выполнить поиск Myinstants');
+      print('searchMyInstants error: $e');
+      return [];
+    }
+  }
+
+  Future<({String filename, String url})?> importMyInstants({
+    required String pageUrl,
+    String? title,
+  }) async {
+    try {
+      _setLastError(null);
+      final uri = Uri.parse('$baseUrl/v2/sounds/external/myinstants/import');
+      final resp = await http.post(
+        uri,
+        headers: _authHeaders(),
+        body: jsonEncode({
+          'page_url': pageUrl.trim(),
+          if (title != null && title.trim().isNotEmpty) 'title': title.trim(),
+        }),
+      );
+      if (resp.statusCode == 200) {
+        final m = _jsonDecodeResponse(resp) as Map<String, dynamic>;
+        final fn = (m['filename'] ?? '').toString().trim();
+        final url = (m['url'] ?? '').toString().trim();
+        if (fn.isEmpty || url.isEmpty) {
+          _setLastError('Сервер вернул неполные данные звука');
+          return null;
+        }
+        return (filename: fn, url: url);
+      }
+      _setLastError(_extractErrorMessage(resp));
+      return null;
+    } catch (e) {
+      _setLastError('Не удалось импортировать звук из Myinstants');
+      print('importMyInstants error: $e');
+      return null;
+    }
+  }
+
+  Future<String?> getMyInstantsPreviewUrl({required String pageUrl}) async {
+    try {
+      _setLastError(null);
+      final uri = Uri.parse('$baseUrl/v2/sounds/external/myinstants/preview').replace(
+        queryParameters: {'page_url': pageUrl.trim()},
+      );
+      final resp = await http.get(uri, headers: _authHeaders());
+      if (resp.statusCode == 200) {
+        final m = _jsonDecodeResponse(resp) as Map<String, dynamic>;
+        final previewUrl = (m['preview_url'] ?? '').toString().trim();
+        return previewUrl.isEmpty ? null : previewUrl;
+      }
+      _setLastError(_extractErrorMessage(resp));
+      return null;
+    } catch (e) {
+      _setLastError('Не удалось загрузить превью звука');
+      print('getMyInstantsPreviewUrl error: $e');
       return null;
     }
   }
@@ -844,7 +959,7 @@ class ApiService {
       );
 
       if (resp.statusCode == 200) {
-        final m = jsonDecode(resp.body) as Map<String, dynamic>;
+        final m = _jsonDecodeResponse(resp) as Map<String, dynamic>;
         final t = m['access_token'] as String? ?? '';
         if (t.isEmpty) return null;
         _jwtToken = t;
@@ -901,7 +1016,7 @@ class ApiService {
       final uri = Uri.parse('$baseUrl/v2/stats/overview');
       final resp = await http.get(uri, headers: _authHeaders());
       if (resp.statusCode == 200) {
-        return jsonDecode(resp.body) as Map<String, dynamic>;
+        return _jsonDecodeResponse(resp) as Map<String, dynamic>;
       }
       _setLastError(_extractErrorMessage(resp));
       return null;
@@ -924,7 +1039,7 @@ class ApiService {
       );
       final resp = await http.get(uri, headers: _authHeaders());
       if (resp.statusCode == 200) {
-        final m = jsonDecode(resp.body) as Map<String, dynamic>;
+        final m = _jsonDecodeResponse(resp) as Map<String, dynamic>;
         final donors = m['donors'] as List<dynamic>? ?? [];
         return donors.cast<Map<String, dynamic>>();
       }
@@ -948,7 +1063,7 @@ class ApiService {
       final uri = Uri.parse('$baseUrl/v2/stats/donor/$u');
       final resp = await http.get(uri, headers: _authHeaders());
       if (resp.statusCode == 200) {
-        return jsonDecode(resp.body) as Map<String, dynamic>;
+        return _jsonDecodeResponse(resp) as Map<String, dynamic>;
       }
       _setLastError(_extractErrorMessage(resp));
       return null;

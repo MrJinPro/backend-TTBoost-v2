@@ -12,17 +12,17 @@ import 'dart:async';
 const _kPrefLastTikTokUsername = 'last_tiktok_username';
 const _kPrefAutoConnectLive = 'auto_connect_live';
 
-// Tikfinity-like behavior: auto-connect should not loop endlessly.
-const int _kMaxAutoReconnectAttempts = 1;
+// Auto reconnect uses backoff and never spams parallel attempts.
 
-/// Provider ╨┤╨╗╤П ╤Г╨┐╤А╨░╨▓╨╗╨╡╨╜╨╕╤П WebSocket ╤Б╨╛╨╡╨┤╨╕╨╜╨╡╨╜╨╕╨╡╨╝ ╨╕ ╤Б╨╛╤Б╤В╨╛╤П╨╜╨╕╨╡╨╝ ╤Б╤В╤А╨╕╨╝╨░
-/// ╨Я╤А╨╡╨┤╨╛╤Б╤В╨░╨▓╨╗╤П╨╡╤В ╨┤╨╛╤Б╤В╤Г╨┐ ╨║ WS ╤Б╨╛╨▒╤Л╤В╨╕╤П╨╝, ╤Б╤В╨░╤В╤Г╤Б╤Г ╨┐╨╛╨┤╨║╨╗╤О╤З╨╡╨╜╨╕╤П ╨╕ ╤Г╨┐╤А╨░╨▓╨╗╨╡╨╜╨╕╤О TikTok ╤Б╨╛╨╡╨┤╨╕╨╜╨╡╨╜╨╕╨╡╨╝
+/// Provider для управления WebSocket соединением и состоянием стрима.
+/// Предоставляет доступ к WS событиям, статусу подключения и управлению TikTok соединением.
 class WsProvider extends ChangeNotifier {
   final WsService _ws = WsService();
   ApiService _api;
   String? _activeToken;
   final AudioPlaybackService _audio = AudioPlaybackService();
   Timer? _overlayStopListener;
+  Timer? _wsKeepAliveTimer;
 
   bool _premiumEnabled = false;
 
@@ -31,9 +31,14 @@ class WsProvider extends ChangeNotifier {
 
   bool _autoConnectLive = false;
   bool _manualLiveDisconnect = false;
+  bool _sessionAutoReconnectLive = false;
   Timer? _autoReconnectTimer;
   int _autoReconnectAttempt = 0;
   bool _autoReconnectInFlight = false;
+
+  Timer? _wsReconnectTimer;
+  int _wsReconnectAttempt = 0;
+  bool _wsReconnectInFlight = false;
   
   bool _wsConnected = false;
   bool _tiktokConnected = false;
@@ -94,7 +99,28 @@ class WsProvider extends ChangeNotifier {
       onSetTtsVolume: (v) async => updateTtsVolume(v),
       onSetGiftsVolume: (v) async => updateGiftsVolume(v),
       onTestTts: _testTtsFromOverlay,
+      onReconnectLive: _reconnectLiveFromOverlay,
     );
+  }
+
+  Future<void> _reconnectLiveFromOverlay() async {
+    try {
+      final u = (_currentTikTokUsername ?? '').trim();
+      if (u.isEmpty) return;
+
+      _manualLiveDisconnect = false;
+      _cancelAutoReconnect();
+
+      final token = (_activeToken ?? '').trim();
+      if (!_wsConnected && token.isNotEmpty) {
+        _ws.connect(token);
+        await Future<void>.delayed(const Duration(milliseconds: 600));
+      }
+
+      await connectToTikTok(u);
+    } catch (_) {
+      // Overlay command should never crash provider.
+    }
   }
 
   /// ╨Ю╨▒╨╜╨╛╨▓╨╗╤П╨╡╤В ╤Б╨╛╤Е╤А╨░╨╜╤С╨╜╨╜╤Л╨╣ TikTok username ╨╗╨╛╨║╨░╨╗╤М╨╜╨╛ (╨╕ ╨┤╨╗╤П ╨╛╨▓╨╡╤А╨╗╨╡╤П),
@@ -105,9 +131,11 @@ class WsProvider extends ChangeNotifier {
 
     if (normalized.isEmpty) {
       _currentTikTokUsername = null;
+      _sessionAutoReconnectLive = false;
       await prefs.remove(_kPrefLastTikTokUsername);
     } else {
       _currentTikTokUsername = normalized;
+      _sessionAutoReconnectLive = true;
       await prefs.setString(_kPrefLastTikTokUsername, normalized);
     }
 
@@ -132,20 +160,21 @@ class WsProvider extends ChangeNotifier {
       // Sync local state with server-side settings (flags, volumes, voice_id).
       () async {
         await refreshSettingsFromServer();
-      }();
 
-      // WS ╨┤╨╗╤П ╤Б╨╛╨▒╤Л╤В╨╕╨╣ ╤Б╤В╤А╨╕╨╝╨░
-      _ws.connect(jwtToken);
+        final savedTarget = (_currentTikTokUsername ?? '').trim();
+        final shouldResumeLive = savedTarget.isNotEmpty && (_autoConnectLive || _sessionAutoReconnectLive);
+        if (shouldResumeLive) {
+          return;
+        }
 
-      // ╨Э╨░ ╤Б╨╡╤А╨▓╨╡╤А╨╡ ╨╝╨╛╨╢╨╡╤В ╨╛╤Б╤В╨░╨▓╨░╤В╤М╤Б╤П ╨░╨║╤В╨╕╨▓╨╜╨░╤П ╤Б╨╡╤Б╤Б╨╕╤П.
-      // ╨з╤В╨╛╨▒╤Л ╨┐╤А╨╕╨╗╨╛╨╢╨╡╨╜╨╕╨╡ ╨╜╨╡ ╨▒╤Л╨╗╨╛ ╨┐╨╛╨┤╨║╨╗╤О╤З╨╡╨╜╨╛ ╨║ LIVE ╨▒╨╡╨╖ ╤П╨▓╨╜╨╛╨╣ ╨║╨╛╨╝╨░╨╜╨┤╤Л ╨┐╨╛╨╗╤М╨╖╨╛╨▓╨░╤В╨╡╨╗╤П,
-      // ╨╛╤В╨┐╤А╨░╨▓╨╗╤П╨╡╨╝ disconnect ╤Б╤А╨░╨╖╤Г ╨┐╨╛╤Б╨╗╨╡ ╨┐╨╛╨┤╨╜╤П╤В╨╕╤П WS.
-      _pendingTikTokUsername = null;
-      () async {
         try {
           await _ws.disconnectFromTikTok();
         } catch (_) {}
       }();
+
+      // WS ╨┤╨╗╤П ╤Б╨╛╨▒╤Л╤В╨╕╨╣ ╤Б╤В╤А╨╕╨╝╨░
+      _ws.connect(jwtToken);
+      _pendingTikTokUsername = null;
     } else {
       // Logout / token cleared
       _ws.disconnect();
@@ -169,6 +198,7 @@ class WsProvider extends ChangeNotifier {
       if (settings == null) return;
 
       final voiceId = settings['voice_id']?.toString().trim();
+      final savedTikTokUsername = settings['tiktok_username']?.toString().trim();
       final ttsEnabled = settings['tts_enabled'];
       final giftEnabled = settings['gift_sounds_enabled'];
       final silenceEnabled = settings['silence_enabled'];
@@ -181,6 +211,19 @@ class WsProvider extends ChangeNotifier {
       if (voiceId != null && voiceId.isNotEmpty && voiceId != _voiceId) {
         _voiceId = voiceId;
         changed = true;
+      }
+
+      if (savedTikTokUsername != null && savedTikTokUsername.isNotEmpty) {
+        final normalized = savedTikTokUsername.replaceAll('@', '').trim();
+        if (normalized.isNotEmpty && ((_currentTikTokUsername ?? '').trim().isEmpty || _currentTikTokUsername != normalized)) {
+          _currentTikTokUsername = normalized;
+          _sessionAutoReconnectLive = true;
+          try {
+            final prefs = await SharedPreferences.getInstance();
+            await prefs.setString(_kPrefLastTikTokUsername, normalized);
+          } catch (_) {}
+          changed = true;
+        }
       }
 
       if (ttsEnabled is bool && ttsEnabled != _ttsEnabled) {
@@ -197,7 +240,7 @@ class WsProvider extends ChangeNotifier {
       }
 
       if (ttsVol != null) {
-        final v = ttsVol.clamp(0, 100);
+        final v = ttsVol.clamp(0, 100).toDouble();
         if (v != _ttsVolume) {
           _ttsVolume = v;
           OverlayBridge.setVolumes(ttsVolume: _ttsVolume);
@@ -206,7 +249,7 @@ class WsProvider extends ChangeNotifier {
       }
 
       if (giftsVol != null) {
-        final v = giftsVol.clamp(0, 100);
+        final v = giftsVol.clamp(0, 100).toDouble();
         if (v != _giftsVolume) {
           _giftsVolume = v;
           OverlayBridge.setVolumes(giftsVolume: _giftsVolume);
@@ -226,6 +269,8 @@ class WsProvider extends ChangeNotifier {
       if (changed) {
         notifyListeners();
       }
+
+      _maybeAutoConnectSavedLive(immediate: true);
     } catch (e) {
       logDebug('Failed to refresh settings: $e');
     }
@@ -398,11 +443,28 @@ class WsProvider extends ChangeNotifier {
 
       if (!connected) {
         _liveConnecting = false;
+        _tiktokConnected = false;
         _cancelAutoReconnect();
+        _stopWsKeepAlive();
+        _scheduleWsReconnect();
       }
 
       if (connected) {
-        if (!_demoMode && _autoConnectLive && !_manualLiveDisconnect && !_tiktokConnected) {
+        // Don't reset attempt immediately: WsService may report "connected" before
+        // the handshake is actually stable. We only cancel pending timer/inFlight.
+        _cancelWsReconnect(resetAttempt: false);
+        _startWsKeepAlive();
+
+        // If WS stays up for a bit, consider it stable and reset backoff.
+        () async {
+          final marker = _wsReconnectAttempt;
+          await Future<void>.delayed(const Duration(seconds: 8));
+          if (_wsConnected && _wsReconnectAttempt == marker) {
+            _wsReconnectAttempt = 0;
+          }
+        }();
+        final allowAutoLive = _autoConnectLive || _sessionAutoReconnectLive;
+        if (!_demoMode && allowAutoLive && !_manualLiveDisconnect && !_tiktokConnected) {
           final u = (_currentTikTokUsername ?? '').trim();
           if (u.isNotEmpty) {
             _scheduleAutoReconnect(immediate: true);
@@ -421,8 +483,12 @@ class WsProvider extends ChangeNotifier {
         final prefs = await SharedPreferences.getInstance();
         _currentTikTokUsername = prefs.getString(_kPrefLastTikTokUsername);
         _autoConnectLive = prefs.getBool(_kPrefAutoConnectLive) ?? false;
+        if ((_currentTikTokUsername ?? '').trim().isNotEmpty) {
+          _sessionAutoReconnectLive = true;
+        }
         _syncOverlayStatus();
         notifyListeners();
+        _maybeAutoConnectSavedLive(immediate: true);
       } catch (_) {}
     }();
   }
@@ -432,8 +498,29 @@ class WsProvider extends ChangeNotifier {
     final savedUsername = prefs.getString(_kPrefLastTikTokUsername);
     if (savedUsername != null && savedUsername.trim().isNotEmpty) {
       _currentTikTokUsername = savedUsername.trim();
+      _sessionAutoReconnectLive = true;
       notifyListeners();
+      _maybeAutoConnectSavedLive(immediate: true);
     }
+  }
+
+  void _maybeAutoConnectSavedLive({bool immediate = false}) {
+    if (_demoMode) return;
+    if (!_wsConnected) return;
+    if (_tiktokConnected || _liveConnecting) return;
+    if (_manualLiveDisconnect) return;
+
+    final allowAutoLive = _autoConnectLive || _sessionAutoReconnectLive;
+    if (!allowAutoLive) return;
+
+    final username = (_currentTikTokUsername ?? '').trim();
+    if (username.isEmpty) return;
+
+    if ((_pendingTikTokUsername ?? '').trim().toLowerCase() == username.toLowerCase()) {
+      return;
+    }
+
+    _scheduleAutoReconnect(immediate: immediate);
   }
 
   void _handleWsEvent(Map<String, dynamic> rawEvent) {
@@ -444,6 +531,12 @@ class WsProvider extends ChangeNotifier {
       final connected = event['connected'] == true;
       final msg = event['message']?.toString();
       final u = event['tiktok_username']?.toString().trim();
+      final pending = _pendingTikTokUsername?.trim().toLowerCase();
+      final incomingUser = u?.replaceAll('@', '').toLowerCase();
+      final isConnectingStatus = !connected && (
+        (msg != null && msg.toLowerCase().contains('подключаем')) ||
+        (pending != null && pending.isNotEmpty && incomingUser == pending)
+      );
       if (u != null && u.isNotEmpty) {
         _currentTikTokUsername = u.replaceAll('@', '');
       }
@@ -452,7 +545,7 @@ class WsProvider extends ChangeNotifier {
       _audio.setLiveConnected(connected);
       _liveStatusText = msg;
       _liveErrorText = null;
-      _liveConnecting = false;
+      _liveConnecting = isConnectingStatus;
 
       if (connected) {
         _manualLiveDisconnect = false;
@@ -460,6 +553,15 @@ class WsProvider extends ChangeNotifier {
         _retryingPendingConnect = false;
         _cancelAutoReconnect();
         _resetStreamStats();
+        _autoReconnectAttempt = 0;
+      } else if (!isConnectingStatus) {
+        final allowAutoLive = _autoConnectLive || _sessionAutoReconnectLive;
+        if (!_demoMode && allowAutoLive && !_manualLiveDisconnect && _wsConnected) {
+          final u2 = (_currentTikTokUsername ?? '').trim();
+          if (u2.isNotEmpty) {
+            _scheduleAutoReconnect(immediate: false);
+          }
+        }
       }
 
       _events.insert(0, _mapEvent(event));
@@ -505,6 +607,14 @@ class WsProvider extends ChangeNotifier {
       _liveConnecting = false;
       _pendingTikTokUsername = null;
       _retryingPendingConnect = false;
+
+      final allowAutoLive = _autoConnectLive || _sessionAutoReconnectLive;
+      if (!_demoMode && allowAutoLive && !_manualLiveDisconnect && _wsConnected && !_tiktokConnected) {
+        final u2 = (_currentTikTokUsername ?? '').trim();
+        if (u2.isNotEmpty) {
+          _scheduleAutoReconnect(immediate: false);
+        }
+      }
     }
 
     logDebug('WS Event: ${event['type']}');
@@ -536,7 +646,7 @@ class WsProvider extends ChangeNotifier {
       final type = event['type']?.toString();
       final isJoin = type == 'viewer_join' || type == 'join';
 
-      final ttsUrl = event['tts_url']?.toString();
+      final ttsUrl = _resolveMediaUrl(event['tts_url']?.toString());
       if (_ttsEnabled && ttsUrl != null && ttsUrl.isNotEmpty) {
         var allowTts = true;
         if (!_premiumEnabled && type == 'chat') {
@@ -552,7 +662,7 @@ class WsProvider extends ChangeNotifier {
         }
       }
 
-      final soundUrl = event['sound_url']?.toString();
+      final soundUrl = _resolveMediaUrl(event['sound_url']?.toString());
       final autoplaySound = event['autoplay_sound'];
       if (autoplaySound is bool && autoplaySound == false) {
         return;
@@ -570,6 +680,32 @@ class WsProvider extends ChangeNotifier {
     } catch (e) {
       logDebug('Auto play error: $e');
     }
+  }
+
+  String? _resolveMediaUrl(String? raw) {
+    final s = (raw ?? '').trim();
+    if (s.isEmpty) return null;
+
+    final base = (_api.baseUrl).trim().replaceAll(RegExp(r'/+$'), '');
+    if (s.startsWith('/')) {
+      if (base.isEmpty) return s;
+      return '$base$s';
+    }
+
+    final u = Uri.tryParse(s);
+    final b = Uri.tryParse(base);
+    if (u == null || b == null) return s;
+
+    final host = u.host.toLowerCase();
+    if (host == 'localhost' || host == '127.0.0.1' || host == '0.0.0.0') {
+      return u.replace(
+        scheme: b.scheme,
+        host: b.host,
+        port: b.hasPort ? b.port : null,
+      ).toString();
+    }
+
+    return s;
   }
   
   Map<String, dynamic> _mapEvent(Map<String, dynamic> event) {
@@ -699,6 +835,11 @@ class WsProvider extends ChangeNotifier {
       }
 
       _manualLiveDisconnect = false;
+      if (!fromAutoReconnect) {
+        // Пользователь подключился вручную — держим LIVE и пытаемся восстановить при обрывах,
+        // но НЕ автоподключаемся на старте приложения.
+        _sessionAutoReconnectLive = true;
+      }
       _cancelAutoReconnect(
         resetAttempt: !fromAutoReconnect,
         resetInFlight: !fromAutoReconnect,
@@ -756,6 +897,7 @@ class WsProvider extends ChangeNotifier {
         return;
       }
       _manualLiveDisconnect = true;
+      _sessionAutoReconnectLive = false;
       _cancelAutoReconnect();
       _pendingTikTokUsername = null;
       await _ws.disconnectFromTikTok();
@@ -802,6 +944,56 @@ class WsProvider extends ChangeNotifier {
     if (resetInFlight) _autoReconnectInFlight = false;
   }
 
+  void _cancelWsReconnect({bool resetAttempt = true, bool resetInFlight = true}) {
+    _wsReconnectTimer?.cancel();
+    _wsReconnectTimer = null;
+    if (resetAttempt) _wsReconnectAttempt = 0;
+    if (resetInFlight) _wsReconnectInFlight = false;
+  }
+
+  void _startWsKeepAlive() {
+    _wsKeepAliveTimer?.cancel();
+    _wsKeepAliveTimer = Timer.periodic(const Duration(seconds: 20), (_) {
+      if (!_wsConnected) return;
+      try {
+        _ws.ping();
+      } catch (_) {}
+    });
+  }
+
+  void _stopWsKeepAlive() {
+    _wsKeepAliveTimer?.cancel();
+    _wsKeepAliveTimer = null;
+  }
+
+  void _scheduleWsReconnect({bool immediate = false}) {
+    if (_demoMode) return;
+    final token = (_activeToken ?? '').trim();
+    if (token.isEmpty) return;
+    if (_wsConnected) return;
+    if (_wsReconnectTimer != null) return;
+    if (_wsReconnectInFlight) return;
+
+    _wsReconnectAttempt += 1;
+    final delay = immediate ? Duration.zero : _nextReconnectDelay(_wsReconnectAttempt);
+
+    _wsReconnectTimer = Timer(delay, () async {
+      _wsReconnectTimer = null;
+      if (_wsConnected) return;
+
+      _wsReconnectInFlight = true;
+      try {
+        _ws.connect(token);
+        await Future<void>.delayed(const Duration(seconds: 2));
+        if (!_wsConnected) {
+          _scheduleWsReconnect();
+        }
+      } finally {
+        _wsReconnectInFlight = false;
+      }
+    });
+  }
+
   void _scheduleAutoReconnect({bool immediate = false}) {
     if (_demoMode) return;
     if (_autoReconnectTimer != null) return;
@@ -809,27 +1001,30 @@ class WsProvider extends ChangeNotifier {
     if (!_wsConnected) return;
     if (_tiktokConnected) return;
     if (_manualLiveDisconnect) return;
-    if (!_autoConnectLive) return;
+    final allowAutoLive = _autoConnectLive || _sessionAutoReconnectLive;
+    if (!allowAutoLive) return;
 
     final u = (_currentTikTokUsername ?? '').trim();
     if (u.isEmpty) return;
 
-    // Do not spam: only one auto attempt per failure.
-    if (_autoReconnectAttempt >= _kMaxAutoReconnectAttempts) return;
+    // Backoff attempts; no parallel retries.
     _autoReconnectAttempt += 1;
 
     final delay = immediate ? Duration.zero : _nextReconnectDelay(_autoReconnectAttempt);
 
     _autoReconnectTimer = Timer(delay, () async {
       _autoReconnectTimer = null;
-      if (!_autoConnectLive || _manualLiveDisconnect || _tiktokConnected) return;
+      final allowAutoLive2 = _autoConnectLive || _sessionAutoReconnectLive;
+      if (!allowAutoLive2 || _manualLiveDisconnect || _tiktokConnected) return;
       if (!_wsConnected) return;
 
       _autoReconnectInFlight = true;
       try {
         await connectToTikTok(u, fromAutoReconnect: true);
-        // ╨Ц╨┤╤С╨╝ ╤Б╤В╨░╤В╤Г╤Б-╤Б╨╛╨▒╤Л╤В╨╕╨╡ ╨╛╤В ╤Б╨╡╤А╨▓╨╡╤А╨░, ╤З╤В╨╛╨▒╤Л ╨╜╨╡ ╨╖╨░╤Ж╨╕╨║╨╗╨╕╤В╤М╤Б╤П ╨╜╨░ "╨╡╤Й╤С ╨╜╨╡ ╤Г╤Б╨┐╨╡╨╗╨╕ ╨┐╤А╨╛╤Б╤В╨░╨▓╨╕╤В╤М _tiktokConnected".
-        await Future<void>.delayed(const Duration(seconds: 2));
+        await Future<void>.delayed(const Duration(seconds: 4));
+        if (!_tiktokConnected && _wsConnected && _autoConnectLive && !_manualLiveDisconnect) {
+          _scheduleAutoReconnect(immediate: false);
+        }
       } finally {
         _autoReconnectInFlight = false;
       }
@@ -932,6 +1127,8 @@ class WsProvider extends ChangeNotifier {
   @override
   void dispose() {
     _autoReconnectTimer?.cancel();
+    _wsReconnectTimer?.cancel();
+    _wsKeepAliveTimer?.cancel();
     _overlayStopListener?.cancel();
     _ws.disconnect();
     super.dispose();

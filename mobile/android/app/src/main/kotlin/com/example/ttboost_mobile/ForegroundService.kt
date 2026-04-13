@@ -66,6 +66,9 @@ class ForegroundService : Service() {
 
     private const val KEY_TEST_TTS = "flutter.overlay_test_tts"
 
+    // Manual reconnect (native overlay -> Flutter)
+    private const val KEY_CMD_RECONNECT_LIVE = "flutter.overlay_cmd_reconnect_live"
+
     // Spotify overlay status
     private const val KEY_SPOTIFY_CONNECTED = "flutter.overlay_spotify_connected"
     private const val KEY_SPOTIFY_IS_PLAYING = "flutter.overlay_spotify_is_playing"
@@ -426,6 +429,16 @@ class ForegroundService : Service() {
     val btnStopGifts = smallButton("Stop Gifts") { setFlutterBool(KEY_STOP_GIFTS, true) }
     row1b.addView(btnStopGifts, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT))
     body.addView(row1b)
+
+    val rowReconnect = LinearLayout(this).apply {
+      orientation = LinearLayout.HORIZONTAL
+      setPadding(0, dp(8), 0, 0)
+    }
+    val btnReconnectLive = smallButton("Переподключить LIVE") {
+      setFlutterBool(KEY_CMD_RECONNECT_LIVE, true)
+    }
+    rowReconnect.addView(btnReconnectLive, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT))
+    body.addView(rowReconnect)
 
     val rowSpeaker = LinearLayout(this).apply {
       orientation = LinearLayout.HORIZONTAL

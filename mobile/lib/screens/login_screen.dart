@@ -174,8 +174,8 @@ class _LoginScreenState extends State<LoginScreen> {
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: const Text(
-                            'Если у вас старый аккаунт — можно войти по логину.
-Если вход по email не получается — убедитесь, что email подтверждён.',
+                            'Если у вас старый аккаунт - можно войти по логину.\n'
+                            'Если вход по email не получается - убедитесь, что email подтвержден.',
                             style: TextStyle(color: AppColors.secondaryText),
                           ),
                         ),

@@ -26,6 +26,13 @@ flutter run -d chrome        # Web Browser
 flutter run -d android       # Android (требует эмулятор или устройство)
 ```
 
+### Spotify (Android)
+1. В Spotify Dashboard добавьте redirect URI `novaboost://spotify-auth`.
+2. На сервере заполните `SPOTIFY_CLIENT_ID`, `SPOTIFY_CLIENT_SECRET` и `SPOTIFY_REDIRECT_URI=novaboost://spotify-auth`.
+3. При необходимости в папке `mobile` создайте `.env.local` на основе `.env.local.example` и укажите `SPOTIFY_CLIENT_ID` и `SPOTIFY_REDIRECT_URI` как локальный override.
+4. `SPOTIFY_CLIENT_SECRET` в мобильное приложение не добавляется.
+5. Подключайте Spotify из профиля в Android-сборке. В Web/Chrome этот сценарий не поддерживается.
+
 ## Тестирование v2 API
 
 ### Данные для входа

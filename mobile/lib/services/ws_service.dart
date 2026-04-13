@@ -13,6 +13,13 @@ class WsService {
 
   bool get isConnected => _connected;
 
+  void ping() {
+    if (_channel == null) return;
+    try {
+      _channel?.sink.add(jsonEncode({'action': 'ping'}));
+    } catch (_) {}
+  }
+
   void connect(String jwtToken) {
     try {
       // предотвратить множественные параллельные подключения
@@ -44,7 +51,17 @@ class WsService {
       _channel!.stream.listen(
         (message) {
           try {
-            final data = jsonDecode(message as String) as Map<String, dynamic>;
+            String payload;
+            if (message is String) {
+              payload = message;
+            } else if (message is List<int>) {
+              // Some servers send binary WS frames; decode as UTF-8.
+              payload = utf8.decode(message);
+            } else {
+              payload = message.toString();
+            }
+
+            final data = jsonDecode(payload) as Map<String, dynamic>;
             logDebug('WS: Received message: $data');
             onEvent?.call(data);
           } catch (e) {

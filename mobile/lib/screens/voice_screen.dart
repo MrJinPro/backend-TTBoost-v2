@@ -237,8 +237,13 @@ class _VoiceScreenState extends State<VoiceScreen> {
                 ),
               ),
               items: _voices.map((voice) {
+                final unavailable = voice['unavailable'] == true;
+                final displayName = unavailable
+                    ? '${voice['name']} (недоступно)'
+                    : voice['name'].toString();
                 return DropdownMenuItem<String>(
                   value: voice['id'],
+                  enabled: !unavailable,
                   child: Row(
                     children: [
                       _getVoiceEngineIcon(voice['engine']),
@@ -249,9 +254,9 @@ class _VoiceScreenState extends State<VoiceScreen> {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(
-                              voice['name'],
+                              displayName,
                               style: AppTextStyles.bodyMedium.copyWith(
-                                color: AppColors.primaryText,
+                                color: unavailable ? AppColors.secondaryText : AppColors.primaryText,
                               ),
                             ),
                             Text(
@@ -272,6 +277,13 @@ class _VoiceScreenState extends State<VoiceScreen> {
                 );
               }).toList(),
               onChanged: (value) {
+                final selected = _voices.where((v) => v['id'] == value).cast<Map<String, dynamic>?>().firstOrNull;
+                if (selected != null && selected['unavailable'] == true) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Этот голос сейчас недоступен на сервере')),
+                  );
+                  return;
+                }
                 setState(() => _selectedVoiceId = value);
                 _saveVoiceSettings();
               },
@@ -807,6 +819,12 @@ class _VoiceScreenState extends State<VoiceScreen> {
       final url = await api.generateTts(text: text, voiceId: voiceId);
       if (url == null || url.trim().isEmpty) {
         throw Exception(api.lastError ?? 'Не удалось сгенерировать TTS');
+      }
+
+      if (mounted && api.lastTtsFallbackUsed && (api.lastError?.isNotEmpty ?? false)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(api.lastError!)),
+        );
       }
 
       final vol = ((_ttsVolume / 100).clamp(0, 1)).toDouble();

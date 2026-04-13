@@ -19,6 +19,9 @@ const kPrefCmdGiftsVolume = 'overlay_cmd_gifts_volume';
 const kPrefCmdSetTtsVolume = 'overlay_cmd_set_tts_volume';
 const kPrefCmdSetGiftsVolume = 'overlay_cmd_set_gifts_volume';
 
+// Manual reconnect (Android overlay)
+const kPrefCmdReconnectLive = 'overlay_cmd_reconnect_live';
+
 const kPrefTestTts = 'overlay_test_tts';
 
 // Spotify (overlay mini-player)
@@ -132,6 +135,7 @@ class OverlayBridge {
     Future<void> Function(double value)? onSetTtsVolume,
     Future<void> Function(double value)? onSetGiftsVolume,
     Future<void> Function()? onTestTts,
+    Future<void> Function()? onReconnectLive,
   }) {
     return Timer.periodic(const Duration(milliseconds: 300), (_) async {
       final prefs = await SharedPreferences.getInstance();
@@ -150,6 +154,7 @@ class OverlayBridge {
       final setTts = prefs.getBool(kPrefCmdSetTtsVolume) ?? false;
       final setGifts = prefs.getBool(kPrefCmdSetGiftsVolume) ?? false;
       final testTts = prefs.getBool(kPrefTestTts) ?? false;
+      final reconnectLive = prefs.getBool(kPrefCmdReconnectLive) ?? false;
 
       if (stopTts) {
         await prefs.setBool(kPrefStopTts, false);
@@ -164,6 +169,11 @@ class OverlayBridge {
       if (testTts && onTestTts != null) {
         await prefs.setBool(kPrefTestTts, false);
         await onTestTts();
+      }
+
+      if (reconnectLive && onReconnectLive != null) {
+        await prefs.setBool(kPrefCmdReconnectLive, false);
+        await onReconnectLive();
       }
 
       if (setTts && onSetTtsVolume != null) {

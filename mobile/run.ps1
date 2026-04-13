@@ -17,6 +17,29 @@ if (-not $flutterInstalled) {
 Write-Host "✅ Flutter найден" -ForegroundColor Green
 flutter --version
 
+function Import-LocalEnvFile {
+    param([string]$Path)
+
+    if (-not (Test-Path $Path)) { return }
+
+    Get-Content -Path $Path -Encoding UTF8 | ForEach-Object {
+        $line = $_.Trim()
+        if (-not $line -or $line.StartsWith('#')) { return }
+
+        $idx = $line.IndexOf('=')
+        if ($idx -lt 1) { return }
+
+        $name = $line.Substring(0, $idx).Trim()
+        $value = $line.Substring($idx + 1).Trim()
+        if (($value.StartsWith('"') -and $value.EndsWith('"')) -or ($value.StartsWith("'") -and $value.EndsWith("'"))) {
+            $value = $value.Substring(1, $value.Length - 2)
+        }
+        Set-Item -Path "Env:$name" -Value $value
+    }
+}
+
+Import-LocalEnvFile (Join-Path $PSScriptRoot ".env.local")
+
 function Get-DartDefines {
     $defines = @()
     if ($env:SUPABASE_URL) { $defines += "--dart-define=SUPABASE_URL=$($env:SUPABASE_URL)" }
@@ -24,6 +47,8 @@ function Get-DartDefines {
     if ($env:API_BASE_URL) { $defines += "--dart-define=API_BASE_URL=$($env:API_BASE_URL)" }
     if ($env:WS_URL) { $defines += "--dart-define=WS_URL=$($env:WS_URL)" }
     if ($env:MEDIA_BASE_URL) { $defines += "--dart-define=MEDIA_BASE_URL=$($env:MEDIA_BASE_URL)" }
+    if ($env:SPOTIFY_CLIENT_ID) { $defines += "--dart-define=SPOTIFY_CLIENT_ID=$($env:SPOTIFY_CLIENT_ID)" }
+    if ($env:SPOTIFY_REDIRECT_URI) { $defines += "--dart-define=SPOTIFY_REDIRECT_URI=$($env:SPOTIFY_REDIRECT_URI)" }
     return $defines
 }
 

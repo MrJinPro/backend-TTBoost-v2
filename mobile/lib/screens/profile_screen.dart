@@ -722,14 +722,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           const HelpIcon(
                             title: 'Spotify',
                             message:
-                                'Интеграция Spotify скоро будет доступна. Сейчас подключение временно недоступно.',
+                              'Spotify настраивается на сервере. Нужны SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET и SPOTIFY_REDIRECT_URI в backend .env. Для Android redirect URI должен совпадать с novaboost://spotify-auth.',
                           ),
                       ],
                     ),
                     const SizedBox(height: 10),
                     Text(
                       !sp.configured
-                          ? 'Скоро будет доступно'
+                          ? 'Не настроено'
                           : (connected ? 'Подключено' : 'Не подключено'),
                       style: AppTextStyles.bodySmall.copyWith(color: AppColors.secondaryText),
                     ),
@@ -781,7 +781,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         icon: Icon(connected ? Icons.link_off : Icons.link),
                         label: Text(
                           !sp.configured
-                              ? 'Скоро'
+                              ? 'Нужен Spotify config'
                               : (connected ? 'Отключить Spotify' : 'Подключить Spotify'),
                         ),
                       ),

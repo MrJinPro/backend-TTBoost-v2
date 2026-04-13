@@ -33,6 +33,25 @@ flutter run -d emulator-5554
 Конфигурацию адресов можно задавать через `--dart-define`:
 - `API_BASE_URL` (по умолчанию `https://api.ttboost.pro`)
 - `WS_URL` (по умолчанию `wss://api.ttboost.pro/v2/ws`)
+- `SPOTIFY_CLIENT_ID` (обязателен для Spotify на Android)
+- `SPOTIFY_REDIRECT_URI` (по умолчанию `novaboost://spotify-auth`)
+
+### Spotify
+
+Мобильное приложение получает код авторизации через `flutter_appauth`, но обмен кода и refresh токенов выполняет backend.
+`SPOTIFY_CLIENT_SECRET` должен быть только на сервере и не вшивается в приложение.
+
+Нужно настроить серверный `.env`:
+- `SPOTIFY_CLIENT_ID`
+- `SPOTIFY_CLIENT_SECRET`
+- `SPOTIFY_REDIRECT_URI=novaboost://spotify-auth`
+
+Для Android должны совпадать три вещи:
+- в Spotify Dashboard redirect URI: `novaboost://spotify-auth`
+- в server env redirect URI: `novaboost://spotify-auth`
+- схема в Android manifest/gradle: `novaboost`
+
+`mobile/.env.local` можно оставить только как локальный override для `SPOTIFY_CLIENT_ID` и `SPOTIFY_REDIRECT_URI`, но без настроенного backend Spotify не подключится.
 
 Для DEV `API_BASE_URL=http://10.0.2.2:8000` (эмулятор Android), для PROD `API_BASE_URL=https://api.ttboost.pro`.
 
