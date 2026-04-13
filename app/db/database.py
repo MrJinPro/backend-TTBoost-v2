@@ -2,6 +2,7 @@ import os
 import json
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
+from sqlalchemy.pool import NullPool
 
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./ttboost.db")
@@ -17,6 +18,7 @@ DB_HOSTADDR = (os.getenv("DB_HOSTADDR") or "").strip()
 
 # For SQLite need check_same_thread=False
 connect_args: dict = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
+engine_kwargs: dict = {"echo": False, "future": True, "connect_args": connect_args}
 
 # For Postgres: allow forcing host address (e.g. IPv4) to avoid flaky IPv6.
 if not DATABASE_URL.startswith("sqlite") and DB_HOSTADDR:
@@ -26,7 +28,19 @@ if not DATABASE_URL.startswith("sqlite") and DB_HOSTADDR:
 if not DATABASE_URL.startswith("sqlite") and DB_SCHEMA and DB_SCHEMA != "public":
     connect_args = {**connect_args, "options": f"-c search_path={DB_SCHEMA},public"}
 
-engine = create_engine(DATABASE_URL, echo=False, future=True, connect_args=connect_args)
+# Managed Postgres providers and PgBouncer session mode are sensitive to idle pooled
+# connections. By default we avoid holding connections open between requests.
+if not DATABASE_URL.startswith("sqlite"):
+    use_null_pool = (os.getenv("DB_USE_NULL_POOL") or "1").strip().lower() not in {"0", "false", "no"}
+    if use_null_pool:
+        engine_kwargs["poolclass"] = NullPool
+    else:
+        engine_kwargs["pool_size"] = int((os.getenv("DB_POOL_SIZE") or "1").strip() or "1")
+        engine_kwargs["max_overflow"] = int((os.getenv("DB_MAX_OVERFLOW") or "0").strip() or "0")
+        engine_kwargs["pool_pre_ping"] = True
+        engine_kwargs["pool_recycle"] = int((os.getenv("DB_POOL_RECYCLE") or "300").strip() or "300")
+
+engine = create_engine(DATABASE_URL, **engine_kwargs)
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, future=True)
 
 Base = declarative_base()
