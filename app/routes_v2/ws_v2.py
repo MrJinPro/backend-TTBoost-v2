@@ -114,6 +114,9 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
     if not user:
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
         return
+    user_id = str(user.id)
+    user_username = str(user.username or "").strip()
+    user_tiktok_username = str(user.tiktok_username or "").strip()
     # Client hints can come from query (?platform=mobile&os=android&device=...) or headers.
     platform_raw = websocket.headers.get("X-Client-Platform")
     client_os_raw = websocket.headers.get("X-Client-OS")
@@ -132,7 +135,7 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
             if k == "device" and v and not client_device_raw:
                 client_device_raw = v
     platform = normalize_platform(platform_raw)
-    tariff, _lic = resolve_tariff(db, user.id)
+    tariff, _lic = resolve_tariff(db, user_id)
     _db_release(db)
 
     if ADMIN_STATE.maintenance_mode or ADMIN_STATE.disable_new_connections:
@@ -379,7 +382,7 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
         s = get_current_settings()
         if not s.get("silence_enabled"):
             return
-        if not active_tiktok_username or not tiktok_service.is_running(user.id):
+        if not active_tiktok_username or not tiktok_service.is_running(user_id):
             return
 
         voice_id = "eleven-premium-main"
@@ -389,7 +392,7 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
 
         tts_url = ""
         try:
-            tts_url = await generate_tts(phrase, voice_id, user_id=str(user.id))
+            tts_url = await generate_tts(phrase, voice_id, user_id=user_id)
         except Exception as e:
             logger.warning("Silence TTS failed: %s", e)
             return
@@ -413,7 +416,7 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
         q = (
             db.query(models.Trigger)
             .filter(
-                models.Trigger.user_id == user.id,
+                models.Trigger.user_id == user_id,
                 models.Trigger.event_type == "chat",
                 models.Trigger.enabled == True,
             )
@@ -432,7 +435,7 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
                         continue
                     template = t.action_params.get("text_template") or "{message}"
                     phrase = template.replace("{user}", _remove_emojis(u)).replace("{message}", sanitized_text)
-                    tts_url = await generate_tts(phrase, voice_id, user_id=str(user.id))
+                    tts_url = await generate_tts(phrase, voice_id, user_id=user_id)
                     try:
                         t.executed_count += 1
                         db.add(t)
@@ -444,7 +447,7 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
         if not tts_url:
             should_speak, tts_text = _chat_tts_should_speak(u, sanitized_text)
             if should_speak:
-                tts_url = await generate_tts(tts_text, voice_id, user_id=str(user.id))
+                tts_url = await generate_tts(tts_text, voice_id, user_id=user_id)
         # если tts выключен — отправим без tts_url
         payload = {"type": "chat", "user": u, "message": text}
         if tts_url:
@@ -467,7 +470,7 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
             qv = (
                 db.query(models.Trigger)
                 .filter(
-                    models.Trigger.user_id == user.id,
+                    models.Trigger.user_id == user_id,
                     models.Trigger.event_type == "viewer_first_message",
                     models.Trigger.enabled == True,
                 )
@@ -487,7 +490,7 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
                 if matched:
                     fn = t.action_params.get("sound_filename") if t.action_params else None
                     if fn and _cooldown_allows(t.id, (t.action_params or {}).get("cooldown_seconds"), username=u):
-                        await websocket.send_text(json.dumps({"type": "viewer_first_message", "user": u, "sound_url": _abs_url(f"/static/sounds/{user.id}/{fn}")}, ensure_ascii=False))
+                        await websocket.send_text(json.dumps({"type": "viewer_first_message", "user": u, "sound_url": _abs_url(f"/static/sounds/{user_id}/{fn}")}, ensure_ascii=False))
                         try:
                             t.executed_count += 1
                             db.add(t)
@@ -523,7 +526,7 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
         q = (
             db.query(models.Trigger)
             .filter(
-                models.Trigger.user_id == user.id,
+                models.Trigger.user_id == user_id,
                 models.Trigger.event_type == "gift",
                 models.Trigger.enabled == True,
             )
@@ -553,7 +556,7 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
                         continue
                     fn = t.action_params.get("sound_filename") if t.action_params else None
                     if fn and s["gift_sounds_enabled"] and _cooldown_allows(t.id, (t.action_params or {}).get("cooldown_seconds")):
-                        sound_url = _abs_url(f"/static/sounds/{user.id}/{fn}")
+                        sound_url = _abs_url(f"/static/sounds/{user_id}/{fn}")
                         if WS_DEBUG:
                             logger.debug("on_gift: matched by gift_id trigger=%s sound=%s", t.id, fn)
                         try:
@@ -574,7 +577,7 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
                         continue
                     fn = t.action_params.get("sound_filename") if t.action_params else None
                     if fn and s["gift_sounds_enabled"] and _cooldown_allows(t.id, (t.action_params or {}).get("cooldown_seconds")):
-                        sound_url = _abs_url(f"/static/sounds/{user.id}/{fn}")
+                        sound_url = _abs_url(f"/static/sounds/{user_id}/{fn}")
                         if WS_DEBUG:
                             logger.debug("on_gift: matched by gift_name trigger=%s sound=%s", t.id, fn)
                         try:
@@ -607,7 +610,7 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
         try:
             record_gift_and_update_stats(
                 db,
-                streamer_id=str(user.id),
+                streamer_id=user_id,
                 streamer_tiktok_username=active_tiktok_username,
                 donor_username=u,
                 gift_id=gift_id,
@@ -674,7 +677,7 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
         q = (
             db.query(models.Trigger)
             .filter(
-                models.Trigger.user_id == user.id,
+                models.Trigger.user_id == user_id,
                 models.Trigger.event_type == "viewer_join",
                 models.Trigger.enabled == True,
             )
@@ -710,7 +713,7 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
                     fn = ap.get("sound_filename")
                     autoplay_sound = ap.get("autoplay_sound", True)
                     if fn and s["viewer_sounds_enabled"] and _cooldown_allows(t.id, (t.action_params or {}).get("cooldown_seconds"), username=viewer_key):
-                        sound_url = _abs_url(f"/static/sounds/{user.id}/{fn}")
+                        sound_url = _abs_url(f"/static/sounds/{user_id}/{fn}")
                         if WS_DEBUG:
                             logger.debug("on_join: matched trigger=%s sound=%s", t.id, fn)
                         try:
@@ -789,7 +792,7 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
         q = (
             db.query(models.Trigger)
             .filter(
-                models.Trigger.user_id == user.id,
+                models.Trigger.user_id == user_id,
                 models.Trigger.event_type == "follow",
                 models.Trigger.enabled == True,
             )
@@ -809,7 +812,7 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
             if matched:
                 fn = t.action_params.get("sound_filename") if t.action_params else None
                 if fn and s["viewer_sounds_enabled"] and _cooldown_allows(t.id, (t.action_params or {}).get("cooldown_seconds")):
-                    sound_url = _abs_url(f"/static/sounds/{user.id}/{fn}")
+                    sound_url = _abs_url(f"/static/sounds/{user_id}/{fn}")
                     try:
                         t.executed_count += 1
                         db.add(t)
@@ -833,7 +836,7 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
         q = (
             db.query(models.Trigger)
             .filter(
-                models.Trigger.user_id == user.id,
+                models.Trigger.user_id == user_id,
                 models.Trigger.event_type == "subscribe",
                 models.Trigger.enabled == True,
             )
@@ -853,7 +856,7 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
             if matched:
                 fn = t.action_params.get("sound_filename") if t.action_params else None
                 if fn and s["viewer_sounds_enabled"] and _cooldown_allows(t.id, (t.action_params or {}).get("cooldown_seconds")):
-                    sound_url = _abs_url(f"/static/sounds/{user.id}/{fn}")
+                    sound_url = _abs_url(f"/static/sounds/{user_id}/{fn}")
                     try:
                         t.executed_count += 1
                         db.add(t)
@@ -900,7 +903,7 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
             try:
                 nonlocal active_stream_session_id
                 ss = models.StreamSession(
-                    user_id=user.id,
+                    user_id=user_id,
                     tiktok_username=username,
                     started_at=datetime.utcnow(),
                     status="running",
@@ -955,32 +958,34 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
         # Initial status
         await _safe_send({
             "type": "status",
-            "connected": tiktok_service.is_running(user.id),
+            "connected": tiktok_service.is_running(user_id),
             "message": "WS подключен. Подключение к LIVE выполняется по команде.",
-            "tiktok_username": (user.tiktok_username or None),
+            "tiktok_username": (user_tiktok_username or None),
         })
 
         # Touch last_ws_at once on WS connect (+ best-effort client hints).
         try:
-            user.last_ws_at = datetime.utcnow()
-            try:
-                user.last_client_platform = platform
-            except Exception:
-                pass
-            try:
-                os_hint = (client_os_raw or "").strip()[:32] or None
-                if os_hint:
-                    user.last_client_os = os_hint
-            except Exception:
-                pass
-            try:
-                dev = (client_device_raw or "").strip()
-                if dev:
-                    user.last_device = dev[:255]
-            except Exception:
-                pass
-            db.add(user)
-            db.commit()
+            user_row = db.get(models.User, user_id)
+            if user_row:
+                user_row.last_ws_at = datetime.utcnow()
+                try:
+                    user_row.last_client_platform = platform
+                except Exception:
+                    pass
+                try:
+                    os_hint = (client_os_raw or "").strip()[:32] or None
+                    if os_hint:
+                        user_row.last_client_os = os_hint
+                except Exception:
+                    pass
+                try:
+                    dev = (client_device_raw or "").strip()
+                    if dev:
+                        user_row.last_device = dev[:255]
+                except Exception:
+                    pass
+                db.add(user_row)
+                db.commit()
         except Exception:
             try:
                 db.rollback()
@@ -997,8 +1002,8 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
 
         # Backwards compatibility: optional autostart on WS connect (disabled by default)
         ws_autostart = str(os.getenv("TT_WS_AUTOSTART", "0")).strip().lower() in ("1", "true", "yes", "on")
-        if ws_autostart and (user.tiktok_username or user.username):
-            target_username = (user.tiktok_username or user.username).strip().lstrip("@").lower()
+        if ws_autostart and (user_tiktok_username or user_username):
+            target_username = (user_tiktok_username or user_username).strip().lstrip("@").lower()
             if target_username:
                 active_tiktok_username = target_username
                 await _safe_send({
@@ -1008,7 +1013,7 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
                     "tiktok_username": target_username,
                 })
                 await tiktok_service.start_client(
-                    user_id=user.id,
+                    user_id=user_id,
                     tiktok_username=target_username,
                     on_comment_callback=on_comment,
                     on_gift_callback=on_gift,
@@ -1030,9 +1035,11 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
                 now_m = time.monotonic()
                 if (now_m - _last_ws_touch_at) >= 15.0:
                     _last_ws_touch_at = now_m
-                    user.last_ws_at = datetime.utcnow()
-                    db.add(user)
-                    db.commit()
+                    user_row = db.get(models.User, user_id)
+                    if user_row:
+                        user_row.last_ws_at = datetime.utcnow()
+                        db.add(user_row)
+                        db.commit()
             except Exception:
                 try:
                     db.rollback()
@@ -1063,12 +1070,12 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
                 try:
                     row = (
                         db.query(models.UserTikTokAccount)
-                        .filter(models.UserTikTokAccount.user_id == user.id)
+                        .filter(models.UserTikTokAccount.user_id == user_id)
                         .filter(models.UserTikTokAccount.username == username)
                         .first()
                     )
                     if not row:
-                        row = models.UserTikTokAccount(user_id=user.id, username=username, last_used_at=datetime.utcnow())
+                        row = models.UserTikTokAccount(user_id=user_id, username=username, last_used_at=datetime.utcnow())
                         db.add(row)
                     else:
                         row.last_used_at = datetime.utcnow()
@@ -1081,9 +1088,9 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
                 active_tiktok_username = username
 
                 # Stop previous session if any
-                if tiktok_service.is_running(user.id):
+                if tiktok_service.is_running(user_id):
                     try:
-                        await tiktok_service.stop_client(user.id)
+                        await tiktok_service.stop_client(user_id)
                     except Exception:
                         pass
 
@@ -1096,7 +1103,7 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
 
                 try:
                     await tiktok_service.start_client(
-                        user_id=user.id,
+                        user_id=user_id,
                         tiktok_username=username,
                         on_comment_callback=on_comment,
                         on_gift_callback=on_gift,
@@ -1134,9 +1141,9 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
                         })
 
             elif action == "disconnect_tiktok":
-                if tiktok_service.is_running(user.id):
+                if tiktok_service.is_running(user_id):
                     try:
-                        await tiktok_service.stop_client(user.id)
+                        await tiktok_service.stop_client(user_id)
                     except Exception:
                         pass
                 active_tiktok_username = None
@@ -1202,8 +1209,8 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
             except Exception:
                 pass
     finally:
-        if tiktok_service.is_running(user.id):
-            await tiktok_service.stop_client(user.id)
+        if tiktok_service.is_running(user_id):
+            await tiktok_service.stop_client(user_id)
 
         try:
             ACTIVE_WS_CONNECTIONS = max(0, int(ACTIVE_WS_CONNECTIONS) - 1)
