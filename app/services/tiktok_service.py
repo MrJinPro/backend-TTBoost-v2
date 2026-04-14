@@ -764,13 +764,29 @@ class TikTokService:
                 try:
                     while uid in self._clients:
                         await asyncio.sleep(check_period)
+                        client_obj = self._clients.get(uid)
+                        if client_obj is None:
+                            continue
+
+                        is_connected = False
+                        try:
+                            is_connected = bool(getattr(client_obj, "connected", False))
+                        except Exception:
+                            is_connected = False
+
+                        # В quiet/live-low-activity эфирах отсутствие новых comment/gift/like событий
+                        # само по себе не означает потерю соединения. Перезапускаем только если сам
+                        # клиент больше не считает себя connected.
+                        if is_connected:
+                            continue
+
                         last = self._last_activity.get(uid)
                         if not last:
                             continue
                         delta = (datetime.now() - last).total_seconds()
                         if delta > inactivity_limit:
                             logger.warning(
-                                f"🛟 Watchdog: нет активности {delta:.0f}s (> {inactivity_limit}s). Перезапуск клиента @{self._usernames.get(uid, '?')}"
+                                f"🛟 Watchdog: клиент disconnected и нет активности {delta:.0f}s (> {inactivity_limit}s). Перезапуск клиента @{self._usernames.get(uid, '?')}"
                             )
                             # Сохраняем параметры для рестарта
                             name = self._usernames.get(uid, tiktok_username)
@@ -863,7 +879,13 @@ class TikTokService:
     
     def is_running(self, user_id: str) -> bool:
         """Проверяет, запущен ли клиент"""
-        return user_id in self._clients
+        client = self._clients.get(user_id)
+        if client is None:
+            return False
+        try:
+            return bool(getattr(client, "connected", False))
+        except Exception:
+            return False
 
 
 # Глобальный экземпляр сервиса
