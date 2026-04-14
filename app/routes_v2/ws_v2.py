@@ -50,6 +50,18 @@ def get_db():
         db.close()
 
 
+def _db_release(db: Session, rollback: bool = False):
+    try:
+        if rollback:
+            db.rollback()
+    except Exception:
+        pass
+    try:
+        db.close()
+    except Exception:
+        pass
+
+
 def _remove_emojis(s: str) -> str:
     try:
         emoji_pattern = re.compile(
@@ -121,6 +133,7 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
                 client_device_raw = v
     platform = normalize_platform(platform_raw)
     tariff, _lic = resolve_tariff(db, user.id)
+    _db_release(db)
 
     if ADMIN_STATE.maintenance_mode or ADMIN_STATE.disable_new_connections:
         try:
@@ -227,6 +240,7 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
         )
         _allowed_trigger_ids_cache = {str(r[0]) for r in rows}
         _allowed_trigger_ids_cache_at = now
+        _db_release(db)
         return _allowed_trigger_ids_cache
 
     def get_current_settings():
@@ -266,6 +280,8 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
             chat_tts_min_diamonds = 0
         if chat_tts_min_diamonds < 0:
             chat_tts_min_diamonds = 0
+
+        _db_release(db)
 
         return {
             "voice_id": voice_id,
@@ -424,6 +440,7 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
                     except Exception:
                         logger.warning("Не удалось обновить executed_count для триггера %s", t.id)
                     break
+        _db_release(db)
         if not tts_url:
             should_speak, tts_text = _chat_tts_should_speak(u, sanitized_text)
             if should_speak:
@@ -478,6 +495,7 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
                         except Exception:
                             logger.warning("Не удалось обновить executed_count для триггера %s", t.id)
                     break
+            _db_release(db)
 
     async def on_gift(u: str, gift_id: str, gift_name: str, count: int, diamonds: int = 0):
         s = get_current_settings()
@@ -570,6 +588,8 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
                     if WS_DEBUG:
                         logger.debug("on_gift: no match gift_name trigger=%s %r != %r", t.id, condition_value, gift_name)
 
+        _db_release(db)
+
         # Фолбэк: если нет пользовательского триггера — используем глобальный звук подарка
         if not sound_url and s["gift_sounds_enabled"]:
             try:
@@ -598,6 +618,7 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
         except Exception:
             # record_gift_and_update_stats сам логирует/rollback'ает, но держим WS стабильным
             pass
+        _db_release(db)
         if WS_DEBUG:
             logger.debug("on_gift: send payload=%s", payload)
         await websocket.send_text(json.dumps(payload, ensure_ascii=False))
@@ -721,6 +742,7 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
                     except Exception:
                         logger.warning("Не удалось обновить executed_count для триггера %s", t.id)
                 break
+                _db_release(db)
         
         # ВСЕГДА отправляем событие на фронтенд (для отображения в UI)
         # Для UI отдаём читабельные значения, но сохраняем и нормализованное поле
@@ -795,6 +817,7 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
                     except Exception:
                         logger.warning("Не удалось обновить executed_count для триггера %s", t.id)
                 break
+                _db_release(db)
 
         payload = {"type": "follow", "user": u}
         if sound_url:
@@ -838,6 +861,7 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
                     except Exception:
                         logger.warning("Не удалось обновить executed_count для триггера %s", t.id)
                 break
+                _db_release(db)
 
         payload = {"type": "subscribe", "user": u}
         if sound_url:
@@ -890,6 +914,7 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
                     db.rollback()
                 except Exception:
                     pass
+            _db_release(db)
             await _safe_send({
                 "type": "status",
                 "message": f"Подключено к TikTok Live @{username}",
@@ -918,6 +943,7 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
                     db.rollback()
                 except Exception:
                     pass
+            _db_release(db)
             auto_reconnect = str(os.getenv("TT_AUTO_RECONNECT", "1")).strip().lower() in ("1", "true", "yes", "on")
             await _safe_send({
                 "type": "status",
@@ -960,6 +986,7 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
                 db.rollback()
             except Exception:
                 pass
+        _db_release(db)
 
         silence_task: asyncio.Task | None = asyncio.create_task(_silence_monitor())
         try:
@@ -1011,6 +1038,7 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
                     db.rollback()
                 except Exception:
                     pass
+            _db_release(db)
             try:
                 data = json.loads(raw) if raw else {}
             except Exception:
@@ -1048,6 +1076,7 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
                     db.commit()
                 except Exception:
                     db.rollback()
+                _db_release(db)
 
                 active_tiktok_username = username
 
@@ -1127,6 +1156,7 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
                         db.rollback()
                     except Exception:
                         pass
+                _db_release(db)
                 await _safe_send({
                     "type": "status",
                     "message": "Отключено от TikTok Live",
