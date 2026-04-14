@@ -6,6 +6,7 @@ from sqlalchemy.pool import NullPool
 
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./ttboost.db")
+IS_SQLITE = DATABASE_URL.startswith("sqlite")
 
 # Optional schema support (useful for Supabase when `public` contains other apps).
 # For Postgres we set `search_path` so unqualified table names go to this schema.
@@ -17,20 +18,26 @@ DB_SCHEMA = (os.getenv("DB_SCHEMA") or "public").strip() or "public"
 DB_HOSTADDR = (os.getenv("DB_HOSTADDR") or "").strip()
 
 # For SQLite need check_same_thread=False
-connect_args: dict = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
-engine_kwargs: dict = {"echo": False, "future": True, "connect_args": connect_args}
+connect_args: dict = {"check_same_thread": False} if IS_SQLITE else {}
 
 # For Postgres: allow forcing host address (e.g. IPv4) to avoid flaky IPv6.
-if not DATABASE_URL.startswith("sqlite") and DB_HOSTADDR:
-    connect_args = {**connect_args, "hostaddr": DB_HOSTADDR}
+if not IS_SQLITE and DB_HOSTADDR:
+    connect_args["hostaddr"] = DB_HOSTADDR
 
 # For Postgres: set search_path (works with psycopg3 via libpq "options").
-if not DATABASE_URL.startswith("sqlite") and DB_SCHEMA and DB_SCHEMA != "public":
-    connect_args = {**connect_args, "options": f"-c search_path={DB_SCHEMA},public"}
+if not IS_SQLITE and DB_SCHEMA and DB_SCHEMA != "public":
+    connect_args["options"] = f"-c search_path={DB_SCHEMA},public"
+
+# Psycopg auto-prepared statements conflict with PgBouncer / managed Postgres
+# poolers and can crash startup with DuplicatePreparedStatement.
+if not IS_SQLITE and DATABASE_URL.startswith("postgresql+psycopg"):
+    connect_args.setdefault("prepare_threshold", None)
+
+engine_kwargs: dict = {"echo": False, "future": True, "connect_args": connect_args}
 
 # Managed Postgres providers and PgBouncer session mode are sensitive to idle pooled
 # connections. By default we avoid holding connections open between requests.
-if not DATABASE_URL.startswith("sqlite"):
+if not IS_SQLITE:
     use_null_pool = (os.getenv("DB_USE_NULL_POOL") or "1").strip().lower() not in {"0", "false", "no"}
     if use_null_pool:
         engine_kwargs["poolclass"] = NullPool
