@@ -53,6 +53,19 @@ SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, futu
 Base = declarative_base()
 
 
+def should_bootstrap_schema() -> bool:
+    """Whether startup should run schema creation/migration bootstrap.
+
+    On managed Postgres/PgBouncer this bootstrap can open many short-lived
+    connections during import and make the service fail before startup.
+    Keep it enabled by default for SQLite/dev, and opt-in for Postgres.
+    """
+    if IS_SQLITE:
+        return True
+    raw = (os.getenv("DB_BOOTSTRAP_ON_STARTUP") or "0").strip().lower()
+    return raw in {"1", "true", "yes", "on"}
+
+
 def _sqlite_table_columns(conn, table_name: str) -> set[str]:
     rows = conn.exec_driver_sql(f"PRAGMA table_info({table_name})").fetchall()
     # PRAGMA table_info: cid, name, type, notnull, dflt_value, pk
@@ -333,6 +346,8 @@ def _migrate_users_email_unique_postgres():
 
 # Extend init_db with best-effort Postgres migrations
 def init_db():
+    if not should_bootstrap_schema():
+        return
     from . import models  # noqa: F401 ensure models are imported
     Base.metadata.create_all(bind=engine)
     _migrate_notifications_sqlite()

@@ -235,427 +235,426 @@ app.include_router(ws.router, tags=["ws"])
 init_db()
 
 # Простая попытка авто-ALTER для добавления новых полей.
-# Важно: выполняем шаги независимо — ошибка в одном не должна ломать остальные.
+# На managed Postgres/VPS может перегружать pooler ещё до старта приложения,
+# поэтому по умолчанию запускается только для SQLite/dev или при явном opt-in.
 from sqlalchemy import inspect, text as sql_text
-from app.db.database import engine, DB_SCHEMA
+from app.db.database import engine, DB_SCHEMA, should_bootstrap_schema
 
 
-def _has_column(insp, table: str, column: str) -> bool:
+def _bootstrap_legacy_schema() -> None:
+    if not should_bootstrap_schema():
+        return
+
+    def _has_column(insp, table: str, column: str) -> bool:
+        try:
+            return any(c.get("name") == column for c in insp.get_columns(table, schema=DB_SCHEMA))
+        except Exception:
+            return False
+
+    def _try_exec(label: str, sql: str) -> bool:
+        try:
+            with engine.connect() as conn:
+                conn.execute(sql_text(sql))
+                conn.commit()
+            print(label)
+            return True
+        except Exception as e:  # pragma: no cover
+            print(f"[DB] {label} FAILED: {e}")
+            return False
+
+    def _refresh_insp():
+        return inspect(engine)
+
+    insp = _refresh_insp()
+
+    if _has_column(insp, "user_settings", "gift_tts_alongside"):
+        _try_exec(
+            "[DB] Removed column user_settings.gift_tts_alongside (no longer needed)",
+            "ALTER TABLE user_settings DROP COLUMN gift_tts_alongside",
+        )
+        insp = _refresh_insp()
+
+    if not _has_column(insp, "user_settings", "auto_connect_live"):
+        _try_exec(
+            "[DB] Added column user_settings.auto_connect_live",
+            "ALTER TABLE user_settings ADD COLUMN auto_connect_live BOOLEAN NOT NULL DEFAULT FALSE",
+        )
+        insp = _refresh_insp()
+
+    if not _has_column(insp, "user_settings", "silence_enabled"):
+        _try_exec(
+            "[DB] Added column user_settings.silence_enabled",
+            "ALTER TABLE user_settings ADD COLUMN silence_enabled BOOLEAN NOT NULL DEFAULT FALSE",
+        )
+        insp = _refresh_insp()
+
+    if not _has_column(insp, "user_settings", "silence_minutes"):
+        _try_exec(
+            "[DB] Added column user_settings.silence_minutes",
+            "ALTER TABLE user_settings ADD COLUMN silence_minutes INTEGER NOT NULL DEFAULT 5",
+        )
+        insp = _refresh_insp()
+
+    if not _has_column(insp, "user_settings", "chat_tts_mode"):
+        _try_exec(
+            "[DB] Added column user_settings.chat_tts_mode",
+            "ALTER TABLE user_settings ADD COLUMN chat_tts_mode VARCHAR(16) NOT NULL DEFAULT 'all'",
+        )
+        insp = _refresh_insp()
+
+    if not _has_column(insp, "user_settings", "chat_tts_prefixes"):
+        _try_exec(
+            "[DB] Added column user_settings.chat_tts_prefixes",
+            "ALTER TABLE user_settings ADD COLUMN chat_tts_prefixes VARCHAR(32) NOT NULL DEFAULT '.'",
+        )
+        insp = _refresh_insp()
+
+    if not _has_column(insp, "user_settings", "chat_tts_min_diamonds"):
+        _try_exec(
+            "[DB] Added column user_settings.chat_tts_min_diamonds",
+            "ALTER TABLE user_settings ADD COLUMN chat_tts_min_diamonds INTEGER NOT NULL DEFAULT 0",
+        )
+        insp = _refresh_insp()
+
+    if not _has_column(insp, "triggers", "executed_count"):
+        _try_exec(
+            "[DB] Added column triggers.executed_count",
+            "ALTER TABLE triggers ADD COLUMN executed_count INTEGER DEFAULT 0",
+        )
+        insp = _refresh_insp()
+
+    if not _has_column(insp, "triggers", "trigger_name"):
+        _try_exec(
+            "[DB] Added column triggers.trigger_name",
+            "ALTER TABLE triggers ADD COLUMN trigger_name VARCHAR(100)",
+        )
+        insp = _refresh_insp()
+
+    if not _has_column(insp, "triggers", "combo_count"):
+        _try_exec(
+            "[DB] Added column triggers.combo_count",
+            "ALTER TABLE triggers ADD COLUMN combo_count INTEGER DEFAULT 0",
+        )
+        insp = _refresh_insp()
+
+    if not _has_column(insp, "users", "role"):
+        _try_exec(
+            "[DB] Added column users.role",
+            "ALTER TABLE users ADD COLUMN role VARCHAR(32) NOT NULL DEFAULT 'user'",
+        )
+        insp = _refresh_insp()
+
+    if not _has_column(insp, "users", "email"):
+        _try_exec(
+            "[DB] Added column users.email",
+            "ALTER TABLE users ADD COLUMN email VARCHAR(256)",
+        )
+        insp = _refresh_insp()
+
+    if not _has_column(insp, "users", "avatar_filename"):
+        _try_exec(
+            "[DB] Added column users.avatar_filename",
+            "ALTER TABLE users ADD COLUMN avatar_filename VARCHAR(255)",
+        )
+        insp = _refresh_insp()
+
+    if not _has_column(insp, "users", "region"):
+        _try_exec(
+            "[DB] Added column users.region",
+            "ALTER TABLE users ADD COLUMN region VARCHAR(64)",
+        )
+        insp = _refresh_insp()
+
+    if not _has_column(insp, "users", "last_login_at"):
+        _try_exec(
+            "[DB] Added column users.last_login_at",
+            "ALTER TABLE users ADD COLUMN last_login_at TIMESTAMP",
+        )
+        insp = _refresh_insp()
+
+    if not _has_column(insp, "users", "last_login_ip"):
+        _try_exec(
+            "[DB] Added column users.last_login_ip",
+            "ALTER TABLE users ADD COLUMN last_login_ip VARCHAR(64)",
+        )
+        insp = _refresh_insp()
+
+    if not _has_column(insp, "users", "last_user_agent"):
+        _try_exec(
+            "[DB] Added column users.last_user_agent",
+            "ALTER TABLE users ADD COLUMN last_user_agent VARCHAR(255)",
+        )
+        insp = _refresh_insp()
+
+    if not _has_column(insp, "users", "last_ws_at"):
+        _try_exec(
+            "[DB] Added column users.last_ws_at",
+            "ALTER TABLE users ADD COLUMN last_ws_at TIMESTAMP",
+        )
+        insp = _refresh_insp()
+
+    if not _has_column(insp, "users", "last_client_platform"):
+        _try_exec(
+            "[DB] Added column users.last_client_platform",
+            "ALTER TABLE users ADD COLUMN last_client_platform VARCHAR(32)",
+        )
+        insp = _refresh_insp()
+
+    if not _has_column(insp, "users", "last_client_os"):
+        _try_exec(
+            "[DB] Added column users.last_client_os",
+            "ALTER TABLE users ADD COLUMN last_client_os VARCHAR(32)",
+        )
+        insp = _refresh_insp()
+
+    if not _has_column(insp, "users", "last_device"):
+        _try_exec(
+            "[DB] Added column users.last_device",
+            "ALTER TABLE users ADD COLUMN last_device VARCHAR(255)",
+        )
+        insp = _refresh_insp()
+
+    if not _has_column(insp, "users", "supabase_uid"):
+        _try_exec(
+            "[DB] Added column users.supabase_uid",
+            "ALTER TABLE users ADD COLUMN supabase_uid VARCHAR(36)",
+        )
+        _try_exec(
+            "[DB] Created index ux_users_supabase_uid",
+            "CREATE UNIQUE INDEX IF NOT EXISTS ux_users_supabase_uid ON users(supabase_uid)",
+        )
+        insp = _refresh_insp()
+
     try:
-        return any(c.get("name") == column for c in insp.get_columns(table, schema=DB_SCHEMA))
-    except Exception:
-        return False
+        tables = set(insp.get_table_names(schema=DB_SCHEMA))
+    except Exception:  # pragma: no cover
+        tables = set()
 
+    if "store_purchases" not in tables:
+        _try_exec(
+            "[DB] Created table store_purchases",
+            """
+            CREATE TABLE store_purchases (
+                id VARCHAR PRIMARY KEY,
+                user_id VARCHAR NOT NULL,
+                platform VARCHAR NOT NULL,
+                product_id VARCHAR(128) NOT NULL,
+                purchase_token VARCHAR(512),
+                transaction_id VARCHAR(128),
+                status VARCHAR NOT NULL DEFAULT 'unknown',
+                expires_at TIMESTAMP,
+                raw JSON,
+                created_at TIMESTAMP NOT NULL,
+                updated_at TIMESTAMP NOT NULL,
+                CONSTRAINT fk_store_purchases_user_id FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
+                CONSTRAINT uq_store_platform_token UNIQUE(platform, purchase_token)
+            )
+            """.strip(),
+        )
 
-def _try_exec(label: str, sql: str) -> bool:
+    insp = _refresh_insp()
     try:
-        with engine.connect() as conn:
-            conn.execute(sql_text(sql))
-            conn.commit()
-        print(label)
-        return True
-    except Exception as e:  # pragma: no cover
-        print(f"[DB] {label} FAILED: {e}")
-        return False
+        tables = set(insp.get_table_names(schema=DB_SCHEMA))
+    except Exception:  # pragma: no cover
+        tables = set()
 
-
-def _refresh_insp():
-    return inspect(engine)
-
-
-insp = _refresh_insp()
-
-# 0) Best-effort cleanup (не критично)
-if _has_column(insp, "user_settings", "gift_tts_alongside"):
-    _try_exec(
-        "[DB] Removed column user_settings.gift_tts_alongside (no longer needed)",
-        "ALTER TABLE user_settings DROP COLUMN gift_tts_alongside",
-    )
-    insp = _refresh_insp()
-
-# 1) user_settings
-if not _has_column(insp, "user_settings", "auto_connect_live"):
-    _try_exec(
-        "[DB] Added column user_settings.auto_connect_live",
-        "ALTER TABLE user_settings ADD COLUMN auto_connect_live BOOLEAN NOT NULL DEFAULT FALSE",
-    )
-    insp = _refresh_insp()
-
-if not _has_column(insp, "user_settings", "silence_enabled"):
-    _try_exec(
-        "[DB] Added column user_settings.silence_enabled",
-        "ALTER TABLE user_settings ADD COLUMN silence_enabled BOOLEAN NOT NULL DEFAULT FALSE",
-    )
-    insp = _refresh_insp()
-
-if not _has_column(insp, "user_settings", "silence_minutes"):
-    _try_exec(
-        "[DB] Added column user_settings.silence_minutes",
-        "ALTER TABLE user_settings ADD COLUMN silence_minutes INTEGER NOT NULL DEFAULT 5",
-    )
-    insp = _refresh_insp()
-
-if not _has_column(insp, "user_settings", "chat_tts_mode"):
-    _try_exec(
-        "[DB] Added column user_settings.chat_tts_mode",
-        "ALTER TABLE user_settings ADD COLUMN chat_tts_mode VARCHAR(16) NOT NULL DEFAULT 'all'",
-    )
-    insp = _refresh_insp()
-
-if not _has_column(insp, "user_settings", "chat_tts_prefixes"):
-    _try_exec(
-        "[DB] Added column user_settings.chat_tts_prefixes",
-        "ALTER TABLE user_settings ADD COLUMN chat_tts_prefixes VARCHAR(32) NOT NULL DEFAULT '.'",
-    )
-    insp = _refresh_insp()
-
-if not _has_column(insp, "user_settings", "chat_tts_min_diamonds"):
-    _try_exec(
-        "[DB] Added column user_settings.chat_tts_min_diamonds",
-        "ALTER TABLE user_settings ADD COLUMN chat_tts_min_diamonds INTEGER NOT NULL DEFAULT 0",
-    )
-    insp = _refresh_insp()
-
-# 2) triggers
-if not _has_column(insp, "triggers", "executed_count"):
-    _try_exec(
-        "[DB] Added column triggers.executed_count",
-        "ALTER TABLE triggers ADD COLUMN executed_count INTEGER DEFAULT 0",
-    )
-    insp = _refresh_insp()
-
-if not _has_column(insp, "triggers", "trigger_name"):
-    _try_exec(
-        "[DB] Added column triggers.trigger_name",
-        "ALTER TABLE triggers ADD COLUMN trigger_name VARCHAR(100)",
-    )
-    insp = _refresh_insp()
-
-if not _has_column(insp, "triggers", "combo_count"):
-    _try_exec(
-        "[DB] Added column triggers.combo_count",
-        "ALTER TABLE triggers ADD COLUMN combo_count INTEGER DEFAULT 0",
-    )
-    insp = _refresh_insp()
-
-# 3) users
-if not _has_column(insp, "users", "role"):
-    _try_exec(
-        "[DB] Added column users.role",
-        "ALTER TABLE users ADD COLUMN role VARCHAR(32) NOT NULL DEFAULT 'user'",
-    )
-    insp = _refresh_insp()
-
-if not _has_column(insp, "users", "email"):
-    _try_exec(
-        "[DB] Added column users.email",
-        "ALTER TABLE users ADD COLUMN email VARCHAR(256)",
-    )
-    insp = _refresh_insp()
-
-if not _has_column(insp, "users", "avatar_filename"):
-    _try_exec(
-        "[DB] Added column users.avatar_filename",
-        "ALTER TABLE users ADD COLUMN avatar_filename VARCHAR(255)",
-    )
-    insp = _refresh_insp()
-
-if not _has_column(insp, "users", "region"):
-    _try_exec(
-        "[DB] Added column users.region",
-        "ALTER TABLE users ADD COLUMN region VARCHAR(64)",
-    )
-    insp = _refresh_insp()
-
-if not _has_column(insp, "users", "last_login_at"):
-    _try_exec(
-        "[DB] Added column users.last_login_at",
-        "ALTER TABLE users ADD COLUMN last_login_at TIMESTAMP",
-    )
-    insp = _refresh_insp()
-
-if not _has_column(insp, "users", "last_login_ip"):
-    _try_exec(
-        "[DB] Added column users.last_login_ip",
-        "ALTER TABLE users ADD COLUMN last_login_ip VARCHAR(64)",
-    )
-    insp = _refresh_insp()
-
-if not _has_column(insp, "users", "last_user_agent"):
-    _try_exec(
-        "[DB] Added column users.last_user_agent",
-        "ALTER TABLE users ADD COLUMN last_user_agent VARCHAR(255)",
-    )
-    insp = _refresh_insp()
-
-if not _has_column(insp, "users", "last_ws_at"):
-    _try_exec(
-        "[DB] Added column users.last_ws_at",
-        "ALTER TABLE users ADD COLUMN last_ws_at TIMESTAMP",
-    )
-    insp = _refresh_insp()
-
-if not _has_column(insp, "users", "last_client_platform"):
-    _try_exec(
-        "[DB] Added column users.last_client_platform",
-        "ALTER TABLE users ADD COLUMN last_client_platform VARCHAR(32)",
-    )
-    insp = _refresh_insp()
-
-if not _has_column(insp, "users", "last_client_os"):
-    _try_exec(
-        "[DB] Added column users.last_client_os",
-        "ALTER TABLE users ADD COLUMN last_client_os VARCHAR(32)",
-    )
-    insp = _refresh_insp()
-
-if not _has_column(insp, "users", "last_device"):
-    _try_exec(
-        "[DB] Added column users.last_device",
-        "ALTER TABLE users ADD COLUMN last_device VARCHAR(255)",
-    )
-    insp = _refresh_insp()
-
-if not _has_column(insp, "users", "supabase_uid"):
-    _try_exec(
-        "[DB] Added column users.supabase_uid",
-        "ALTER TABLE users ADD COLUMN supabase_uid VARCHAR(36)",
-    )
-    _try_exec(
-        "[DB] Created index ux_users_supabase_uid",
-        "CREATE UNIQUE INDEX IF NOT EXISTS ux_users_supabase_uid ON users(supabase_uid)",
-    )
-    insp = _refresh_insp()
-
-# 4) store_purchases table
-try:
-    tables = set(insp.get_table_names(schema=DB_SCHEMA))
-except Exception:  # pragma: no cover
-    tables = set()
-
-if "store_purchases" not in tables:
-    _try_exec(
-        "[DB] Created table store_purchases",
-        """
-        CREATE TABLE store_purchases (
-            id VARCHAR PRIMARY KEY,
-            user_id VARCHAR NOT NULL,
-            platform VARCHAR NOT NULL,
-            product_id VARCHAR(128) NOT NULL,
-            purchase_token VARCHAR(512),
-            transaction_id VARCHAR(128),
-            status VARCHAR NOT NULL DEFAULT 'unknown',
-            expires_at TIMESTAMP,
-            raw JSON,
-            created_at TIMESTAMP NOT NULL,
-            updated_at TIMESTAMP NOT NULL,
-            CONSTRAINT fk_store_purchases_user_id FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
-            CONSTRAINT uq_store_platform_token UNIQUE(platform, purchase_token)
+    if "gift_events" not in tables:
+        _try_exec(
+            "[DB] Created table gift_events",
+            """
+            CREATE TABLE gift_events (
+                id VARCHAR PRIMARY KEY,
+                streamer_id VARCHAR NOT NULL,
+                donor_username VARCHAR(64) NOT NULL,
+                gift_id VARCHAR(64),
+                gift_name VARCHAR(256),
+                gift_count INTEGER NOT NULL DEFAULT 1,
+                gift_coins INTEGER NOT NULL DEFAULT 0,
+                day DATE NOT NULL,
+                created_at TIMESTAMP NOT NULL,
+                CONSTRAINT fk_gift_events_streamer_id FOREIGN KEY(streamer_id) REFERENCES users(id) ON DELETE CASCADE
+            )
+            """.strip(),
         )
-        """.strip(),
-    )
-
-# 5) gift stats tables
-insp = _refresh_insp()
-try:
-    tables = set(insp.get_table_names(schema=DB_SCHEMA))
-except Exception:  # pragma: no cover
-    tables = set()
-
-if "gift_events" not in tables:
-    _try_exec(
-        "[DB] Created table gift_events",
-        """
-        CREATE TABLE gift_events (
-            id VARCHAR PRIMARY KEY,
-            streamer_id VARCHAR NOT NULL,
-            donor_username VARCHAR(64) NOT NULL,
-            gift_id VARCHAR(64),
-            gift_name VARCHAR(256),
-            gift_count INTEGER NOT NULL DEFAULT 1,
-            gift_coins INTEGER NOT NULL DEFAULT 0,
-            day DATE NOT NULL,
-            created_at TIMESTAMP NOT NULL,
-            CONSTRAINT fk_gift_events_streamer_id FOREIGN KEY(streamer_id) REFERENCES users(id) ON DELETE CASCADE
+        _try_exec(
+            "[DB] Created index idx_gift_events_streamer_day",
+            "CREATE INDEX IF NOT EXISTS idx_gift_events_streamer_day ON gift_events(streamer_id, day)",
         )
-        """.strip(),
-    )
-    _try_exec(
-        "[DB] Created index idx_gift_events_streamer_day",
-        "CREATE INDEX IF NOT EXISTS idx_gift_events_streamer_day ON gift_events(streamer_id, day)",
-    )
-    _try_exec(
-        "[DB] Created index idx_gift_events_streamer_donor_day",
-        "CREATE INDEX IF NOT EXISTS idx_gift_events_streamer_donor_day ON gift_events(streamer_id, donor_username, day)",
-    )
-
-insp = _refresh_insp()
-try:
-    tables = set(insp.get_table_names(schema=DB_SCHEMA))
-except Exception:  # pragma: no cover
-    tables = set()
-
-if "gift_events_tt" not in tables:
-    _try_exec(
-        "[DB] Created table gift_events_tt",
-        """
-        CREATE TABLE gift_events_tt (
-            id VARCHAR PRIMARY KEY,
-            streamer_tiktok_username VARCHAR(64) NOT NULL,
-            donor_username VARCHAR(64) NOT NULL,
-            gift_id VARCHAR(64),
-            gift_name VARCHAR(256),
-            gift_count INTEGER NOT NULL DEFAULT 1,
-            gift_coins INTEGER NOT NULL DEFAULT 0,
-            day DATE NOT NULL,
-            created_at TIMESTAMP NOT NULL
+        _try_exec(
+            "[DB] Created index idx_gift_events_streamer_donor_day",
+            "CREATE INDEX IF NOT EXISTS idx_gift_events_streamer_donor_day ON gift_events(streamer_id, donor_username, day)",
         )
-        """.strip(),
-    )
-    _try_exec(
-        "[DB] Created index idx_gift_events_tt_streamer_day",
-        "CREATE INDEX IF NOT EXISTS idx_gift_events_tt_streamer_day ON gift_events_tt(streamer_tiktok_username, day)",
-    )
-    _try_exec(
-        "[DB] Created index idx_gift_events_tt_streamer_donor_day",
-        "CREATE INDEX IF NOT EXISTS idx_gift_events_tt_streamer_donor_day ON gift_events_tt(streamer_tiktok_username, donor_username, day)",
-    )
 
-insp = _refresh_insp()
-try:
-    tables = set(insp.get_table_names(schema=DB_SCHEMA))
-except Exception:  # pragma: no cover
-    tables = set()
+    insp = _refresh_insp()
+    try:
+        tables = set(insp.get_table_names(schema=DB_SCHEMA))
+    except Exception:  # pragma: no cover
+        tables = set()
 
-if "donor_stats" not in tables:
-    _try_exec(
-        "[DB] Created table donor_stats",
-        """
-        CREATE TABLE donor_stats (
-            id VARCHAR PRIMARY KEY,
-            streamer_id VARCHAR NOT NULL,
-            donor_username VARCHAR(64) NOT NULL,
-            total_coins INTEGER NOT NULL DEFAULT 0,
-            total_gifts INTEGER NOT NULL DEFAULT 0,
-            today_date DATE,
-            today_coins INTEGER NOT NULL DEFAULT 0,
-            yesterday_date DATE,
-            yesterday_coins INTEGER NOT NULL DEFAULT 0,
-            last_7d_anchor DATE,
-            last_7d_coins INTEGER NOT NULL DEFAULT 0,
-            last_30d_anchor DATE,
-            last_30d_coins INTEGER NOT NULL DEFAULT 0,
-            updated_at TIMESTAMP NOT NULL,
-            CONSTRAINT fk_donor_stats_streamer_id FOREIGN KEY(streamer_id) REFERENCES users(id) ON DELETE CASCADE,
-            CONSTRAINT uq_donor_stats_streamer_donor UNIQUE(streamer_id, donor_username)
+    if "gift_events_tt" not in tables:
+        _try_exec(
+            "[DB] Created table gift_events_tt",
+            """
+            CREATE TABLE gift_events_tt (
+                id VARCHAR PRIMARY KEY,
+                streamer_tiktok_username VARCHAR(64) NOT NULL,
+                donor_username VARCHAR(64) NOT NULL,
+                gift_id VARCHAR(64),
+                gift_name VARCHAR(256),
+                gift_count INTEGER NOT NULL DEFAULT 1,
+                gift_coins INTEGER NOT NULL DEFAULT 0,
+                day DATE NOT NULL,
+                created_at TIMESTAMP NOT NULL
+            )
+            """.strip(),
         )
-        """.strip(),
-    )
-    _try_exec(
-        "[DB] Created index idx_donor_stats_streamer_total",
-        "CREATE INDEX IF NOT EXISTS idx_donor_stats_streamer_total ON donor_stats(streamer_id, total_coins)",
-    )
-
-insp = _refresh_insp()
-try:
-    tables = set(insp.get_table_names(schema=DB_SCHEMA))
-except Exception:  # pragma: no cover
-    tables = set()
-
-if "donor_stats_tt" not in tables:
-    _try_exec(
-        "[DB] Created table donor_stats_tt",
-        """
-        CREATE TABLE donor_stats_tt (
-            id VARCHAR PRIMARY KEY,
-            streamer_tiktok_username VARCHAR(64) NOT NULL,
-            donor_username VARCHAR(64) NOT NULL,
-            total_coins INTEGER NOT NULL DEFAULT 0,
-            total_gifts INTEGER NOT NULL DEFAULT 0,
-            today_date DATE,
-            today_coins INTEGER NOT NULL DEFAULT 0,
-            yesterday_date DATE,
-            yesterday_coins INTEGER NOT NULL DEFAULT 0,
-            last_7d_anchor DATE,
-            last_7d_coins INTEGER NOT NULL DEFAULT 0,
-            last_30d_anchor DATE,
-            last_30d_coins INTEGER NOT NULL DEFAULT 0,
-            updated_at TIMESTAMP NOT NULL,
-            CONSTRAINT uq_donor_stats_tt_streamer_donor UNIQUE(streamer_tiktok_username, donor_username)
+        _try_exec(
+            "[DB] Created index idx_gift_events_tt_streamer_day",
+            "CREATE INDEX IF NOT EXISTS idx_gift_events_tt_streamer_day ON gift_events_tt(streamer_tiktok_username, day)",
         )
-        """.strip(),
-    )
-    _try_exec(
-        "[DB] Created index idx_donor_stats_tt_streamer_total",
-        "CREATE INDEX IF NOT EXISTS idx_donor_stats_tt_streamer_total ON donor_stats_tt(streamer_tiktok_username, total_coins)",
-    )
-
-insp = _refresh_insp()
-try:
-    tables = set(insp.get_table_names(schema=DB_SCHEMA))
-except Exception:  # pragma: no cover
-    tables = set()
-
-if "streamer_stats" not in tables:
-    _try_exec(
-        "[DB] Created table streamer_stats",
-        """
-        CREATE TABLE streamer_stats (
-            id VARCHAR PRIMARY KEY,
-            streamer_id VARCHAR NOT NULL,
-            total_coins INTEGER NOT NULL DEFAULT 0,
-            total_gifts INTEGER NOT NULL DEFAULT 0,
-            today_date DATE,
-            today_coins INTEGER NOT NULL DEFAULT 0,
-            yesterday_date DATE,
-            yesterday_coins INTEGER NOT NULL DEFAULT 0,
-            last_7d_anchor DATE,
-            last_7d_coins INTEGER NOT NULL DEFAULT 0,
-            last_30d_anchor DATE,
-            last_30d_coins INTEGER NOT NULL DEFAULT 0,
-            updated_at TIMESTAMP NOT NULL,
-            CONSTRAINT fk_streamer_stats_streamer_id FOREIGN KEY(streamer_id) REFERENCES users(id) ON DELETE CASCADE,
-            CONSTRAINT uq_streamer_stats_streamer_id UNIQUE(streamer_id)
+        _try_exec(
+            "[DB] Created index idx_gift_events_tt_streamer_donor_day",
+            "CREATE INDEX IF NOT EXISTS idx_gift_events_tt_streamer_donor_day ON gift_events_tt(streamer_tiktok_username, donor_username, day)",
         )
-        """.strip(),
-    )
-    _try_exec(
-        "[DB] Created index idx_streamer_stats_total",
-        "CREATE INDEX IF NOT EXISTS idx_streamer_stats_total ON streamer_stats(total_coins)",
-    )
 
-insp = _refresh_insp()
-try:
-    tables = set(insp.get_table_names(schema=DB_SCHEMA))
-except Exception:  # pragma: no cover
-    tables = set()
+    insp = _refresh_insp()
+    try:
+        tables = set(insp.get_table_names(schema=DB_SCHEMA))
+    except Exception:  # pragma: no cover
+        tables = set()
 
-if "streamer_stats_tt" not in tables:
-    _try_exec(
-        "[DB] Created table streamer_stats_tt",
-        """
-        CREATE TABLE streamer_stats_tt (
-            id VARCHAR PRIMARY KEY,
-            streamer_tiktok_username VARCHAR(64) NOT NULL,
-            total_coins INTEGER NOT NULL DEFAULT 0,
-            total_gifts INTEGER NOT NULL DEFAULT 0,
-            today_date DATE,
-            today_coins INTEGER NOT NULL DEFAULT 0,
-            yesterday_date DATE,
-            yesterday_coins INTEGER NOT NULL DEFAULT 0,
-            last_7d_anchor DATE,
-            last_7d_coins INTEGER NOT NULL DEFAULT 0,
-            last_30d_anchor DATE,
-            last_30d_coins INTEGER NOT NULL DEFAULT 0,
-            updated_at TIMESTAMP NOT NULL,
-            CONSTRAINT uq_streamer_stats_tt_streamer UNIQUE(streamer_tiktok_username)
+    if "donor_stats" not in tables:
+        _try_exec(
+            "[DB] Created table donor_stats",
+            """
+            CREATE TABLE donor_stats (
+                id VARCHAR PRIMARY KEY,
+                streamer_id VARCHAR NOT NULL,
+                donor_username VARCHAR(64) NOT NULL,
+                total_coins INTEGER NOT NULL DEFAULT 0,
+                total_gifts INTEGER NOT NULL DEFAULT 0,
+                today_date DATE,
+                today_coins INTEGER NOT NULL DEFAULT 0,
+                yesterday_date DATE,
+                yesterday_coins INTEGER NOT NULL DEFAULT 0,
+                last_7d_anchor DATE,
+                last_7d_coins INTEGER NOT NULL DEFAULT 0,
+                last_30d_anchor DATE,
+                last_30d_coins INTEGER NOT NULL DEFAULT 0,
+                updated_at TIMESTAMP NOT NULL,
+                CONSTRAINT fk_donor_stats_streamer_id FOREIGN KEY(streamer_id) REFERENCES users(id) ON DELETE CASCADE,
+                CONSTRAINT uq_donor_stats_streamer_donor UNIQUE(streamer_id, donor_username)
+            )
+            """.strip(),
         )
-        """.strip(),
-    )
-    _try_exec(
-        "[DB] Created index idx_streamer_stats_tt_total",
-        "CREATE INDEX IF NOT EXISTS idx_streamer_stats_tt_total ON streamer_stats_tt(total_coins)",
-    )
+        _try_exec(
+            "[DB] Created index idx_donor_stats_streamer_total",
+            "CREATE INDEX IF NOT EXISTS idx_donor_stats_streamer_total ON donor_stats(streamer_id, total_coins)",
+        )
+
+    insp = _refresh_insp()
+    try:
+        tables = set(insp.get_table_names(schema=DB_SCHEMA))
+    except Exception:  # pragma: no cover
+        tables = set()
+
+    if "donor_stats_tt" not in tables:
+        _try_exec(
+            "[DB] Created table donor_stats_tt",
+            """
+            CREATE TABLE donor_stats_tt (
+                id VARCHAR PRIMARY KEY,
+                streamer_tiktok_username VARCHAR(64) NOT NULL,
+                donor_username VARCHAR(64) NOT NULL,
+                total_coins INTEGER NOT NULL DEFAULT 0,
+                total_gifts INTEGER NOT NULL DEFAULT 0,
+                today_date DATE,
+                today_coins INTEGER NOT NULL DEFAULT 0,
+                yesterday_date DATE,
+                yesterday_coins INTEGER NOT NULL DEFAULT 0,
+                last_7d_anchor DATE,
+                last_7d_coins INTEGER NOT NULL DEFAULT 0,
+                last_30d_anchor DATE,
+                last_30d_coins INTEGER NOT NULL DEFAULT 0,
+                updated_at TIMESTAMP NOT NULL,
+                CONSTRAINT uq_donor_stats_tt_streamer_donor UNIQUE(streamer_tiktok_username, donor_username)
+            )
+            """.strip(),
+        )
+        _try_exec(
+            "[DB] Created index idx_donor_stats_tt_streamer_total",
+            "CREATE INDEX IF NOT EXISTS idx_donor_stats_tt_streamer_total ON donor_stats_tt(streamer_tiktok_username, total_coins)",
+        )
+
+    insp = _refresh_insp()
+    try:
+        tables = set(insp.get_table_names(schema=DB_SCHEMA))
+    except Exception:  # pragma: no cover
+        tables = set()
+
+    if "streamer_stats" not in tables:
+        _try_exec(
+            "[DB] Created table streamer_stats",
+            """
+            CREATE TABLE streamer_stats (
+                id VARCHAR PRIMARY KEY,
+                streamer_id VARCHAR NOT NULL,
+                total_coins INTEGER NOT NULL DEFAULT 0,
+                total_gifts INTEGER NOT NULL DEFAULT 0,
+                today_date DATE,
+                today_coins INTEGER NOT NULL DEFAULT 0,
+                yesterday_date DATE,
+                yesterday_coins INTEGER NOT NULL DEFAULT 0,
+                last_7d_anchor DATE,
+                last_7d_coins INTEGER NOT NULL DEFAULT 0,
+                last_30d_anchor DATE,
+                last_30d_coins INTEGER NOT NULL DEFAULT 0,
+                updated_at TIMESTAMP NOT NULL,
+                CONSTRAINT fk_streamer_stats_streamer_id FOREIGN KEY(streamer_id) REFERENCES users(id) ON DELETE CASCADE,
+                CONSTRAINT uq_streamer_stats_streamer_id UNIQUE(streamer_id)
+            )
+            """.strip(),
+        )
+        _try_exec(
+            "[DB] Created index idx_streamer_stats_total",
+            "CREATE INDEX IF NOT EXISTS idx_streamer_stats_total ON streamer_stats(total_coins)",
+        )
+
+    insp = _refresh_insp()
+    try:
+        tables = set(insp.get_table_names(schema=DB_SCHEMA))
+    except Exception:  # pragma: no cover
+        tables = set()
+
+    if "streamer_stats_tt" not in tables:
+        _try_exec(
+            "[DB] Created table streamer_stats_tt",
+            """
+            CREATE TABLE streamer_stats_tt (
+                id VARCHAR PRIMARY KEY,
+                streamer_tiktok_username VARCHAR(64) NOT NULL,
+                total_coins INTEGER NOT NULL DEFAULT 0,
+                total_gifts INTEGER NOT NULL DEFAULT 0,
+                today_date DATE,
+                today_coins INTEGER NOT NULL DEFAULT 0,
+                yesterday_date DATE,
+                yesterday_coins INTEGER NOT NULL DEFAULT 0,
+                last_7d_anchor DATE,
+                last_7d_coins INTEGER NOT NULL DEFAULT 0,
+                last_30d_anchor DATE,
+                last_30d_coins INTEGER NOT NULL DEFAULT 0,
+                updated_at TIMESTAMP NOT NULL,
+                CONSTRAINT uq_streamer_stats_tt_streamer UNIQUE(streamer_tiktok_username)
+            )
+            """.strip(),
+        )
+        _try_exec(
+            "[DB] Created index idx_streamer_stats_tt_total",
+            "CREATE INDEX IF NOT EXISTS idx_streamer_stats_tt_total ON streamer_stats_tt(total_coins)",
+        )
+
+
+_bootstrap_legacy_schema()
 app.include_router(auth_v2.router, prefix="/v2/auth", tags=["v2-auth"])
 app.include_router(settings_v2.router, prefix="/v2/settings", tags=["v2-settings"])
 app.include_router(sounds_v2.router, prefix="/v2/sounds", tags=["v2-sounds"])
