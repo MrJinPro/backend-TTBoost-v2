@@ -325,11 +325,59 @@ class SpotifyService {
     return null;
   }
 
+  Future<List<Map<String, dynamic>>> getDevices() async {
+    final uri = Uri.parse('$_apiBase/me/player/devices');
+    final resp = await _authedRequest('GET', uri);
+
+    if (resp.statusCode < 200 || resp.statusCode >= 300) {
+      throw StateError('Spotify devices error: ${resp.statusCode} ${resp.body}');
+    }
+
+    final decoded = jsonDecode(resp.body);
+    if (decoded is! Map<String, dynamic>) return const [];
+    final devices = decoded['devices'];
+    if (devices is! List) return const [];
+    return devices.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList();
+  }
+
+  Never _throwPlayerCommandError(String actionLabel, http.Response resp) {
+    String? reason;
+    String? message;
+    try {
+      final decoded = jsonDecode(resp.body);
+      if (decoded is Map<String, dynamic>) {
+        final err = decoded['error'];
+        if (err is Map<String, dynamic>) {
+          reason = err['reason']?.toString();
+          message = err['message']?.toString();
+        }
+      }
+    } catch (_) {}
+
+    final normalizedReason = (reason ?? '').trim().toUpperCase();
+    final normalizedMessage = (message ?? '').trim().toLowerCase();
+
+    if (normalizedReason == 'NO_ACTIVE_DEVICE' ||
+        normalizedMessage.contains('no active device') ||
+        resp.statusCode == 404) {
+      throw StateError(
+        'Spotify не видит активное устройство. Откройте Spotify на телефоне, начните воспроизведение любого трека и вернитесь в TTBoost.',
+      );
+    }
+
+    if (resp.statusCode == 403 &&
+        (normalizedMessage.contains('premium') || normalizedReason.contains('PREMIUM'))) {
+      throw StateError('Управление воспроизведением Spotify доступно только для Premium-аккаунта.');
+    }
+
+    throw StateError('Spotify $actionLabel failed: ${resp.statusCode} ${resp.body}');
+  }
+
   Future<void> play() async {
     final uri = Uri.parse('$_apiBase/me/player/play');
     final resp = await _authedRequest('PUT', uri);
     if (resp.statusCode < 200 || resp.statusCode >= 300) {
-      throw StateError('Spotify play failed: ${resp.statusCode} ${resp.body}');
+      _throwPlayerCommandError('play', resp);
     }
   }
 
@@ -337,7 +385,7 @@ class SpotifyService {
     final uri = Uri.parse('$_apiBase/me/player/pause');
     final resp = await _authedRequest('PUT', uri);
     if (resp.statusCode < 200 || resp.statusCode >= 300) {
-      throw StateError('Spotify pause failed: ${resp.statusCode} ${resp.body}');
+      _throwPlayerCommandError('pause', resp);
     }
   }
 
@@ -345,7 +393,7 @@ class SpotifyService {
     final uri = Uri.parse('$_apiBase/me/player/next');
     final resp = await _authedRequest('POST', uri);
     if (resp.statusCode < 200 || resp.statusCode >= 300) {
-      throw StateError('Spotify next failed: ${resp.statusCode} ${resp.body}');
+      _throwPlayerCommandError('next', resp);
     }
   }
 
@@ -353,7 +401,7 @@ class SpotifyService {
     final uri = Uri.parse('$_apiBase/me/player/previous');
     final resp = await _authedRequest('POST', uri);
     if (resp.statusCode < 200 || resp.statusCode >= 300) {
-      throw StateError('Spotify previous failed: ${resp.statusCode} ${resp.body}');
+      _throwPlayerCommandError('previous', resp);
     }
   }
 
@@ -365,7 +413,7 @@ class SpotifyService {
 
     final resp = await _authedRequest('PUT', uri);
     if (resp.statusCode < 200 || resp.statusCode >= 300) {
-      throw StateError('Spotify volume failed: ${resp.statusCode} ${resp.body}');
+      _throwPlayerCommandError('volume', resp);
     }
   }
 }

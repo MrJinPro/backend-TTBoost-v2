@@ -15,6 +15,8 @@ class SpotifyProvider extends ChangeNotifier {
   String? _track;
   String? _artist;
   int? _volume;
+  String? _deviceName;
+  String? _hint;
   String? _error;
 
   Timer? _pollTimer;
@@ -26,6 +28,8 @@ class SpotifyProvider extends ChangeNotifier {
   String? get track => _track;
   String? get artist => _artist;
   int? get volume => _volume;
+  String? get deviceName => _deviceName;
+  String? get hint => _hint;
   String? get error => _error;
 
   SpotifyProvider() {
@@ -160,8 +164,24 @@ class SpotifyProvider extends ChangeNotifier {
         _track = null;
         _artist = null;
         _volume = null;
+        final devices = await _spotify.getDevices();
+        if (devices.isEmpty) {
+          _deviceName = null;
+          _hint = 'Откройте приложение Spotify на этом телефоне и запустите любой трек. После этого станут доступны Play, Next, Prev и отдельная громкость.';
+        } else {
+          final activeDevice = devices.cast<Map<String, dynamic>?>().firstWhere(
+            (d) => d?['is_active'] == true,
+            orElse: () => null,
+          );
+          final firstDevice = activeDevice ?? devices.first;
+          _deviceName = firstDevice['name']?.toString();
+          _hint = activeDevice == null
+              ? 'Spotify подключён, но активное устройство сейчас не выбрано. Откройте Spotify на телефоне и начните воспроизведение.'
+              : null;
+        }
       } else {
         _playing = playback['is_playing'] == true;
+        _hint = null;
 
         final item = playback['item'];
         if (item is Map) {
@@ -177,10 +197,13 @@ class SpotifyProvider extends ChangeNotifier {
 
         final device = playback['device'];
         if (device is Map) {
+          _deviceName = device['name']?.toString();
           final v = device['volume_percent'];
           if (v is num) {
             _volume = v.toInt().clamp(0, 100);
           }
+        } else {
+          _deviceName = null;
         }
       }
 
@@ -212,6 +235,7 @@ class SpotifyProvider extends ChangeNotifier {
       await refreshNow();
     } catch (e) {
       _error = e.toString();
+      await refreshNow();
       notifyListeners();
     }
   }
@@ -224,6 +248,7 @@ class SpotifyProvider extends ChangeNotifier {
       await refreshNow();
     } catch (e) {
       _error = e.toString();
+      await refreshNow();
       notifyListeners();
     }
   }
@@ -236,6 +261,7 @@ class SpotifyProvider extends ChangeNotifier {
       await refreshNow();
     } catch (e) {
       _error = e.toString();
+      await refreshNow();
       notifyListeners();
     }
   }
@@ -256,6 +282,7 @@ class SpotifyProvider extends ChangeNotifier {
       notifyListeners();
     } catch (e) {
       _error = e.toString();
+      await refreshNow();
       notifyListeners();
     }
   }

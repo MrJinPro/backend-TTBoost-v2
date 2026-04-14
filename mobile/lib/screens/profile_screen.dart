@@ -697,6 +697,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
               final track = (sp.track ?? '').trim();
               final artist = (sp.artist ?? '').trim();
               final vol = sp.volume;
+              final deviceName = (sp.deviceName ?? '').trim();
+              final hint = (sp.hint ?? '').trim();
               final err = (sp.error ?? '').trim();
 
               return Container(
@@ -733,6 +735,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           : (connected ? 'Подключено' : 'Не подключено'),
                       style: AppTextStyles.bodySmall.copyWith(color: AppColors.secondaryText),
                     ),
+                    if (connected && deviceName.isNotEmpty) ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        'Активное устройство: $deviceName',
+                        style: AppTextStyles.bodySmall.copyWith(color: AppColors.secondaryText),
+                      ),
+                    ],
+                    if (connected) ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        'Для управления Spotify откройте приложение Spotify на телефоне и запустите трек. Тогда заработают отдельная громкость и кнопки Prev/Play/Next.',
+                        style: AppTextStyles.bodySmall.copyWith(color: AppColors.secondaryText),
+                      ),
+                    ],
                     if (connected && (track.isNotEmpty || artist.isNotEmpty)) ...[
                       const SizedBox(height: 8),
                       Text(
@@ -756,6 +772,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             style: AppTextStyles.bodySmall.copyWith(color: AppColors.secondaryText),
                           ),
                         ),
+                    ],
+                    if (hint.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        hint,
+                        style: AppTextStyles.bodySmall.copyWith(color: AppColors.accentCyan),
+                      ),
                     ],
                     if (err.isNotEmpty) ...[
                       const SizedBox(height: 8),
