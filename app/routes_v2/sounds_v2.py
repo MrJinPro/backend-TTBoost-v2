@@ -1,5 +1,6 @@
 import os
 import re
+import time
 from urllib.parse import quote, urljoin, urlparse
 
 import httpx
@@ -29,6 +30,9 @@ def get_db():
 MAX_BYTES = 1024 * 1024
 _MYINSTANTS_BASE = "https://www.myinstants.com"
 _HTTP_TIMEOUT = httpx.Timeout(20.0)
+_MYINSTANTS_CATALOG_TTL_SECONDS = 600.0
+_MYINSTANTS_CATALOG_CACHE: list[dict[str, str]] = []
+_MYINSTANTS_CATALOG_CACHE_AT = 0.0
 
 
 def _media_root(user_id: str) -> str:
@@ -137,6 +141,40 @@ def _parse_myinstants_search(html: str) -> list[dict[str, str]]:
     return results
 
 
+async def _load_myinstants_catalog(force_refresh: bool = False) -> list[dict[str, str]]:
+    global _MYINSTANTS_CATALOG_CACHE, _MYINSTANTS_CATALOG_CACHE_AT
+
+    now = time.monotonic()
+    if not force_refresh and _MYINSTANTS_CATALOG_CACHE and (now - _MYINSTANTS_CATALOG_CACHE_AT) < _MYINSTANTS_CATALOG_TTL_SECONDS:
+        return list(_MYINSTANTS_CATALOG_CACHE)
+
+    catalog_urls = [
+        f"{_MYINSTANTS_BASE}/ru/",
+        f"{_MYINSTANTS_BASE}/",
+    ]
+    parsed_items: list[dict[str, str]] = []
+
+    async with httpx.AsyncClient(timeout=_HTTP_TIMEOUT, follow_redirects=True, headers=_myinstants_headers()) as client:
+        for catalog_url in catalog_urls:
+            try:
+                resp = await client.get(catalog_url)
+            except Exception:
+                continue
+
+            if resp.status_code < 200 or resp.status_code >= 300:
+                continue
+
+            parsed_items = _parse_myinstants_search(resp.text)
+            if parsed_items:
+                break
+
+    if parsed_items:
+        _MYINSTANTS_CATALOG_CACHE = parsed_items
+        _MYINSTANTS_CATALOG_CACHE_AT = now
+
+    return list(_MYINSTANTS_CATALOG_CACHE)
+
+
 def _extract_myinstants_mp3(html: str, page_url: str) -> tuple[str | None, str | None]:
     title_match = re.search(r"<h1[^>]*>\s*([^<]+?)\s*</h1>", html, flags=re.IGNORECASE)
     title = title_match.group(1).strip() if title_match else None
@@ -173,11 +211,39 @@ async def myinstants_preview(page_url: str, user: models.User = Depends(get_curr
     return {"title": title, "preview_url": mp3_url}
 
 
+@router.get("/external/myinstants/catalog")
+async def myinstants_catalog(
+    q: str = "",
+    limit: int = 30,
+    offset: int = 0,
+    user: models.User = Depends(get_current_user),
+):
+    query = (q or "").strip().lower()
+    safe_limit = min(max(int(limit or 30), 1), 100)
+    safe_offset = max(int(offset or 0), 0)
+
+    items = await _load_myinstants_catalog()
+    if query:
+        items = [
+            item for item in items
+            if query in (item.get("title") or "").lower() or query in (item.get("page_url") or "").lower()
+        ]
+
+    page = items[safe_offset:safe_offset + safe_limit]
+    return {
+        "items": page,
+        "total": len(items),
+        "offset": safe_offset,
+        "limit": safe_limit,
+    }
+
+
 @router.get("/external/myinstants/search")
 async def myinstants_search(q: str, user: models.User = Depends(get_current_user)):
     query = (q or "").strip()
     if len(query) < 2:
-        return {"items": []}
+        items = await _load_myinstants_catalog()
+        return {"items": items[:20]}
 
     search_url = f"{_MYINSTANTS_BASE}/ru/search/?name={quote(query)}"
     async with httpx.AsyncClient(timeout=_HTTP_TIMEOUT, follow_redirects=True, headers=_myinstants_headers()) as client:
@@ -186,7 +252,15 @@ async def myinstants_search(q: str, user: models.User = Depends(get_current_user
     if resp.status_code < 200 or resp.status_code >= 300:
         raise HTTPException(502, detail="myinstants search failed")
 
-    return {"items": _parse_myinstants_search(resp.text)}
+    items = _parse_myinstants_search(resp.text)
+    if not items:
+        catalog_items = await _load_myinstants_catalog()
+        q_lower = query.lower()
+        items = [
+            item for item in catalog_items
+            if q_lower in (item.get("title") or "").lower() or q_lower in (item.get("page_url") or "").lower()
+        ]
+    return {"items": items}
 
 
 @router.post("/external/myinstants/import")
