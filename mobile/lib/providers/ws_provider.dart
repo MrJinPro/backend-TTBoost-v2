@@ -1022,7 +1022,7 @@ class WsProvider extends ChangeNotifier {
       try {
         await connectToTikTok(u, fromAutoReconnect: true);
         await Future<void>.delayed(const Duration(seconds: 4));
-        if (!_tiktokConnected && _wsConnected && _autoConnectLive && !_manualLiveDisconnect) {
+        if (!_tiktokConnected && _wsConnected && allowAutoLive2 && !_manualLiveDisconnect) {
           _scheduleAutoReconnect(immediate: false);
         }
       } finally {

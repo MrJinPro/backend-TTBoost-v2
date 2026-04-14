@@ -38,12 +38,14 @@ class _GiftPickerDialogState extends State<GiftPickerDialog> {
       // Загрузка библиотеки подарков через API
       final api = context.read<ApiService>();
       final gifts = await api.getGiftsLibrary();
+      if (!mounted) return;
       setState(() {
         _gifts = gifts;
         _filteredGifts = gifts;
         _loading = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() => _loading = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -213,7 +215,20 @@ class _GiftPickerDialogState extends State<GiftPickerDialog> {
               child: _loading
                   ? const Center(child: CircularProgressIndicator())
                   : _filteredGifts.isEmpty
-                      ? const Center(child: Text('Подарки не найдены'))
+                      ? Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Text('Подарки не найдены'),
+                              const SizedBox(height: 12),
+                              OutlinedButton.icon(
+                                onPressed: _loadGifts,
+                                icon: const Icon(Icons.refresh),
+                                label: const Text('Повторить загрузку'),
+                              ),
+                            ],
+                          ),
+                        )
                       : ListView.separated(
                           itemCount: _filteredGifts.length,
                           separatorBuilder: (context, index) => const SizedBox(height: 8),

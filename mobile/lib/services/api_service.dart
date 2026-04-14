@@ -10,6 +10,8 @@ class ApiService {
   String? lastTtsEngineUsed;
   String? lastTtsVoiceIdUsed;
   bool lastTtsFallbackUsed = false;
+  List<Map<String, dynamic>>? _cachedGiftsLibrary;
+  List<Map<String, dynamic>>? _cachedMyInstantsCatalog;
 
   ApiService({String baseUrl = kApiBaseUrl})
       : baseUrl = baseUrl.endsWith('/') ? baseUrl.substring(0, baseUrl.length - 1) : baseUrl;
@@ -696,6 +698,9 @@ class ApiService {
   Future<List<Map<String, dynamic>>> getGiftsLibrary() async {
     try {
       _setLastError(null);
+      if (_cachedGiftsLibrary != null && _cachedGiftsLibrary!.isNotEmpty) {
+        return List<Map<String, dynamic>>.from(_cachedGiftsLibrary!);
+      }
       // Большой payload: на мобильных сетях без gzip и таймаута может "висеть".
       // Просим облегчённый ответ без поля sound (оно не нужно для выбора подарка).
       final uri = Uri.parse('$baseUrl/v2/gifts/library').replace(
@@ -705,7 +710,11 @@ class ApiService {
       if (resp.statusCode == 200) {
         final m = _jsonDecodeResponse(resp) as Map<String, dynamic>;
         final gifts = m['gifts'] as List<dynamic>? ?? [];
-        return gifts.cast<Map<String, dynamic>>();
+        final parsed = gifts.cast<Map<String, dynamic>>();
+        if (parsed.isNotEmpty) {
+          _cachedGiftsLibrary = List<Map<String, dynamic>>.from(parsed);
+        }
+        return parsed;
       }
 
       _setLastError(_extractErrorMessage(resp));
@@ -713,6 +722,44 @@ class ApiService {
     } catch (e) {
       _setLastError('Не удалось загрузить библиотеку подарков');
       print('getGiftsLibrary error: $e');
+      return [];
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getMyInstantsCatalog({
+    String query = '',
+    int limit = 30,
+    int offset = 0,
+    bool forceRefresh = false,
+  }) async {
+    try {
+      _setLastError(null);
+      final normalizedQuery = query.trim();
+      if (!forceRefresh && normalizedQuery.isEmpty && _cachedMyInstantsCatalog != null && _cachedMyInstantsCatalog!.isNotEmpty) {
+        return List<Map<String, dynamic>>.from(_cachedMyInstantsCatalog!);
+      }
+
+      final uri = Uri.parse('$baseUrl/v2/sounds/external/myinstants/catalog').replace(
+        queryParameters: {
+          'q': normalizedQuery,
+          'limit': '$limit',
+          'offset': '$offset',
+        },
+      );
+      final resp = await http.get(uri, headers: _authHeaders());
+      if (resp.statusCode == 200) {
+        final m = _jsonDecodeResponse(resp) as Map<String, dynamic>;
+        final items = (m['items'] as List<dynamic>? ?? []).cast<Map<String, dynamic>>();
+        if (normalizedQuery.isEmpty && offset == 0 && items.isNotEmpty) {
+          _cachedMyInstantsCatalog = List<Map<String, dynamic>>.from(items);
+        }
+        return items;
+      }
+      _setLastError(_extractErrorMessage(resp));
+      return [];
+    } catch (e) {
+      _setLastError('Не удалось загрузить каталог Myinstants');
+      print('getMyInstantsCatalog error: $e');
       return [];
     }
   }

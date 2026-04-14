@@ -117,16 +117,27 @@ class _AlertsScreenState extends State<AlertsScreen> {
     bool importing = false;
     String? previewingPageUrl;
     List<Map<String, dynamic>> results = [];
+    bool initialized = false;
 
     return showDialog<({String filename, String url})?>(
       context: context,
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setStateDialog) {
+            Future<void> loadCatalog({bool forceRefresh = false}) async {
+              setStateDialog(() => loading = true);
+              final found = await api.getMyInstantsCatalog(forceRefresh: forceRefresh);
+              if (!context.mounted) return;
+              setStateDialog(() {
+                results = found;
+                loading = false;
+              });
+            }
+
             Future<void> runSearch() async {
               final q = searchCtrl.text.trim();
               if (q.length < 2) {
-                setStateDialog(() => results = []);
+                await loadCatalog();
                 return;
               }
 
@@ -184,6 +195,13 @@ class _AlertsScreenState extends State<AlertsScreen> {
               }
             }
 
+            if (!initialized) {
+              initialized = true;
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                loadCatalog();
+              });
+            }
+
             return AlertDialog(
               backgroundColor: AppColors.cardBackground,
               title: const Text('Импорт из Myinstants'),
@@ -212,7 +230,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
                     Align(
                       alignment: Alignment.centerLeft,
                       child: Text(
-                        'Найденный звук будет импортирован в вашу библиотеку и затем доступен в триггерах как обычный файл.',
+                        'Каталог подгружается сразу. Любой выбранный звук будет импортирован в вашу библиотеку и затем доступен в триггерах как обычный файл.',
                         style: AppTextStyles.bodySmall.copyWith(color: AppColors.secondaryText),
                       ),
                     ),
@@ -228,7 +246,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
                         child: results.isEmpty
                             ? Center(
                                 child: Text(
-                                  'Введите запрос и нажмите поиск',
+                                  'Каталог пуст. Попробуйте обновить или введите запрос.',
                                   style: AppTextStyles.bodyMedium.copyWith(color: AppColors.secondaryText),
                                 ),
                               )
@@ -273,6 +291,10 @@ class _AlertsScreenState extends State<AlertsScreen> {
                 ),
               ),
               actions: [
+                TextButton(
+                  onPressed: importing || loading ? null : () => loadCatalog(forceRefresh: true),
+                  child: const Text('Обновить каталог'),
+                ),
                 TextButton(
                   onPressed: importing ? null : () => Navigator.of(context).pop(),
                   child: const Text('Закрыть'),
@@ -887,6 +909,16 @@ class _AlertsScreenState extends State<AlertsScreen> {
 
     Map<String, dynamic>? selectedGift;
 
+    if (eventType == 'gift' && existingConditionKey == 'gift_id' && (existingConditionValue ?? '').trim().isNotEmpty) {
+      try {
+        final gifts = await api.getGiftsLibrary();
+        final existingGiftId = (existingConditionValue ?? '').trim();
+        selectedGift = gifts.firstWhere(
+          (gift) => (gift['gift_id']?.toString() ?? '').trim() == existingGiftId,
+        );
+      } catch (_) {}
+    }
+
     bool saving = false;
     bool soundsLoading = true;
     List<Map<String, dynamic>> sounds = [];
@@ -1032,7 +1064,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
                                   ),
                                   items: const [
                                     DropdownMenuItem(value: 'any', child: Text('Любой подарок')),
-                                    DropdownMenuItem(value: 'gift_id', child: Text('По gift_id')),
+                                    DropdownMenuItem(value: 'gift_id', child: Text('Выбрать из списка')),
                                     DropdownMenuItem(value: 'gift_name', child: Text('По названию')),
                                   ],
                                   onChanged: saving
@@ -1074,7 +1106,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
                                           });
                                         },
                                   icon: const Icon(Icons.card_giftcard),
-                                  label: const Text('Выбрать подарок'),
+                                  label: Text(selectedGift == null ? 'Выбрать подарок из списка' : 'Изменить подарок'),
                                 ),
                               ),
                               if (selectedGift != null) ...[
@@ -1113,17 +1145,22 @@ class _AlertsScreenState extends State<AlertsScreen> {
                                 ),
                               ],
                               const SizedBox(height: 12),
-                            ],
-
-                            TextField(
-                              controller: conditionCtrl,
-                              decoration: InputDecoration(
-                                labelText: conditionMode == 'gift_id' ? 'gift_id' : 'gift_name',
-                                filled: true,
-                                fillColor: AppColors.surfaceColor,
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                              Text(
+                                selectedGift == null
+                                    ? 'Сначала выберите подарок из списка.'
+                                    : 'Для триггера будет сохранён выбранный подарок. Ручной ввод gift_id не нужен.',
+                                style: AppTextStyles.bodySmall.copyWith(color: AppColors.secondaryText),
                               ),
-                            ),
+                            ] else
+                              TextField(
+                                controller: conditionCtrl,
+                                decoration: InputDecoration(
+                                  labelText: 'Название подарка',
+                                  filled: true,
+                                  fillColor: AppColors.surfaceColor,
+                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                ),
+                              ),
                           ],
                           const SizedBox(height: 12),
                         ],
