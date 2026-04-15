@@ -42,6 +42,18 @@ class JsTikTokService:
         task = asyncio.create_task(coro)
         self._callback_tasks.add(task)
         task.add_done_callback(self._callback_tasks.discard)
+        task.add_done_callback(self._log_task_exception)
+
+    def _log_task_exception(self, task: asyncio.Task) -> None:
+        try:
+            exc = task.exception()
+        except asyncio.CancelledError:
+            return
+        except Exception:
+            logger.exception("TikTok JS callback task failed while reading result")
+            return
+        if exc is not None:
+            logger.exception("TikTok JS callback task failed", exc_info=exc)
 
     async def _send(self, payload: dict[str, Any]) -> None:
         ws = self._bridge_ws

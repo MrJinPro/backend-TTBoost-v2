@@ -41,6 +41,30 @@ function getViewerStats(data) {
   return { current, total };
 }
 
+function formatErrorMessage(error, fallback = 'TikTok connection error') {
+  if (!error) {
+    return fallback;
+  }
+
+  if (error instanceof Error) {
+    return error.message || fallback;
+  }
+
+  if (typeof error === 'object') {
+    const info = typeof error.info === 'string' ? error.info.trim() : '';
+    const nested = error.exception instanceof Error
+      ? (error.exception.message || '')
+      : (typeof error.exception?.message === 'string' ? error.exception.message.trim() : '');
+    return [info, nested].filter(Boolean).join(': ') || fallback;
+  }
+
+  if (typeof error === 'string') {
+    return error.trim() || fallback;
+  }
+
+  return fallback;
+}
+
 class LiveSession {
   constructor({ userId, username, bridge }) {
     this.userId = String(userId);
@@ -136,8 +160,9 @@ class LiveSession {
       });
     });
 
-    connection.on('disconnected', () => {
-      this.handleUnexpectedDisconnect('Connection dropped');
+    connection.on('disconnected', (details) => {
+      const reason = formatErrorMessage(details, 'Connection dropped');
+      this.handleUnexpectedDisconnect(reason);
     });
 
     connection.on('streamEnd', () => {
@@ -145,7 +170,14 @@ class LiveSession {
     });
 
     connection.on('error', (error) => {
-      this.handleUnexpectedDisconnect(error instanceof Error ? error.message : 'TikTok connection error');
+      const message = formatErrorMessage(error, 'TikTok connection error');
+      this.emitError('TIKTOK_ERROR', message);
+
+      // The library emits generic error events for non-terminal problems as well.
+      // Reconnect only when we are still connecting; once connected, wait for a real disconnect.
+      if (!this.connected) {
+        this.handleConnectionFailure(error, false);
+      }
     });
 
     connection.on('chat', (data) => {
