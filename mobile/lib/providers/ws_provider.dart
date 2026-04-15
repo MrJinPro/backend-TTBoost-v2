@@ -532,15 +532,31 @@ class WsProvider extends ChangeNotifier {
         value.contains('�');
   }
 
+  bool _isBackendReconnectMessage(String? message) {
+    final lower = (message ?? '').trim().toLowerCase();
+    if (lower.isEmpty) return false;
+    return lower.contains('переподключ') ||
+        lower.contains('reconnect') ||
+        lower.contains('re-connecting') ||
+        lower.contains('recovering');
+  }
+
   String _friendlyLiveStatusText(
     String? message, {
     required bool connected,
     required bool isConnectingStatus,
+    bool isRecoveringStatus = false,
     String? username,
   }) {
     final account = (username ?? '').replaceAll('@', '').trim();
     final normalized = (message ?? '').trim();
     final lower = normalized.toLowerCase();
+
+    if (isRecoveringStatus) {
+      return account.isNotEmpty
+          ? 'Связь с @$account потеряна, переподключаемся...'
+          : 'Связь с TikTok LIVE потеряна, переподключаемся...';
+    }
 
     if (isConnectingStatus) {
       return account.isNotEmpty
@@ -619,6 +635,7 @@ class WsProvider extends ChangeNotifier {
       final u = event['tiktok_username']?.toString().trim();
       final pending = _pendingTikTokUsername?.trim().toLowerCase();
       final incomingUser = u?.replaceAll('@', '').toLowerCase();
+      final isRecoveringStatus = !connected && _isBackendReconnectMessage(msg);
       final isConnectingStatus = !connected && (
         (msg != null && msg.toLowerCase().contains('подключаем')) ||
         (pending != null && pending.isNotEmpty && incomingUser == pending)
@@ -633,10 +650,11 @@ class WsProvider extends ChangeNotifier {
         msg,
         connected: connected,
         isConnectingStatus: isConnectingStatus,
+        isRecoveringStatus: isRecoveringStatus,
         username: u,
       );
       _liveErrorText = null;
-      _liveConnecting = isConnectingStatus;
+      _liveConnecting = isConnectingStatus || isRecoveringStatus;
 
       if (connected) {
         _manualLiveDisconnect = false;
@@ -645,6 +663,8 @@ class WsProvider extends ChangeNotifier {
         _cancelAutoReconnect();
         _resetStreamStats();
         _autoReconnectAttempt = 0;
+      } else if (isRecoveringStatus) {
+        _cancelAutoReconnect(resetAttempt: false, resetInFlight: false);
       } else if (!isConnectingStatus) {
         final allowAutoLive = _autoConnectLive || _sessionAutoReconnectLive;
         if (!_demoMode && allowAutoLive && !_manualLiveDisconnect && _wsConnected) {
@@ -861,6 +881,8 @@ class WsProvider extends ChangeNotifier {
         text = _friendlyLiveStatusText(
           event['message']?.toString(),
           connected: event['connected'] == true,
+          isRecoveringStatus: event['connected'] != true &&
+            _isBackendReconnectMessage(event['message']?.toString()),
           isConnectingStatus: event['connected'] != true &&
               ((event['message']?.toString().toLowerCase().contains('подключаем')) ?? false),
           username: event['tiktok_username']?.toString(),
@@ -1108,6 +1130,7 @@ class WsProvider extends ChangeNotifier {
     if (_autoReconnectInFlight) return;
     if (!_wsConnected) return;
     if (_tiktokConnected) return;
+    if (_liveConnecting) return;
     if (_manualLiveDisconnect) return;
     final allowAutoLive = _autoConnectLive || _sessionAutoReconnectLive;
     if (!allowAutoLive) return;
@@ -1125,6 +1148,7 @@ class WsProvider extends ChangeNotifier {
       final allowAutoLive2 = _autoConnectLive || _sessionAutoReconnectLive;
       if (!allowAutoLive2 || _manualLiveDisconnect || _tiktokConnected) return;
       if (!_wsConnected) return;
+      if (_liveConnecting) return;
 
       _autoReconnectInFlight = true;
       try {
