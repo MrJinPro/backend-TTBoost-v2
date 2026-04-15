@@ -322,18 +322,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
           const SizedBox(height: 12),
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
-            title: Text('Автоподключение к LIVE', style: AppTextStyles.bodyMedium.copyWith(color: AppColors.primaryText)),
-            value: ws.autoConnectLive,
-            onChanged: (v) => ws.setAutoConnectLive(v),
-            activeColor: AppColors.accentGreen,
-            secondary: const HelpIcon(
-              title: 'Автоподключение к LIVE',
-              message:
-                  'Если включено — приложение будет пытаться автоматически подключаться к LIVE (к вашему TikTok нику) при старте и/или при восстановлении соединения.\n\nПолезно, чтобы не забывать нажать «Подключиться».',
-            ),
-          ),
-          SwitchListTile(
-            contentPadding: EdgeInsets.zero,
             title: Text('TTS ON / OFF', style: AppTextStyles.bodyMedium.copyWith(color: AppColors.primaryText)),
             value: ws.ttsEnabled,
             onChanged: ws.updateTtsEnabled,

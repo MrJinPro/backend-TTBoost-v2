@@ -131,11 +131,9 @@ class WsProvider extends ChangeNotifier {
 
     if (normalized.isEmpty) {
       _currentTikTokUsername = null;
-      _sessionAutoReconnectLive = false;
       await prefs.remove(_kPrefLastTikTokUsername);
     } else {
       _currentTikTokUsername = normalized;
-      _sessionAutoReconnectLive = true;
       await prefs.setString(_kPrefLastTikTokUsername, normalized);
     }
 
@@ -161,8 +159,7 @@ class WsProvider extends ChangeNotifier {
       () async {
         await refreshSettingsFromServer();
 
-        final savedTarget = (_currentTikTokUsername ?? '').trim();
-        final shouldResumeLive = savedTarget.isNotEmpty && (_autoConnectLive || _sessionAutoReconnectLive);
+        final shouldResumeLive = false;
         if (shouldResumeLive) {
           return;
         }
@@ -217,7 +214,6 @@ class WsProvider extends ChangeNotifier {
         final normalized = savedTikTokUsername.replaceAll('@', '').trim();
         if (normalized.isNotEmpty && ((_currentTikTokUsername ?? '').trim().isEmpty || _currentTikTokUsername != normalized)) {
           _currentTikTokUsername = normalized;
-          _sessionAutoReconnectLive = true;
           try {
             final prefs = await SharedPreferences.getInstance();
             await prefs.setString(_kPrefLastTikTokUsername, normalized);
@@ -257,11 +253,11 @@ class WsProvider extends ChangeNotifier {
         }
       }
 
-      if (auto is bool && auto != _autoConnectLive) {
-        _autoConnectLive = auto;
+      if (auto is bool && auto != false) {
+        _autoConnectLive = false;
         try {
           final prefs = await SharedPreferences.getInstance();
-          await prefs.setBool(_kPrefAutoConnectLive, auto);
+          await prefs.setBool(_kPrefAutoConnectLive, false);
         } catch (_) {}
         changed = true;
       }
@@ -270,7 +266,6 @@ class WsProvider extends ChangeNotifier {
         notifyListeners();
       }
 
-      _maybeAutoConnectSavedLive(immediate: true);
     } catch (e) {
       logDebug('Failed to refresh settings: $e');
     }
@@ -463,13 +458,6 @@ class WsProvider extends ChangeNotifier {
             _wsReconnectAttempt = 0;
           }
         }();
-        final allowAutoLive = _autoConnectLive || _sessionAutoReconnectLive;
-        if (!_demoMode && allowAutoLive && !_manualLiveDisconnect && !_tiktokConnected) {
-          final u = (_currentTikTokUsername ?? '').trim();
-          if (u.isNotEmpty) {
-            _scheduleAutoReconnect(immediate: true);
-          }
-        }
       }
 
       _syncOverlayStatus();
@@ -482,13 +470,11 @@ class WsProvider extends ChangeNotifier {
       try {
         final prefs = await SharedPreferences.getInstance();
         _currentTikTokUsername = prefs.getString(_kPrefLastTikTokUsername);
-        _autoConnectLive = prefs.getBool(_kPrefAutoConnectLive) ?? false;
-        if ((_currentTikTokUsername ?? '').trim().isNotEmpty) {
-          _sessionAutoReconnectLive = true;
-        }
+        _autoConnectLive = false;
+        _sessionAutoReconnectLive = false;
+        await prefs.setBool(_kPrefAutoConnectLive, false);
         _syncOverlayStatus();
         notifyListeners();
-        _maybeAutoConnectSavedLive(immediate: true);
       } catch (_) {}
     }();
   }
@@ -498,29 +484,12 @@ class WsProvider extends ChangeNotifier {
     final savedUsername = prefs.getString(_kPrefLastTikTokUsername);
     if (savedUsername != null && savedUsername.trim().isNotEmpty) {
       _currentTikTokUsername = savedUsername.trim();
-      _sessionAutoReconnectLive = true;
       notifyListeners();
-      _maybeAutoConnectSavedLive(immediate: true);
     }
   }
 
   void _maybeAutoConnectSavedLive({bool immediate = false}) {
-    if (_demoMode) return;
-    if (!_wsConnected) return;
-    if (_tiktokConnected || _liveConnecting) return;
-    if (_manualLiveDisconnect) return;
-
-    final allowAutoLive = _autoConnectLive || _sessionAutoReconnectLive;
-    if (!allowAutoLive) return;
-
-    final username = (_currentTikTokUsername ?? '').trim();
-    if (username.isEmpty) return;
-
-    if ((_pendingTikTokUsername ?? '').trim().toLowerCase() == username.toLowerCase()) {
-      return;
-    }
-
-    _scheduleAutoReconnect(immediate: immediate);
+    return;
   }
 
   bool _looksCorruptedText(String? text) {
@@ -665,14 +634,6 @@ class WsProvider extends ChangeNotifier {
         _autoReconnectAttempt = 0;
       } else if (isRecoveringStatus) {
         _cancelAutoReconnect(resetAttempt: false, resetInFlight: false);
-      } else if (!isConnectingStatus) {
-        final allowAutoLive = _autoConnectLive || _sessionAutoReconnectLive;
-        if (!_demoMode && allowAutoLive && !_manualLiveDisconnect && _wsConnected) {
-          final u2 = (_currentTikTokUsername ?? '').trim();
-          if (u2.isNotEmpty) {
-            _scheduleAutoReconnect(immediate: false);
-          }
-        }
       }
 
       _events.insert(0, _mapEvent(event));
@@ -726,14 +687,6 @@ class WsProvider extends ChangeNotifier {
       _liveConnecting = false;
       _pendingTikTokUsername = null;
       _retryingPendingConnect = false;
-
-      final allowAutoLive = _autoConnectLive || _sessionAutoReconnectLive;
-      if (!_demoMode && allowAutoLive && !_manualLiveDisconnect && _wsConnected && !_tiktokConnected) {
-        final u2 = (_currentTikTokUsername ?? '').trim();
-        if (u2.isNotEmpty) {
-          _scheduleAutoReconnect(immediate: false);
-        }
-      }
     }
 
     logDebug('WS Event: ${event['type']}');
@@ -965,15 +918,9 @@ class WsProvider extends ChangeNotifier {
       }
 
       _manualLiveDisconnect = false;
-      if (!fromAutoReconnect) {
-        // Пользователь подключился вручную — держим LIVE и пытаемся восстановить при обрывах,
-        // но НЕ автоподключаемся на старте приложения.
-        _sessionAutoReconnectLive = true;
-      }
-      _cancelAutoReconnect(
-        resetAttempt: !fromAutoReconnect,
-        resetInFlight: !fromAutoReconnect,
-      );
+      _sessionAutoReconnectLive = false;
+      _autoConnectLive = false;
+      _cancelAutoReconnect();
 
       // ╨п╨▓╨╜╨╛╨╡ ╨┤╨╡╨╣╤Б╤В╨▓╨╕╨╡ ╨┐╨╛╨╗╤М╨╖╨╛╨▓╨░╤В╨╡╨╗╤П: ╤А╨░╨╖╤А╨╡╤И╨░╨╡╨╝ ╨┐╨╛╨┤╨║╨╗╤О╤З╨╡╨╜╨╕╨╡ ╤В╨╛╨╗╤М╨║╨╛ ╤Б╨╡╨╣╤З╨░╤Б.
       _pendingTikTokUsername = username;
@@ -1040,29 +987,17 @@ class WsProvider extends ChangeNotifier {
   }
 
   Future<void> setAutoConnectLive(bool enabled) async {
-    _autoConnectLive = enabled;
+    _autoConnectLive = false;
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool(_kPrefAutoConnectLive, enabled);
+      await prefs.setBool(_kPrefAutoConnectLive, false);
     } catch (_) {}
 
-    // ╤Б╨╛╤Е╤А╨░╨╜╤П╨╡╨╝ ╨╜╨░ ╤Б╨╡╤А╨▓╨╡╤А╨╡ (╨╜╨░╤Б╤В╤А╨╛╨╣╨║╨░ ╨┐╤А╨╛╤Д╨╕╨╗╤П)
     try {
-      await _api.updateSettings(autoConnectLive: enabled);
+      await _api.updateSettings(autoConnectLive: false);
     } catch (_) {}
 
-    if (!enabled) {
-      _cancelAutoReconnect();
-    } else {
-      // ╨╡╤Б╨╗╨╕ ╨▓╨║╨╗╤О╤З╨╕╨╗╨╕ тАФ ╨┐╤А╨╛╨▒╤Г╨╡╨╝ ╨┐╨╛╨┤╨║╨╗╤О╤З╨╕╤В╤М╤Б╤П
-      _manualLiveDisconnect = false;
-      // Reset attempt counter so enabling the toggle always tries once.
-      _cancelAutoReconnect();
-      final u = (_currentTikTokUsername ?? '').trim();
-      if (u.isNotEmpty && !_tiktokConnected) {
-        _scheduleAutoReconnect(immediate: true);
-      }
-    }
+    _cancelAutoReconnect();
 
     notifyListeners();
   }
@@ -1125,42 +1060,7 @@ class WsProvider extends ChangeNotifier {
   }
 
   void _scheduleAutoReconnect({bool immediate = false}) {
-    if (_demoMode) return;
-    if (_autoReconnectTimer != null) return;
-    if (_autoReconnectInFlight) return;
-    if (!_wsConnected) return;
-    if (_tiktokConnected) return;
-    if (_liveConnecting) return;
-    if (_manualLiveDisconnect) return;
-    final allowAutoLive = _autoConnectLive || _sessionAutoReconnectLive;
-    if (!allowAutoLive) return;
-
-    final u = (_currentTikTokUsername ?? '').trim();
-    if (u.isEmpty) return;
-
-    // Backoff attempts; no parallel retries.
-    _autoReconnectAttempt += 1;
-
-    final delay = immediate ? Duration.zero : _nextReconnectDelay(_autoReconnectAttempt);
-
-    _autoReconnectTimer = Timer(delay, () async {
-      _autoReconnectTimer = null;
-      final allowAutoLive2 = _autoConnectLive || _sessionAutoReconnectLive;
-      if (!allowAutoLive2 || _manualLiveDisconnect || _tiktokConnected) return;
-      if (!_wsConnected) return;
-      if (_liveConnecting) return;
-
-      _autoReconnectInFlight = true;
-      try {
-        await connectToTikTok(u, fromAutoReconnect: true);
-        await Future<void>.delayed(const Duration(seconds: 4));
-        if (!_tiktokConnected && _wsConnected && allowAutoLive2 && !_manualLiveDisconnect) {
-          _scheduleAutoReconnect(immediate: false);
-        }
-      } finally {
-        _autoReconnectInFlight = false;
-      }
-    });
+    return;
   }
 
   Duration _nextReconnectDelay(int attempt) {
