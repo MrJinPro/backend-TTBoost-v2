@@ -887,6 +887,35 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
             except Exception:
                 return
 
+        def _friendly_tiktok_error(exc: Exception | str | None, username: str | None = None) -> str:
+            account = (username or "").strip().lstrip("@").lower()
+            suffix = f" у @{account}" if account else ""
+            raw = str(exc or "").strip()
+            lower = raw.lower()
+
+            if isinstance(exc, UserNotFoundError) or "usernotfound" in lower or "not found" in lower:
+                return (
+                    f"Не удалось найти активный эфир{suffix}. "
+                    "Проверьте username и что LIVE уже запущен."
+                )
+
+            if WebcastBlocked200Error is not None and isinstance(exc, WebcastBlocked200Error):
+                return (
+                    "TikTok отклонил подключение с этого сервера. "
+                    "Чаще всего это блокировка по IP. Попробуйте другой IP или proxy."
+                )
+
+            if isinstance(exc, TimeoutError) or "timeout" in lower or "timed out" in lower:
+                return "TikTok долго не отвечает. Попробуйте подключиться еще раз."
+
+            if "signature" in lower or "signapi" in lower:
+                return "TikTok временно отклонил подключение. Попробуйте еще раз чуть позже."
+
+            return (
+                f"Не удалось подключиться к TikTok LIVE{suffix}. "
+                "Проверьте username и что эфир уже запущен."
+            )
+
         async def _silence_monitor():
             while True:
                 await asyncio.sleep(5)
@@ -1063,7 +1092,7 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
             if action == "connect_tiktok":
                 username = str(data.get("username") or "").strip().lstrip("@").lower()
                 if not username:
-                    await _safe_send({"type": "error", "message": "Username is required"})
+                    await _safe_send({"type": "error", "message": "Укажите username TikTok"})
                     continue
 
                 # remember for stats resolution (most recent TikTok account)
@@ -1119,26 +1148,13 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
                 except UserNotFoundError:
                     await _safe_send({
                         "type": "error",
-                        "message": (
-                            "TikTok пользователь не найден. "
-                            "Проверьте, что ник указан без '@', и что стрим запущен."
-                        ) + (f" (username: @{username})" if username else ""),
+                        "message": _friendly_tiktok_error(UserNotFoundError(), username),
                     })
                 except Exception as e:
-                    if WebcastBlocked200Error is not None and isinstance(e, WebcastBlocked200Error):
-                        await _safe_send({
-                            "type": "error",
-                            "message": (
-                                "TikTok заблокировал WebSocket (DEVICE_BLOCKED). "
-                                "На VPS/датацентровом IP это бывает очень часто. "
-                                "Решение: используйте residential proxy (TIKTOK_PROXY) и/или авторизованные cookies (TIKTOK_COOKIES)."
-                            ),
-                        })
-                    else:
-                        await _safe_send({
-                            "type": "error",
-                            "message": f"Ошибка подключения к TikTok Live: {e}",
-                        })
+                    await _safe_send({
+                        "type": "error",
+                        "message": _friendly_tiktok_error(e, username),
+                    })
 
             elif action == "disconnect_tiktok":
                 if tiktok_service.is_running(user_id):
@@ -1177,37 +1193,24 @@ async def ws_endpoint(websocket: WebSocket, db: Session = Depends(get_db), autho
         try:
             await websocket.send_text(json.dumps({
                 "type": "error",
-                "message": (
-                    "TikTok пользователь не найден. "
-                    "Проверьте, что ник указан без '@', и что стрим запущен."
-                ) + (f" (username: @{target_username})" if 'target_username' in locals() and target_username else "")
+                "message": _friendly_tiktok_error(
+                    UserNotFoundError(),
+                    target_username if 'target_username' in locals() else None,
+                )
             }, ensure_ascii=False))
         except Exception:
             pass
     except Exception as e:
-        # DEVICE_BLOCKED и подобные блокировки лучше объяснять явно
-        if WebcastBlocked200Error is not None and isinstance(e, WebcastBlocked200Error):
-            try:
-                await websocket.send_text(json.dumps({
-                    "type": "error",
-                    "message": (
-                        "TikTok заблокировал WebSocket (DEVICE_BLOCKED). "
-                        "На VPS/датацентровом IP это бывает очень часто. "
-                        "Решение: используйте residential proxy (TIKTOK_PROXY) и/или авторизованные cookies (TIKTOK_COOKIES)."
-                    )
-                }, ensure_ascii=False))
-            except Exception:
-                pass
-        else:
-            # Отправляем любую другую ошибку перед закрытием
-            error_msg = str(e)
-            try:
-                await websocket.send_text(json.dumps({
-                    "type": "error",
-                    "message": f"Ошибка подключения к TikTok Live: {error_msg}"
-                }, ensure_ascii=False))
-            except Exception:
-                pass
+        try:
+            await websocket.send_text(json.dumps({
+                "type": "error",
+                "message": _friendly_tiktok_error(
+                    e,
+                    target_username if 'target_username' in locals() else None,
+                )
+            }, ensure_ascii=False))
+        except Exception:
+            pass
     finally:
         if tiktok_service.is_running(user_id):
             await tiktok_service.stop_client(user_id)
