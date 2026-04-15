@@ -595,6 +595,9 @@ class TikTokService:
             async def on_disconnect(event: DisconnectEvent):
                 logger.warning(f"TikTok Live отключен: {tiktok_username}")
                 # Не обновляем last_activity здесь, чтобы watchdog мог перезапускать
+                if self._stopping.get(user_id):
+                    logger.info("Пропускаем disconnect callback для контролируемой остановки @%s", tiktok_username)
+                    return
                 if on_disconnect_callback:
                     try:
                         await on_disconnect_callback(tiktok_username)
@@ -604,8 +607,6 @@ class TikTokService:
                 # Автопереподключение (если включено)
                 auto_reconnect = str(os.getenv("TT_AUTO_RECONNECT", "1")).strip().lower() in ("1", "true", "yes", "on")
                 if not auto_reconnect:
-                    return
-                if self._stopping.get(user_id):
                     return
                 if user_id not in self._clients:
                     return
