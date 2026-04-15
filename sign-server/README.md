@@ -43,12 +43,22 @@ npm start
 ## Настройка бэкенда TTBoost
 В файле `backend/.env` задайте:
 ```
-SIGN_SERVER_URL=http://localhost:3000/sign
 TIKTOK_CONNECTOR_BACKEND=js
+```
+Этого уже достаточно для локального bridge на том же сервере.
+
+Дополнительно, только если нужно изменить дефолты:
+```
 TIKTOK_BRIDGE_WS_URL=ws://127.0.0.1:3000/bridge
 TIKTOK_BRIDGE_TOKEN=change_me
 ```
-Перезапустите бэкенд. Он автоматически попробует использовать Sign Server.
+
+Важно:
+- `TIKTOK_BRIDGE_WS_URL` необязателен, по умолчанию backend сам использует `ws://127.0.0.1:3000/bridge`
+- `TIKTOK_BRIDGE_TOKEN` необязателен, если bridge крутится локально и наружу не открыт
+- `SIGN_SERVER_URL` для JS LIVE bridge не нужен; он нужен только если вы отдельно используете HTTP endpoint `POST /sign`
+
+Перезапустите backend после изменения env.
 
 ## Multi-user bridge
 
@@ -57,12 +67,35 @@ Bridge рассчитан на многопользовательский реж
 Полезные env для bridge:
 ```
 PORT=3000
-TIKTOK_BRIDGE_TOKEN=change_me
+# Необязательно. Если не указывать, bridge принимает локальные подключения без токена.
+# TIKTOK_BRIDGE_TOKEN=change_me
 TIKTOK_BRIDGE_MAX_SESSIONS=1000
 TIKTOK_BRIDGE_RECONNECT_BASE_SEC=2
 TIKTOK_BRIDGE_RECONNECT_MAX_SEC=30
 TIKTOK_BRIDGE_RECONNECT_ATTEMPTS=8
 ```
+
+## Минимальный запуск на сервере
+
+1. В `backend/.env` включите:
+```dotenv
+TIKTOK_CONNECTOR_BACKEND=js
+```
+
+2. В папке `sign-server` выполните:
+```bash
+npm install
+node index.js
+```
+
+3. Перезапустите backend.
+
+4. Проверьте:
+```bash
+curl http://127.0.0.1:3000/health
+```
+
+Если видите `"ok":true`, bridge поднят и backend может к нему подключаться по умолчанию.
 
 ## Важно
 - Пример алгоритма в `tiktok_signer.js` — упрощенный и предназначен как заглушка/демонстрация интерфейса.
