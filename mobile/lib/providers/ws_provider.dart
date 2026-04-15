@@ -301,7 +301,7 @@ class WsProvider extends ChangeNotifier {
     _stopDemoInternal();
     _tiktokConnected = false;
     _liveConnecting = false;
-    _liveStatusText = 'Demo ╤А╨╡╨╢╨╕╨╝ ╨▓╤Л╨║╨╗╤О╤З╨╡╨╜';
+    _liveStatusText = 'Демо-режим выключен';
     _liveErrorText = null;
     _syncOverlayStatus();
     notifyListeners();
@@ -320,7 +320,7 @@ class WsProvider extends ChangeNotifier {
     _liveConnecting = false;
     _tiktokConnected = true;
     _liveErrorText = null;
-    _liveStatusText = 'DEMO MODE: ╤В╨╡╤Б╤В╨╛╨▓╤Л╨╡ ╤Б╨╛╨▒╤Л╤В╨╕╤П ╨▒╨╡╨╖ LIVE';
+    _liveStatusText = 'Демо-режим: тестовые события без LIVE';
 
     if ((_currentTikTokUsername ?? '').trim().isEmpty) {
       _currentTikTokUsername = 'demo_live';
@@ -368,16 +368,16 @@ class WsProvider extends ChangeNotifier {
           'type': 'viewer_join',
           'username': 'demo_viewer_${(_demoStep % 99) + 1}',
         };
-        ttsText = '╨Ъ ╨╜╨░╨╝ ╨┐╤А╨╕╤Б╨╛╨╡╨┤╨╕╨╜╨╕╨╗╤Б╤П ╨╖╤А╨╕╤В╨╡╨╗╤М.';
+        ttsText = 'К нам присоединился зритель.';
         break;
       case 1:
         event = {
           '__demo': true,
           'type': 'chat',
           'user': 'DemoUser',
-          'message': '╨Я╤А╨╕╨▓╨╡╤В! ╨н╤В╨╛ ╤В╨╡╤Б╤В╨╛╨▓╤Л╨╣ ╤З╨░╤В ╨┤╨╗╤П ╤А╨╡╨▓╤М╤О.',
+          'message': 'Привет! Это тестовый чат для проверки.',
         };
-        ttsText = 'DemoUser: ╨Я╤А╨╕╨▓╨╡╤В! ╨н╤В╨╛ ╤В╨╡╤Б╤В╨╛╨▓╤Л╨╣ ╤З╨░╤В ╨┤╨╗╤П ╤А╨╡╨▓╤М╤О.';
+        ttsText = 'DemoUser: Привет! Это тестовый чат для проверки.';
         break;
       case 2:
         event = {
@@ -390,7 +390,7 @@ class WsProvider extends ChangeNotifier {
           if (_demoSoundUrl != null) 'sound_url': _demoSoundUrl,
           'volume': 100,
         };
-        ttsText = 'DemoFan ╨╛╤В╨┐╤А╨░╨▓╨╕╨╗ ╨┐╨╛╨┤╨░╤А╨╛╨║ Rose.';
+        ttsText = 'DemoFan отправил подарок Rose.';
         break;
       case 3:
         event = {
@@ -425,7 +425,7 @@ class WsProvider extends ChangeNotifier {
       // Always allow testing, even if TTS is currently disabled.
       await _audio.stopTts();
 
-      const text = 'NovaBoost Mobile ╤Б╨╡╤А╨▓╨╕╤Б ╨┤╨╗╤П ╤Б╤В╤А╨╕╨╝╨╡╤А╨╛╨▓!';
+      const text = 'NovaBoost Mobile сервис для стримеров!';
       final url = await _api.generateTts(text: text, voiceId: _voiceId);
       if (url == null || url.trim().isEmpty) return;
 
@@ -523,6 +523,92 @@ class WsProvider extends ChangeNotifier {
     _scheduleAutoReconnect(immediate: immediate);
   }
 
+  bool _looksCorruptedText(String? text) {
+    final value = (text ?? '').trim();
+    if (value.isEmpty) return false;
+    return value.contains('╨') ||
+        value.contains('╤') ||
+        value.contains('тА') ||
+        value.contains('�');
+  }
+
+  String _friendlyLiveStatusText(
+    String? message, {
+    required bool connected,
+    required bool isConnectingStatus,
+    String? username,
+  }) {
+    final account = (username ?? '').replaceAll('@', '').trim();
+    final normalized = (message ?? '').trim();
+    final lower = normalized.toLowerCase();
+
+    if (isConnectingStatus) {
+      return account.isNotEmpty
+          ? 'Подключаемся к @$account...'
+          : 'Подключаемся к TikTok LIVE...';
+    }
+
+    if (connected) {
+      return account.isNotEmpty ? 'Подключено к @$account' : 'TikTok LIVE подключен';
+    }
+
+    if (normalized.isEmpty || _looksCorruptedText(normalized)) {
+      return account.isNotEmpty ? 'LIVE для @$account отключен' : 'TikTok LIVE отключен';
+    }
+
+    if (lower.contains('disconnect') ||
+        lower.contains('offline') ||
+        lower.contains('stopped') ||
+        lower.contains('closed') ||
+        lower.contains('отключ')) {
+      return account.isNotEmpty ? 'LIVE для @$account отключен' : 'TikTok LIVE отключен';
+    }
+
+    return normalized;
+  }
+
+  String _friendlyLiveErrorText(String? message, {String? username}) {
+    final account = (username ?? '').replaceAll('@', '').trim();
+    final normalized = (message ?? '').trim();
+    final lower = normalized.toLowerCase();
+
+    if (lower.contains('not found') ||
+        lower.contains('user_not_found') ||
+        lower.contains('room_id') ||
+        lower.contains('room id') ||
+        lower.contains('offline') ||
+        lower.contains('not live') ||
+        lower.contains('no active live')) {
+      return account.isNotEmpty
+          ? 'Не удалось найти активный эфир у @$account. Проверьте, что LIVE запущен.'
+          : 'Не удалось найти активный эфир. Проверьте, что LIVE запущен.';
+    }
+
+    if (lower.contains('timeout') || lower.contains('timed out')) {
+      return 'TikTok долго не отвечает. Попробуйте еще раз.';
+    }
+
+    if (lower.contains('network') ||
+        lower.contains('websocket') ||
+        lower.contains('connection') ||
+        lower.contains('connect')) {
+      return 'Не удалось подключиться к TikTok LIVE. Попробуйте еще раз.';
+    }
+
+    if (normalized.isEmpty ||
+        _looksCorruptedText(normalized) ||
+        lower.contains('traceback') ||
+        lower.contains('exception') ||
+        lower.contains('sqlalchemy') ||
+        lower.contains('session')) {
+      return account.isNotEmpty
+          ? 'Не удалось подключиться к @$account. Проверьте username и что эфир уже запущен.'
+          : 'Не удалось подключиться к TikTok LIVE. Проверьте username и что эфир уже запущен.';
+    }
+
+    return normalized;
+  }
+
   void _handleWsEvent(Map<String, dynamic> rawEvent) {
     final event = Map<String, dynamic>.from(rawEvent);
 
@@ -543,7 +629,12 @@ class WsProvider extends ChangeNotifier {
 
       _tiktokConnected = connected;
       _audio.setLiveConnected(connected);
-      _liveStatusText = msg;
+      _liveStatusText = _friendlyLiveStatusText(
+        msg,
+        connected: connected,
+        isConnectingStatus: isConnectingStatus,
+        username: u,
+      );
       _liveErrorText = null;
       _liveConnecting = isConnectingStatus;
 
@@ -602,7 +693,15 @@ class WsProvider extends ChangeNotifier {
       }
 
       if (msg != null && msg.isNotEmpty) {
-        _liveErrorText = msg;
+        _liveErrorText = _friendlyLiveErrorText(
+          msg,
+          username: expected ?? _currentTikTokUsername,
+        );
+      } else {
+        _liveErrorText = _friendlyLiveErrorText(
+          null,
+          username: expected ?? _currentTikTokUsername,
+        );
       }
       _liveConnecting = false;
       _pendingTikTokUsername = null;
@@ -638,7 +737,7 @@ class WsProvider extends ChangeNotifier {
     if (nickname != null && nickname.isNotEmpty) return nickname;
     final user = event['user']?.toString().trim();
     if (user != null && user.isNotEmpty) return user;
-    return '╨Р╨╜╨╛╨╜╨╕╨╝';
+    return 'Аноним';
   }
 
   Future<void> _autoPlay(Map<String, dynamic> event) async {
@@ -717,49 +816,58 @@ class WsProvider extends ChangeNotifier {
     
     switch (type) {
       case 'chat':
-        category = '╨з╨░╤В';
-        final user = event['user']?.toString() ?? '╨Р╨╜╨╛╨╜╨╕╨╝';
+        category = 'Чат';
+        final user = event['user']?.toString() ?? 'Аноним';
         final message = event['message']?.toString() ?? '';
         text = '$user: $message';
         break;
       case 'gift':
-        category = '╨Я╨╛╨┤╨░╤А╨╛╨║';
-        final user = event['user']?.toString() ?? '╨Р╨╜╨╛╨╜╨╕╨╝';
-        final giftName = event['gift_name']?.toString() ?? '╨Я╨╛╨┤╨░╤А╨╛╨║';
+        category = 'Подарок';
+        final user = event['user']?.toString() ?? 'Аноним';
+        final giftName = event['gift_name']?.toString() ?? 'Подарок';
         final count = event['count']?.toString() ?? '1';
-        text = '$user ╨╛╤В╨┐╤А╨░╨▓╨╕╨╗ $giftName (x$count)';
+        text = '$user отправил $giftName (x$count)';
         break;
       case 'join':
-        category = '╨Ч╤А╨╕╤В╨╡╨╗╤М';
+        category = 'Зритель';
         final who = _displayNameFromEvent(event);
-        text = '$who ╨╖╨░╤И╤С╨╗ ╨▓ ╤Н╤Д╨╕╤А';
+        text = '$who зашел в эфир';
         break;
       case 'viewer_join':
-        category = '╨Ч╤А╨╕╤В╨╡╨╗╤М';
+        category = 'Зритель';
         final who = _displayNameFromEvent(event);
-        text = '$who ╨╖╨░╤И╤С╨╗ ╨▓ ╤Н╤Д╨╕╤А';
+        text = '$who зашел в эфир';
         break;
       case 'follow':
-        category = '╨Я╨╛╨┤╨┐╨╕╤Б╨║╨░';
-        final user = event['user']?.toString() ?? '╨Р╨╜╨╛╨╜╨╕╨╝';
-        text = '$user ╨┐╨╛╨┤╨┐╨╕╤Б╨░╨╗╤Б╤П';
+        category = 'Подписка';
+        final user = event['user']?.toString() ?? 'Аноним';
+        text = '$user подписался';
         break;
       case 'like':
-        category = '╨Ы╨░╨╣╨║';
-        final user = event['user']?.toString() ?? '╨Р╨╜╨╛╨╜╨╕╨╝';
+        category = 'Лайк';
+        final user = event['user']?.toString() ?? 'Аноним';
         final count = event['count']?.toString() ?? '1';
-        text = '$user ╨┐╨╛╤Б╤В╨░╨▓╨╕╨╗ $count ╨╗╨░╨╣╨║╨╛╨▓';
+        text = '$user поставил $count лайков';
         break;
       case 'error':
-        category = '╨Ю╤И╨╕╨▒╨║╨░';
-        text = event['message']?.toString() ?? '╨Э╨╡╨╕╨╖╨▓╨╡╤Б╤В╨╜╨░╤П ╨╛╤И╨╕╨▒╨║╨░';
+        category = 'Ошибка';
+        text = _friendlyLiveErrorText(
+          event['message']?.toString(),
+          username: _pendingTikTokUsername ?? _currentTikTokUsername,
+        );
         break;
       case 'status':
-        category = '╨б╤В╨░╤В╤Г╤Б';
-        text = event['message']?.toString() ?? '╨Ш╨╖╨╝╨╡╨╜╨╡╨╜╨╕╨╡ ╤Б╤В╨░╤В╤Г╤Б╨░';
+        category = 'Статус';
+        text = _friendlyLiveStatusText(
+          event['message']?.toString(),
+          connected: event['connected'] == true,
+          isConnectingStatus: event['connected'] != true &&
+              ((event['message']?.toString().toLowerCase().contains('подключаем')) ?? false),
+          username: event['tiktok_username']?.toString(),
+        );
         break;
       default:
-        category = '╨б╨╛╨▒╤Л╤В╨╕╨╡';
+        category = 'Событие';
         text = event['message']?.toString() ?? type;
     }
     
@@ -855,7 +963,7 @@ class WsProvider extends ChangeNotifier {
 
       _liveConnecting = true;
       _liveErrorText = null;
-      _liveStatusText = '╨Я╨╛╨┤╨║╨╗╤О╤З╨░╨╡╨╝╤Б╤П ╨║ TikTok LiveтАж';
+      _liveStatusText = 'Подключаемся к TikTok LIVE...';
       notifyListeners();
 
       // ╤Б╨╜╨░╤З╨░╨╗╨░ ╨│╨░╤А╨░╨╜╤В╨╕╤А╨╛╨▓╨░╨╜╨╜╨╛ ╨╛╤В╨║╨╗╤О╤З╨░╨╡╨╝╤Б╤П ╨╛╤В ╨▓╨╛╨╖╨╝╨╛╨╢╨╜╨╛╨│╨╛ ╨┐╤А╨╡╨┤╤Л╨┤╤Г╤Й╨╡╨│╨╛ LIVE
@@ -878,7 +986,7 @@ class WsProvider extends ChangeNotifier {
     } catch (e) {
       logDebug('Error connecting to TikTok: $e');
       _liveConnecting = false;
-      _liveErrorText = '╨Ю╤И╨╕╨▒╨║╨░ ╨┐╨╛╨┤╨║╨╗╤О╤З╨╡╨╜╨╕╤П ╨║ LIVE';
+      _liveErrorText = _friendlyLiveErrorText(e.toString(), username: username);
       notifyListeners();
       return false;
     }
@@ -902,7 +1010,7 @@ class WsProvider extends ChangeNotifier {
       _pendingTikTokUsername = null;
       await _ws.disconnectFromTikTok();
       _tiktokConnected = false;
-      _liveStatusText = '╨Ю╤В╨║╨╗╤О╤З╨╡╨╜╨╛ ╨╛╤В LIVE';
+      _liveStatusText = 'Отключено от LIVE';
       notifyListeners();
     } catch (e) {
       logDebug('Error disconnecting from TikTok: $e');
