@@ -17,10 +17,10 @@ from app.routes import auth, tts, ws, voices, sounds, profile, catalog, triggers
 from app.db.database import init_db
 from app.routes_v2 import auth_v2, settings_v2, sounds_v2, triggers_v2, ws_v2, license_v2, voices_v2, gifts_v2, admin_v2, profile_v2, billing_v2, tiktok_v2, notifications_v2, stats_v2, push_v2, spotify_v2
 from app.services import tts_service
+from app.services.tiktok_service_runtime import tiktok_service
 
 from datetime import datetime
 from sqlalchemy import text
-from app.services.tiktok_service import tiktok_service
 
 app = FastAPI(title="TTBoost Backend", version="0.1.0")
 # Большие ответы (например, gifts library) в мобильной сети без gzip могут грузиться
@@ -172,7 +172,7 @@ async def dynamic_origin(request: Request, call_next):
     if request.method == "OPTIONS":
         from fastapi.responses import Response
         resp = Response(status_code=200)
-        if is_allowed_origin(origin):
+        if origin and is_allowed_origin(origin):
             resp.headers["Access-Control-Allow-Origin"] = origin
         resp.headers["Access-Control-Allow-Credentials"] = "true"
         resp.headers["Access-Control-Allow-Methods"] = "GET,POST,PUT,PATCH,DELETE,OPTIONS"
@@ -184,7 +184,7 @@ async def dynamic_origin(request: Request, call_next):
         resp.headers["Vary"] = "Origin"
         # Дополнительная отладка CORS при AUTH_DEBUG
         if os.getenv("AUTH_DEBUG") == "1":
-            print(f"[CORS-DEBUG] Preflight origin={origin} allowed={is_allowed_origin(origin)} headers={allow_headers}")
+            print(f"[CORS-DEBUG] Preflight origin={origin} allowed={is_allowed_origin(origin or '')} headers={allow_headers}")
         return resp
 
     try:
@@ -196,7 +196,7 @@ async def dynamic_origin(request: Request, call_next):
         from fastapi.responses import JSONResponse
 
         response = JSONResponse(status_code=500, content={"detail": "Internal Server Error"})
-    if is_allowed_origin(origin):
+    if origin and is_allowed_origin(origin):
         response.headers.setdefault("Access-Control-Allow-Origin", origin)
         response.headers.setdefault("Vary", "Origin")
         response.headers.setdefault("Access-Control-Allow-Credentials", "true")
@@ -698,7 +698,10 @@ async def status():
         db_error = str(e)
     # TikTok clients info
     try:
-        clients_cnt = len(getattr(tiktok_service, '_clients', {}))
+        clients_cnt = max(
+            len(getattr(tiktok_service, '_clients', {})),
+            len(getattr(tiktok_service, '_desired_usernames', {})),
+        )
         # Добавим максимальный лаг по подаркам для диагностики (в секундах)
         gift_lags = []
         from datetime import datetime as _dt

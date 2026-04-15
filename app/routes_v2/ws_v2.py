@@ -13,7 +13,7 @@ from app.db import models
 from .auth_v2 import get_current_user
 from app.services.security import decode_token
 from app.services.tts_service import generate_tts, get_voice_by_id
-from app.services.tiktok_service import tiktok_service
+from app.services.tiktok_service_runtime import tiktok_service
 from app.services.gift_sounds import get_global_gift_sound_path
 from app.services.plans import TARIFF_FREE, resolve_tariff, normalize_platform
 from app.services.limits import FREE_MAX_TRIGGERS

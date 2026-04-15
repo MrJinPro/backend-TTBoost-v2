@@ -2,7 +2,7 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect, status
 from app.services.license_service import verify_ws_token, get_user_data
 from app.services.event_dispatcher import dispatcher
 from app.services.tts_service import generate_tts
-from app.services.tiktok_service import tiktok_service
+from app.services.tiktok_service_runtime import tiktok_service
 from app.services.profile_service import get_or_create_profile, get_gift_sound, get_viewer_sound
 from app.services.triggers_service import find_applicable_trigger, add_or_update_trigger
 from app.db.database import SessionLocal
